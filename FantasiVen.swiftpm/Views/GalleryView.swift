@@ -75,6 +75,10 @@ struct FriendDetailView: View {
                                     MenuTile(title: store.t("playTogether"), icon: "sparkles", color: Color(red: 0.22, green: 0.62, blue: 0.5))
                                 }.buttonStyle(SquishStyle())
                                 CandyButton(title: store.t("editLook"), icon: "paintbrush.pointed.fill") { onEdit(friend, true) }
+                                CandyButton(title: store.t("sibling"), icon: "person.2.fill", color: GameStyle.purple) { onEdit(friend.sibling(), false) }
+                                NavigationLink(destination: FriendRoomView(friendID: friend.id)) {
+                                    MenuTile(title: store.t("myRoom"), icon: "house.fill", color: GameStyle.purple)
+                                }.buttonStyle(SquishStyle())
                                 Button { gate = true } label: {
                                     Label(store.t("delete"), systemImage: "lock.fill").font(.system(.footnote, design: .rounded)).frame(minHeight: 48)
                                 }.foregroundColor(GameStyle.ink.opacity(0.65))

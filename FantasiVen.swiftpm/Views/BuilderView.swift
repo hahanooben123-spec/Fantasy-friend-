@@ -18,6 +18,7 @@ struct BuilderView: View {
     @State private var brushWidth: Double = 9
     @State private var revision = 0
     @State private var tools = false
+    @State private var freeStudio = false
     private let categories: [Part] = [.body, .paint, .color, .eyes, .mouth, .extras, .arms, .legs, .accent]
 
     init(original: FantasyFriend, existing: Bool) {
@@ -62,6 +63,9 @@ struct BuilderView: View {
             }.environmentObject(store)
         }
         .sheet(isPresented: $tools) { toolsSheet }
+        .sheet(isPresented: $freeStudio) {
+            FreeStudioView(friend: Binding(get: { friend }, set: { value in change { $0 = value } })).environmentObject(store)
+        }
         .alert(store.t("discard"), isPresented: $discard) {
             Button(store.t("cancel"), role: .cancel) {}
             Button(store.t("leave"), role: .destructive) { presentation.wrappedValue.dismiss() }
@@ -99,6 +103,7 @@ struct BuilderView: View {
                     Text(store.t(part == .paint ? "paintHint" : "piecesHint")).font(.system(.caption, design: .rounded))
                 }.minimumScaleFactor(0.8)
                 Spacer(minLength: 4)
+                RoundButton(icon: "hand.draw.fill", label: store.t("freeStudio")) { freeStudio = true }
                 RoundButton(icon: "paintpalette.fill", label: store.t("colorMagic")) {
                     change { $0.color = ($0.color + Int.random(in: 1..<16)) % 16; $0.accent = ($0.accent + Int.random(in: 1..<16)) % 16 }
                 }

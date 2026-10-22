@@ -31,43 +31,7 @@ struct HomeView: View {
                             }
                             Text(store.t("tagline")).font(.system(.subheadline, design: .rounded).weight(.semibold)).multilineTextAlignment(.center)
                             welcomeStage.frame(height: min(geometry.size.height * (wide ? 0.35 : 0.29), wide ? 350 : 245))
-                            if wide {
-                                HStack(alignment: .top, spacing: 19) {
-                                    Button { openEditor(FantasyFriend(), existing: false) } label: {
-                                        DestinationCard(kind: .studio, title: store.t("create"), subtitle: store.t("studioDoorHint"))
-                                    }
-                                    NavigationLink(destination: GalleryView(onEdit: openEditor)) {
-                                        DestinationCard(kind: .village, title: store.t("friendVillage"), subtitle: store.t("villageDoorHint"))
-                                    }
-                                    NavigationLink(destination: PlaygroundView(onCreate: create)) {
-                                        DestinationCard(kind: .playground, title: store.t("playRoom"), subtitle: store.t("playDoorHint"))
-                                    }
-                                }.buttonStyle(SquishStyle())
-                            } else {
-                                Button(action: create) {
-                                    HStack(spacing: 6) {
-                                        DestinationArt(kind: .studio).frame(width: 135, height: 108)
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            Text(store.t("create")).font(.system(size: 24, weight: .heavy, design: .rounded))
-                                            Text(store.t("studioDoorHint")).font(.system(.caption, design: .rounded)).lineLimit(2)
-                                        }
-                                        Spacer(minLength: 0)
-                                        Image(systemName: "arrow.right").font(.system(size: 21, weight: .heavy)).padding(.trailing, 14)
-                                    }.foregroundColor(GameStyle.ink).padding(7)
-                                        .background(CandySurface(color: StudioStyle.colors[0], cornerRadius: 32))
-                                        .contentShape(RoundedRectangle(cornerRadius: 32))
-                                }.buttonStyle(SquishStyle())
-                                HStack(alignment: .top, spacing: 14) {
-                                    NavigationLink(destination: GalleryView(onEdit: openEditor)) {
-                                        DestinationCard(kind: .village, title: store.t("friendVillage"), subtitle: "", compact: true)
-                                    }
-                                    NavigationLink(destination: PlaygroundView(onCreate: create)) {
-                                        DestinationCard(kind: .playground, title: store.t("playRoom"), subtitle: "", compact: true)
-                                    }
-                                }.buttonStyle(SquishStyle())
-                            }
-                            NavigationLink(destination: MiniGamesView(onCreate: create)) { MiniGamesDoor() }
-                                .buttonStyle(SquishStyle())
+                            FantasyMapView(onCreate: create, onEdit: openEditor)
                             Text(store.t("homeFooter")).font(.system(.caption, design: .rounded).weight(.semibold)).padding(.top, 7).opacity(0.7)
                         }.padding(.horizontal, wide ? 28 : 19).padding(.top, 12).padding(.bottom, 24)
                             .frame(maxWidth: 1100).frame(maxWidth: .infinity)

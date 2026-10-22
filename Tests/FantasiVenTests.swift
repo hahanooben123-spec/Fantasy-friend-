@@ -267,3 +267,59 @@ extension FantasiVenTests {
         XCTAssertFalse(fresh.complete)
     }
 }
+
+extension FantasiVenTests {
+    func testCreativeFriendsAndSavedCreationsRoundTrip() throws {
+        var friend = FantasyFriend()
+        friend.pieces = [CreativePiece(kind: .eye, variant: 4, x: 0.4, y: 0.3, mirrored: true, color: 5)]
+        friend.bodyWidth = 1.2; friend.bodyHeight = 0.75
+        friend.voice = .hum; friend.gait = .waddle
+        friend.room = [RoomObject(kind: 2, x: 0.3, y: 0.6)]
+        friend.track = SlideTrack(); friend.song = OrchestraPattern()
+        XCTAssertTrue(friend.isValid)
+        XCTAssertEqual(friend, try JSONDecoder().decode(FantasyFriend.self, from: JSONEncoder().encode(friend)))
+        let copy = friend.sibling()
+        XCTAssertNotEqual(copy.id, friend.id)
+        XCTAssertEqual(copy.pieces, friend.pieces)
+        XCTAssertEqual(copy.room, friend.room)
+        friend.pieces![0].x = .nan
+        XCTAssertFalse(friend.isValid)
+    }
+    func testCreativeMovementSnapAndPatternBounds() {
+        var piece = CreativePiece(kind: .arm)
+        piece.move(x: -10, y: 4, snap: false)
+        XCTAssertEqual(piece.x, 0.08); XCTAssertEqual(piece.y, 0.92)
+        piece.move(x: 0.423, y: 0.574, snap: true)
+        XCTAssertEqual(piece.x, 0.4, accuracy: 0.001)
+        XCTAssertTrue(piece.isValid)
+        var track = SlideTrack()
+        track.set(2, y: 4); track.set(99, y: 0.5)
+        XCTAssertTrue(track.isValid)
+        XCTAssertEqual(track.height(at: 0), track.heights[0])
+        var song = OrchestraPattern()
+        song.toggle(row: 0, beat: 3); song.toggle(row: 12, beat: -1)
+        XCTAssertTrue(song.rows[0][3]); XCTAssertTrue(song.isValid)
+    }
+    func testKitchenAndPathHaveReachablePositiveEndings() {
+        var recipe = KitchenRecipe()
+        for _ in 0..<20 { recipe.add(2) }
+        XCTAssertEqual(recipe.ingredients.count, 5)
+        XCTAssertTrue((0..<3).contains(recipe.flavor))
+        recipe.clear(); XCTAssertTrue(recipe.ingredients.isEmpty)
+        for level in 1...3 {
+            var puzzle = PathPuzzle(level: level)
+            XCTAssertFalse(puzzle.complete)
+            for i in 0..<4 {
+                while puzzle.tiles[i] != puzzle.target[i] { puzzle.turn(i) }
+            }
+            XCTAssertTrue(puzzle.complete)
+        }
+    }
+    func testOldSettingsGainSpeechAndSimpleChallenge() throws {
+        let data = Data(#"{"language":"da","sound":false,"music":false}"#.utf8)
+        let settings = try JSONDecoder().decode(GameSettings.self, from: data)
+        XCTAssertTrue(settings.speechEnabled)
+        XCTAssertEqual(settings.challengeLevel, 1)
+        XCTAssertFalse(settings.sound)
+    }
+}

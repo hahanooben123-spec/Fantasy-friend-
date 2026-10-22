@@ -8,45 +8,97 @@ final class SoundService {
     private var settings = GameSettings()
     private var effects: [AVAudioPlayer] = []
     private var music: AVAudioPlayer?
+    private let speech = AVSpeechSynthesizer()
+    private var speechTask: Task<Void, Never>?
+    private var cache: [String: Data] = [:]
     private var active = true
+    private var world = World.forest
 
     func configure(_ settings: GameSettings) {
         self.settings = settings
         if !settings.sound { effects.forEach { $0.stop() }; effects.removeAll() }
+        if !settings.speechEnabled { stopSpeech() }
         updateMusic()
     }
     func setActive(_ value: Bool) {
         active = value
-        if !value { effects.forEach { $0.stop() } }
+        if !value { effects.forEach { $0.stop() }; stopSpeech() }
+        updateMusic()
+    }
+    func setWorld(_ value: World) {
+        guard world != value else { return }
+        world = value
+        music?.stop(); music = nil
         updateMusic()
     }
     private func updateMusic() {
         guard settings.music && active else { music?.pause(); return }
         if music == nil {
-            music = player(resource: "music", fallback: [261.63, 329.63, 392, 329.63, 293.66, 349.23, 440, 349.23], noteDuration: 0.7)
+            let root: Double = world == .stars ? 220 : world == .castle ? 293.66 : 261.63
+            let notes = [1.0, 1.25, 1.5, 0, 1.125, 1.3333, 1.5, 0].map { $0 * root }
+            music = try? AVAudioPlayer(data: Self.wave(notes: notes, noteDuration: 0.55, timbre: world.rawValue % 3))
             music?.numberOfLoops = -1
-            music?.volume = 0.13
         }
+        music?.volume = speech.isSpeaking ? 0.025 : 0.11
         try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
         music?.play()
     }
     func play(_ cue: Cue) {
+        let notes: [Double]
+        switch cue {
+        case .click: notes = [660]
+        case .reaction: notes = [[523.25, 659.25], [659.25, 783.99], [392, 523.25]][Int.random(in: 0..<3)]
+        case .complete: notes = [523.25, 659.25, 783.99, 1046.5]
+        }
+        playNotes(notes, duration: cue == .click ? 0.055 : 0.12, timbre: 0)
+    }
+    func react(voice: Int) {
+        let root = [523.25, 880, 261.63][min(2, max(0, voice))]
+        playNotes([root, root * [1.25, 1.5, 0.75].randomElement()!], duration: 0.13, timbre: voice)
+    }
+    func instrument(_ row: Int, beat: Int) {
+        let roots: [Double] = [130.81, 329.63, 523.25]
+        playNotes([roots[min(2, max(0, row))] * (beat.isMultiple(of: 4) ? 1.25 : 1)], duration: 0.18, timbre: row)
+    }
+    private func playNotes(_ notes: [Double], duration: Double, timbre: Int) {
         guard settings.sound && active else { return }
         effects.removeAll { !$0.isPlaying }
-        guard effects.count < 6 else { return }
-        let notes: [Double]
-        switch cue { case .click: notes = [660]; case .reaction: notes = [523.25, 659.25, 783.99]; case .complete: notes = [523.25, 659.25, 783.99, 1046.5] }
-        guard let sound = player(resource: cue.rawValue, fallback: notes, noteDuration: cue == .click ? 0.055 : 0.12) else { return }
+        guard effects.count < 12 else { return }
+        let key = "\(notes)-\(duration)-\(timbre)"
+        let data: Data
+        if let stored = cache[key] { data = stored }
+        else {
+            data = Self.wave(notes: notes, noteDuration: duration, timbre: timbre)
+            if cache.count < 64 { cache[key] = data }
+        }
+        guard let player = try? AVAudioPlayer(data: data) else { return }
         try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
-        sound.volume = 0.35
-        effects.append(sound); sound.play()
+        player.volume = 0.25; effects.append(player); player.play()
     }
-    private func player(resource: String, fallback: [Double], noteDuration: Double) -> AVAudioPlayer? {
-        if let url = Bundle.main.url(forResource: resource, withExtension: "wav"), let player = try? AVAudioPlayer(contentsOf: url) { return player }
-        return try? AVAudioPlayer(data: Self.wave(notes: fallback, noteDuration: noteDuration))
+    func speak(_ text: String, language: Language) {
+        guard settings.speechEnabled && active else { return }
+        stopSpeech()
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: language == .da ? "da-DK" : "en-GB")
+        utterance.rate = 0.43; utterance.volume = 0.7
+        music?.volume = 0.025
+        speech.speak(utterance)
+        speechTask = Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: 300_000_000)
+                while self?.speech.isSpeaking == true {
+                    try await Task.sleep(nanoseconds: 200_000_000)
+                }
+                self?.updateMusic()
+            } catch { return }
+        }
     }
-    // Small, original bell tones. No downloaded assets or audio permissions.
-    private static func wave(notes: [Double], noteDuration: Double) -> Data {
+    func stopSpeech() {
+        speechTask?.cancel(); speechTask = nil
+        speech.stopSpeaking(at: .immediate)
+        music?.volume = 0.11
+    }
+    private static func wave(notes: [Double], noteDuration: Double, timbre: Int) -> Data {
         let sampleRate = 22050
         let samplesPerNote = Int(Double(sampleRate) * noteDuration)
         var samples = Data()
@@ -57,9 +109,10 @@ final class SoundService {
         for frequency in notes {
             for index in 0..<samplesPerNote {
                 let t = Double(index) / Double(sampleRate)
-                let envelope = min(1, t / 0.008) * pow(max(0, 1 - t / noteDuration), 2)
-                let wave = sin(2 * .pi * frequency * t) + 0.2 * sin(2 * .pi * frequency * 2 * t)
-                append(Int16(wave * envelope * 9000), to: &samples)
+                let envelope = min(1, t / 0.008) * pow(max(0, 1 - t / noteDuration), timbre == 0 ? 2 : 1)
+                let base = sin(2 * .pi * frequency * t)
+                let tone = base + (timbre == 1 ? 0.35 : 0.15) * sin(2 * .pi * frequency * 2 * t)
+                append(Int16(tone * envelope * 7500), to: &samples)
             }
         }
         var data = Data("RIFF".utf8)

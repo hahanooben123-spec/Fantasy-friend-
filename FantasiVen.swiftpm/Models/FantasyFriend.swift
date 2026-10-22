@@ -19,6 +19,20 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
     // Optional so friends saved before free placement still decode unchanged.
     var placements: [String: PartPlacement]?
     var doodles: [DoodleStroke]?
+    var pieces: [CreativePiece]?
+    var bodyWidth: Double?
+    var bodyHeight: Double?
+    var voice: VoiceKind?
+    var gait: GaitKind?
+    var room: [RoomObject]?
+    var track: SlideTrack?
+    var song: OrchestraPattern?
+
+    var widthFactor: Double { bodyWidth ?? 1 }
+    var heightFactor: Double { bodyHeight ?? 1 }
+    func sibling() -> FantasyFriend {
+        var copy = self; copy.id = UUID(); copy.name = ""; return copy
+    }
 
     func placement(for attachment: Attachment) -> PartPlacement {
         placements?[attachment.rawValue] ?? PartPlacement()
@@ -50,7 +64,13 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
         (0..<8).contains(arms) && (0..<8).contains(legs) &&
         accessories.allSatisfy { (0..<15).contains($0) } && name.count <= 30 &&
         (placements ?? [:]).allSatisfy { Attachment(rawValue: $0.key) != nil && $0.value.isValid } &&
-        (doodles ?? []).allSatisfy(\.isValid)
+        (doodles ?? []).allSatisfy(\.isValid) &&
+        (pieces ?? []).count <= 64 && (pieces ?? []).allSatisfy(\.isValid) &&
+        Set((pieces ?? []).map(\.id)).count == (pieces ?? []).count &&
+        widthFactor.isFinite && heightFactor.isFinite &&
+        (0.75...1.2).contains(widthFactor) && (0.75...1.2).contains(heightFactor) &&
+        (room ?? []).count <= 32 && (room ?? []).allSatisfy(\.isValid) &&
+        (track?.isValid ?? true) && (song?.isValid ?? true)
     }
 }
 
@@ -59,4 +79,8 @@ struct GameSettings: Codable {
     var language: Language = .da
     var sound = true
     var music = false
+    var speech: Bool?
+    var challenge: Int?
+    var speechEnabled: Bool { speech ?? true }
+    var challengeLevel: Int { min(3, max(1, challenge ?? 1)) }
 }

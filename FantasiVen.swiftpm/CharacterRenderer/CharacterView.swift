@@ -7,6 +7,7 @@ struct CharacterView: View {
     var asleep = false
     var piece: Attachment? = nil
     var detail: Part? = nil
+    var gaze = CGPoint.zero
 
     var body: some View {
         Canvas { context, size in
@@ -28,7 +29,7 @@ struct CharacterView: View {
                 CreaturePainter(context: context, friend: friend).drawPiece(piece)
             } else {
                 context.scaleBy(x: size.width / 300, y: size.height / 320)
-                CreaturePainter(context: context, friend: friend).draw(blink: blink, happy: happy, asleep: asleep)
+                CreaturePainter(context: context, friend: friend, gaze: gaze).draw(blink: blink, happy: happy, asleep: asleep)
             }
         }
         .aspectRatio(300.0 / 320, contentMode: .fit)
@@ -39,6 +40,8 @@ struct CharacterView: View {
 private struct CreaturePainter {
     var context: GraphicsContext
     let friend: FantasyFriend
+    var gaze = CGPoint.zero
+    var singleEye = false
     var primary: Color { GameStyle.palette[friend.color % 16] }
     var accent: Color { GameStyle.palette[friend.accent % 16] }
     var ink: Color { GameStyle.ink }
@@ -110,9 +113,44 @@ private struct CreaturePainter {
             let attachment = Attachment.extra(index)
             placed(for: attachment).drawPiece(attachment)
         }
+        for piece in friend.pieces ?? [] { drawCreative(piece) }
+    }
+
+    func drawCreative(_ piece: CreativePiece, preview: Bool = false) {
+        var sample = friend
+        sample.placements = nil; sample.pieces = nil
+        sample.color = piece.color; sample.accent = piece.accent
+        var rect: CGRect
+        switch piece.kind {
+        case .eye: sample.eyes = piece.variant; rect = CGRect(x: 116, y: 123, width: 68, height: 70)
+        case .arm: sample.arms = piece.variant; rect = AttachmentLayout.bounds(for: .leftArm, friend: sample)
+        case .leg: sample.legs = piece.variant; rect = AttachmentLayout.bounds(for: .leftLeg, friend: sample)
+        case .extra: rect = AttachmentLayout.bounds(for: .extra(piece.variant), friend: sample)
+        }
+        var canvas = context
+        canvas.translateBy(x: preview ? 150 : piece.x * 300, y: preview ? 160 : piece.y * 320)
+        canvas.rotate(by: .degrees(piece.rotation))
+        let scale = preview ? min(210 / rect.width, 250 / rect.height) : CGFloat(piece.scale)
+        canvas.scaleBy(x: (piece.mirrored ? -1 : 1) * scale, y: scale)
+        canvas.translateBy(x: -rect.midX, y: -rect.midY)
+        let painter = CreaturePainter(context: canvas, friend: sample, singleEye: true)
+        switch piece.kind {
+        case .eye: painter.drawEyes(closed: false, happy: false)
+        case .arm: painter.drawArm(side: 0)
+        case .leg: painter.drawLeg(side: 0)
+        case .extra: painter.drawExtra(piece.variant)
+        }
     }
 
     func drawBody(blink: Bool, happy: Bool, asleep: Bool) {
+        var bodyContext = context
+        bodyContext.translateBy(x: 150, y: 175)
+        bodyContext.scaleBy(x: CGFloat(friend.widthFactor), y: CGFloat(friend.heightFactor))
+        bodyContext.translateBy(x: -150, y: -175)
+        CreaturePainter(context: bodyContext, friend: friend, gaze: gaze).drawBaseBody(blink: blink, happy: happy, asleep: asleep)
+    }
+
+    func drawBaseBody(blink: Bool, happy: Bool, asleep: Bool) {
         let silhouette = CreatureShape(kind: friend.body).path(in: CGRect(x: 0, y: 0, width: 300, height: 320))
         context.fill(silhouette, with: .linearGradient(Gradient(colors: [GameStyle.mixed(primary, with: .white, amount: 0.25), primary, GameStyle.mixed(primary, with: ink, amount: 0.26)]), startPoint: CGPoint(x: 85, y: 76), endPoint: CGPoint(x: 207, y: 260)))
         context.stroke(silhouette, with: .color(GameStyle.mixed(primary, with: ink, amount: 0.72)), lineWidth: 3.5)
@@ -274,8 +312,8 @@ private struct CreaturePainter {
 
     func drawEyes(closed: Bool, happy: Bool) {
         let kind = friend.eyes
-        let centers: [CGFloat] = kind == 5 ? [150] : (kind == 6 ? [110, 150, 190] : [120, 181])
-        let radius: CGFloat = kind == 1 ? 10 : (kind == 5 ? 31 : (kind == 6 ? 15 : 22))
+        let centers: [CGFloat] = singleEye || kind == 5 ? [150] : (kind == 6 ? [110, 150, 190] : [120, 181])
+        let radius: CGFloat = singleEye ? 22 : kind == 1 ? 10 : (kind == 5 ? 31 : (kind == 6 ? 15 : 22))
         for x in centers {
             let y: CGFloat = 157
             if closed || kind == 3 || happy {
@@ -291,7 +329,7 @@ private struct CreaturePainter {
                 ellipse(x - 12, y - 8, 24, 22, accent); ellipse(x - 5, y - 8, 10, 22, ink)
             } else {
                 let pupilWidth: CGFloat = kind == 8 ? 7 : radius * 0.9
-                ellipse(x - pupilWidth / 2 + (kind == 7 ? 5 : 0), y - radius * 0.35, pupilWidth, radius * 1.15, ink)
+                ellipse(x - pupilWidth / 2 + (kind == 7 ? 5 : 0) + gaze.x * 5, y - radius * 0.35 + gaze.y * 4, pupilWidth, radius * 1.15, ink)
             }
             ellipse(x - 5, y - 8, 6, 7, .white)
             if kind == 2 {
@@ -355,5 +393,15 @@ struct RagdollCharacterView: View {
                 context.draw(Text("z Z").font(.system(size: 24, weight: .bold, design: .rounded)).foregroundColor(GameStyle.purple), at: CGPoint(x: position.x + 85, y: position.y - 90))
             }
         }
+    }
+}
+
+struct CreativePieceView: View {
+    let piece: CreativePiece
+    var body: some View {
+        Canvas { context, size in
+            context.scaleBy(x: size.width / 300, y: size.height / 320)
+            CreaturePainter(context: context, friend: FantasyFriend()).drawCreative(piece, preview: true)
+        }.aspectRatio(300.0 / 320, contentMode: .fit)
     }
 }

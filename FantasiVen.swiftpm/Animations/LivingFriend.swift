@@ -8,6 +8,7 @@ struct LivingFriend: View {
     var signal = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var blink = false
+    @State private var gaze = CGPoint.zero
     @State private var breathe = false
     @State private var happy = false
     @State private var sleeping = false
@@ -27,7 +28,7 @@ struct LivingFriend: View {
         } label: {
             ZStack {
                 Ellipse().fill(GameStyle.ink.opacity(0.09)).frame(width: 150, height: 17).offset(y: 128)
-                CharacterView(friend: friend, blink: blink, happy: happy, asleep: sleeping)
+                CharacterView(friend: friend, blink: blink, happy: happy, asleep: sleeping, gaze: gaze)
                     .scaleEffect(x: squash, y: (breathe ? 1.018 : 1) / squash, anchor: .bottom)
                     .rotationEffect(.degrees(tilt), anchor: .bottom)
                     .offset(y: lift)
@@ -45,6 +46,9 @@ struct LivingFriend: View {
             }.aspectRatio(300.0 / 320, contentMode: .fit).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { value in
+            gaze = CGPoint(x: min(1, max(-1, value.translation.width / 60)), y: min(1, max(-1, value.translation.height / 60)))
+        }.onEnded { _ in gaze = .zero })
         .accessibilityLabel(friend.name.isEmpty ? "FantasiVen" : friend.name)
         .accessibilityHint(Words.text("tap", locale.identifier.hasPrefix("en") ? .en : .da))
         .onChange(of: signal) { _ in localSignal = 0 }
@@ -70,7 +74,7 @@ struct LivingFriend: View {
             sleeping = chosen == .sleep
             happy = chosen != .sleep
             lift = 0; tilt = 0; squash = 1; sparkle = false
-            SoundService.shared.play(chosen == .sleep ? .click : .reaction)
+            if chosen == .sleep { SoundService.shared.play(.click) } else { SoundService.shared.react(voice: friend.voice?.rawValue ?? 0) }
             withAnimation(.easeOut(duration: 0.2)) { sparkle = chosen != .sleep }
             do {
                 if !reduceMotion {
@@ -78,7 +82,7 @@ struct LivingFriend: View {
                         withAnimation(.spring(response: 0.32, dampingFraction: 0.55)) {
                             switch chosen {
                             case .jump: lift = step == 0 ? -55 : 0
-                            case .dance: tilt = step.isMultiple(of: 2) ? -13 : 13; lift = step.isMultiple(of: 2) ? -12 : 0
+                            case .dance: tilt = step.isMultiple(of: 2) ? -(friend.gait == .waddle ? 20 : 10) : (friend.gait == .waddle ? 20 : 10); lift = friend.gait == .glide ? -8 : (step.isMultiple(of: 2) ? -22 : 0)
                             case .tickle: tilt = step.isMultiple(of: 2) ? -6 : 6
                             case .hug: squash = step == 0 ? 0.89 : 1
                             case .feed: squash = step == 0 ? 1.06 : 1

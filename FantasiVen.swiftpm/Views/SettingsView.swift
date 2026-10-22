@@ -28,6 +28,18 @@ struct SettingsView: View {
                                 }
                             }
                         }.toggleStyle(SwitchToggleStyle(tint: GameStyle.purple)).padding(22).background(RoundedRectangle(cornerRadius: 32).fill(.white.opacity(0.9)))
+                        VStack(spacing: 14) {
+                            Toggle(store.t("speech"), isOn: Binding(get: { store.settings.speechEnabled }, set: { value in store.updateSettings { $0.speech = value } }))
+                            Text(store.t("challenge")).font(.headline)
+                            HStack {
+                                ForEach(1...3, id: \.self) { level in
+                                    Button { store.updateSettings { $0.challenge = level } } label: {
+                                        Text(String(repeating: "🌼", count: level)).font(.title2).frame(maxWidth: .infinity, minHeight: 52)
+                                            .background(CandySurface(color: store.settings.challengeLevel == level ? StudioStyle.colors[0] : .white, cornerRadius: 20)).contentShape(Rectangle())
+                                    }.accessibilityLabel(store.t("challenge") + " \(level)")
+                                }
+                            }
+                        }.padding(20).background(RoundedRectangle(cornerRadius: 28).fill(.white.opacity(0.9)))
                         VStack(alignment: .leading, spacing: 12) {
                             Text(store.t("language")).font(.system(.headline, design: .rounded))
                             HStack(spacing: 14) {
