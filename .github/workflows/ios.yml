@@ -56,6 +56,17 @@ jobs:
             sleep 3
             xcrun simctl io "$DEVICE_ID" screenshot "ui-previews/$ROUTE.png"
           done
+      - name: Capture iPad creator
+        run: |
+          xcrun simctl shutdown "$DEVICE_ID" || true
+          IPAD_ID=$(xcrun simctl list devices available --json | python3 -c "import json,sys; data=json.load(sys.stdin); print(next(d['udid'] for devices in data['devices'].values() for d in devices if d['name'].startswith('iPad')))")
+          xcrun simctl boot "$IPAD_ID" || true
+          xcrun simctl bootstatus "$IPAD_ID" -b
+          xcrun simctl install "$IPAD_ID" build/DerivedData/Build/Products/Debug-iphonesimulator/FantasiVen.app
+          xcrun simctl status_bar "$IPAD_ID" override --time "9:41" --batteryState charged --batteryLevel 100
+          xcrun simctl launch --terminate-running-process "$IPAD_ID" dk.fantasiven.app --preview-creator
+          sleep 4
+          xcrun simctl io "$IPAD_ID" screenshot ui-previews/Creator-iPad.png
       - uses: actions/upload-artifact@v4
         if: always()
         with:

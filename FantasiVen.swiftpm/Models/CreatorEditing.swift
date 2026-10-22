@@ -40,8 +40,11 @@ enum CreatorGeometry {
     }
     private static func transformed(_ rect: CGRect, center: CGPoint, scale: Double, angle: Double) -> CGRect {
         let a = angle * .pi / 180
-        let width = (abs(cos(a)) * rect.width + abs(sin(a)) * rect.height) * scale
-        let height = (abs(sin(a)) * rect.width + abs(cos(a)) * rect.height) * scale
+        let cosine = CGFloat(abs(cos(a)))
+        let sine = CGFloat(abs(sin(a)))
+        let factor = CGFloat(scale)
+        let width = (cosine * rect.width + sine * rect.height) * factor
+        let height = (sine * rect.width + cosine * rect.height) * factor
         return CGRect(x: center.x - width / 2, y: center.y - height / 2, width: width, height: height)
     }
     static func hit(_ point: CGPoint, friend: FantasyFriend, margin: CGFloat) -> CreatorSelection? {

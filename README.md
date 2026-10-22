@@ -11,15 +11,13 @@ Et originalt, lokalt iPhone-spil til børn på 3–8 år. Swift 6, SwiftUI og iO
 
 Alternativt: Åbn **FantasiVen.swiftpm** i en Swift Playgrounds-version, der understøtter Swift 6 og AppleProductTypes. Pakken og Xcode-projektet bruger samme kildefiler. Playgrounds-kompatibilitet skal verificeres på en Apple-enhed; almindelig `swift build` på Windows understøtter ikke AppleProductTypes eller SwiftUI.
 
-## Fri placering i figurværkstedet
+## Figurværkstedet
 
-Arme, ben og pynt kan nu trækkes fra bakken op på figuren. Hold kort på en miniature i bakken for at starte træk. Ved arme/ben vælges venstre eller højre side efter, hvor delen slippes. Træk derefter direkte på delen for at flytte den igen. Tryk på en del eller vælg dens navneknap for at markere den. Bakken viser nu de enkelte løse dele frem for hele figuren.
+Skaberen er ét samlet arbejdsområde. På iPad står den illustrerede delbakke ved siden af den store figur; på iPhone ligger den under. Kategorierne viser de faktiske kropsdele, og øjne og munde vises tæt på.
 
-Den valgte del kan flyttes med pile, drejes, ændres i størrelse, nulstilles eller fjernes (pynt). Venstre/højre arm og ben har hver sin placering; typen af arme/ben vælges fortsat for parret. Pynt som ører, horn og vinger flyttes som den viste gruppe. Et træk giver ét fortryd-trin. Placering, rotation og størrelse gemmes sammen med vennen og bruges også i galleri og leg. Ældre venner åbner med deres normale placeringer.
+Tryk på en kropsform eller et ansigt for at prøve det. Tryk på arme, ben eller pynt for at tilføje en løs del, eller hold på en miniature og træk den hen til figuren. Delene kan flyttes direkte med én finger. De blå greb på en markeret del bruges til rotation og størrelse; kroppens greb ændrer bredde og højde. Kopiér, spejl, farv eller fjern den markerede del fra værktøjerne under figuren. Ansigtet kan også flyttes og ændres i størrelse. Penslen maler direkte på kroppen.
 
-Figuren står stille under placering, så den ikke bevæger sig væk fra fingeren. Delene holdes inden for tegneområdet. Berøringsreaktioner og vejrtrækning bruges fortsat i menu, detaljer og legeplads.
-
-Denne udvidelses berørings- og drop-adfærd skal afprøves på iPad i Playgrounds. Enhedens bekræftede prototypekørsel gælder versionen før udvidelsen.
+Fortryd og gendan fungerer for valg, dele og hele træk. Gemte venner beholder deres identitet og åbner i det nye værksted. Nye valgfrie datafelter til ansigt, skjulte dele og spejling bevarer kompatibilitet med ældre samlinger. Berøringsoplevelsen skal fortsat afprøves på fysisk iPad.
 
 ## Første version
 

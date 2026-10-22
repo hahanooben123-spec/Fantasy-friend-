@@ -137,7 +137,7 @@ struct CreatorStage: View {
             }.onEnded { _ in handleOrigin=nil;onEnd() })
     }
     private func appendPaint(_ point:CGPoint,brush:PaintTool) {
-        let p=DoodlePoint(x:min(1,max(0,point.x/300)),y:min(1,max(0,point.y/320)))
+        let p=DoodlePoint(x:min(1,max(0,(150+(point.x-150)/friend.widthFactor)/300)),y:min(1,max(0,(175+(point.y-175)/friend.heightFactor)/320)))
         var stroke=draft ?? DoodleStroke(points:[p],color:brush.color,width:brush.width)
         if let last=stroke.points.last,hypot(last.x-p.x,last.y-p.y)>0.006 {
             if stroke.points.count>=600 { stroke.points=stroke.points.enumerated().filter { $0.offset.isMultiple(of:2) }.map(\.element) }
