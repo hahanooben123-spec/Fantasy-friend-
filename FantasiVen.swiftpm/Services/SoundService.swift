@@ -12,6 +12,7 @@ final class SoundService {
     private var speechTask: Task<Void, Never>?
     private var cache: [String: Data] = [:]
     private var active = true
+    private var performing = false
     private var world = World.forest
 
     func configure(_ settings: GameSettings) {
@@ -28,11 +29,19 @@ final class SoundService {
     func setWorld(_ value: World) {
         guard world != value else { return }
         world = value
-        music?.stop(); music = nil
+        let outgoing = music
+        outgoing?.setVolume(0, fadeDuration: 0.3)
+        music = nil
         updateMusic()
+        if settings.music && active && !performing { music?.volume = 0; music?.setVolume(speech.isSpeaking ? 0.025 : 0.11, fadeDuration: 0.4) }
+        Task {
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            outgoing?.stop()
+        }
     }
+    func setPerformance(_ value: Bool) { performing = value; updateMusic() }
     private func updateMusic() {
-        guard settings.music && active else { music?.pause(); return }
+        guard settings.music && active && !performing else { music?.pause(); return }
         if music == nil {
             let root: Double = world == .stars ? 220 : world == .castle ? 293.66 : 261.63
             let notes = [1.0, 1.25, 1.5, 0, 1.125, 1.3333, 1.5, 0].map { $0 * root }

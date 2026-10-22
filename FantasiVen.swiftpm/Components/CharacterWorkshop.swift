@@ -32,6 +32,7 @@ private struct WorkshopDrag {
 
 struct CharacterWorkshop: View {
     @EnvironmentObject private var store: FriendStore
+    @Environment(\.accessibilityReduceMotion) private var reduced
     let friend: FantasyFriend
     let category: Part
     @Binding var selection: Attachment?
@@ -40,6 +41,7 @@ struct CharacterWorkshop: View {
     var onMove: (Attachment, PartPlacement) -> Void
     var onDropPart: (PartDragChoice, CGPoint, CGSize) -> Void
     var onPaint: (DoodleStroke) -> Void
+    @State private var reacting = false
     @State private var draftStroke: DoodleStroke?
     @GestureState private var touching = false
     @GestureState private var drag: WorkshopDrag?
@@ -95,7 +97,7 @@ struct CharacterWorkshop: View {
             Ellipse().fill(StudioStyle.color(category).opacity(0.23))
                 .frame(width: size.width * 0.55, height: size.height * 0.05)
                 .position(x: size.width * 0.5, y: size.height * 0.92).allowsHitTesting(false)
-            CharacterView(friend: shown).allowsHitTesting(false)
+            CharacterView(friend: shown, happy: reacting).rotationEffect(.degrees(reacting && !reduced ? -2 : 0)).animation(reduced ? nil : .easeOut(duration: 0.2), value: reacting).allowsHitTesting(false)
             if paintTool == nil, let selection = selection, AttachmentLayout.attachments(in: friend).contains(selection) {
                 let rect = AttachmentLayout.visualBounds(for: selection, friend: shown)
                 RoundedRectangle(cornerRadius: 14)
@@ -137,6 +139,11 @@ struct CharacterWorkshop: View {
         .onChange(of: touching) { active in if !active { draftStroke = nil } }
         .onChange(of: paintTool) { _ in draftStroke = nil }
         .onDisappear { draftStroke = nil }
+        .task(id: friend) {
+            reacting = true
+            do { try await Task.sleep(nanoseconds: 300_000_000) } catch { reacting = false; return }
+            reacting = false
+        }
         .onDrop(of: [PartDragChoice.contentType.identifier], isTargeted: $targeted) { providers, point in
             guard !providers.isEmpty, let choice = draggedChoice else { return false }
             onDropPart(choice, point, size)

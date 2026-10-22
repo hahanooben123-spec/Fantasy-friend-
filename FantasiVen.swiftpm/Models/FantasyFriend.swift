@@ -20,6 +20,7 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
     var placements: [String: PartPlacement]?
     var doodles: [DoodleStroke]?
     var pieces: [CreativePiece]?
+    var partColors: [String: Int]?
     var bodyWidth: Double?
     var bodyHeight: Double?
     var voice: VoiceKind?
@@ -65,6 +66,7 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
         accessories.allSatisfy { (0..<15).contains($0) } && name.count <= 30 &&
         (placements ?? [:]).allSatisfy { Attachment(rawValue: $0.key) != nil && $0.value.isValid } &&
         (doodles ?? []).allSatisfy(\.isValid) &&
+        (partColors ?? [:]).allSatisfy { Attachment(rawValue: $0.key) != nil && (0..<16).contains($0.value) } &&
         (pieces ?? []).count <= 64 && (pieces ?? []).allSatisfy(\.isValid) &&
         Set((pieces ?? []).map(\.id)).count == (pieces ?? []).count &&
         widthFactor.isFinite && heightFactor.isFinite &&

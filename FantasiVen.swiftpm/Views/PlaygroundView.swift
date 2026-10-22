@@ -39,6 +39,9 @@ struct PlaygroundView: View {
                                         .id(friend.id).frame(height: min(geometry.size.height * 0.46, 405))
                                     actionGrid
                                 }
+                                NavigationLink(destination: SharedToyYardView(initialFriend: friend)) {
+                                    MenuTile(title: store.t("sharedYard"), icon: "person.3.fill", color: GameStyle.purple)
+                                }.buttonStyle(SquishStyle())
                                 HStack(spacing: 12) {
                                     Button { picker = .friends } label: {
                                         HStack(spacing: 6) {

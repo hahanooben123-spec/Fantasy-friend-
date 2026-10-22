@@ -224,10 +224,10 @@ extension FantasiVenTests {
         XCTAssertEqual(game.playerX, 0.14)
         game.move(to: .nan)
         XCTAssertEqual(game.playerX, 0.14)
-        for _ in 0..<12 { game.step(1.0 / 30, spawnX: 0.5) }
+        for _ in 0..<20 { game.step(1.0 / 30, spawnX: 0.5) }
         let before = game.drops.first!.y
         game.step(3600, spawnX: 0.5)
-        XCTAssertEqual(game.drops.first!.y - before, 0.08 * 0.18, accuracy: 0.00001)
+        XCTAssertEqual(game.drops.first!.y - before, 0.08 * 0.16, accuracy: 0.00001)
         game.step(.infinity, spawnX: 0.5)
         XCTAssertEqual(game.caught, 0)
         XCTAssertTrue(game.flowers.isEmpty)
@@ -321,5 +321,39 @@ extension FantasiVenTests {
         XCTAssertTrue(settings.speechEnabled)
         XCTAssertEqual(settings.challengeLevel, 1)
         XCTAssertFalse(settings.sound)
+    }
+}
+
+extension FantasiVenTests {
+    @MainActor
+    func testSharedPhysicsKeepsOriginalsAndLimitsSceneSize() {
+        var original = FantasyFriend()
+        original.pieces = [CreativePiece(kind: .arm, variant: 3, color: 4)]
+        original.setPlacement(PartPlacement(rotation: 30), for: .leftArm)
+        let simulation = PlayPhysics()
+        simulation.configure(friends: [original], mode: .yard, reducedMotion: true)
+        for _ in 0..<10 { simulation.addFriend(original) }
+        for _ in 0..<20 { simulation.addToy(0) }
+        XCTAssertEqual(simulation.friendCount, 4)
+        XCTAssertEqual(simulation.toyCount, 12)
+        simulation.beginDrag(CGPoint(x: 180, y: 280))
+        simulation.moveDrag(CGPoint(x: 450, y: 350))
+        simulation.endDrag(); simulation.refresh()
+        XCTAssertEqual(simulation.friends[0].x, 450)
+        XCTAssertEqual(simulation.friends[0].friend.pieces, original.pieces)
+        XCTAssertEqual(original.placement(for: .leftArm).rotation, 30)
+        simulation.configure(friends: [original], mode: .trampoline, reducedMotion: true)
+        simulation.accessibleRide(progress: 1, track: nil)
+        XCTAssertTrue(simulation.arrived)
+        XCTAssertEqual(simulation.toyCount, 0)
+        simulation.setActive(false)
+        XCTAssertTrue(simulation.scene.isPaused)
+    }
+    func testFruitVarietyAndPicnicCollectionStayBounded() {
+        var game = AppleRain()
+        for _ in 0..<2000 { game.step(1.0 / 30, spawnX: 0.5, level: 3) }
+        XCTAssertEqual(Set(game.fruitBasket), [0, 1, 2])
+        XCTAssertEqual(game.fruitBasket.count, 12)
+        XCTAssertLessThanOrEqual(game.drops.count, 5)
     }
 }

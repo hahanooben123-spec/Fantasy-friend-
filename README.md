@@ -94,3 +94,29 @@ Menuen er et illustreret univers med indgange til værksted, Vennebyen og Legest
 Legetøjsknapperne er originale Canvas-illustrationer. Valg af ven og miljø åbnes i egne vælgere, så hovedskærmen har mere plads til fysisk leg. Miljøer har stærkere illustrationer og diskret skybevægelse, som respekterer Reducer bevægelse og appens livscyklus. Miniaturemiljøer animeres ikke.
 
 I værkstedet vises Mal selv tidligt. Den valgte dels præcise indstillinger samles under Tilpas med store knapper. Navngivning har trykbare navneforslag. iPad er tilføjet som understøttet enhed sammen med iPhone. Den samlede ændring valideres som én milepæl, og manuel touch-/layoutgennemgang på enhed er fortsat nødvendig.
+
+## Creative play expansion
+
+The world map leads to the workshop, village, playground and adventure tree.
+The free studio supports tap-then-place and drag/drop, independent part colors,
+extra eyes/limbs/accessories, duplication, mirroring, rotation, scale, body stretching,
+optional placement assistance, starting shapes, personal voice and movement.
+The village offers sibling copies and locally saved, draggable room furniture.
+
+Eight activities: fruit catching with picnic endings, bubble growing/merging,
+hide-and-seek with clues, editable ragdoll slide tracks, trampoline/cushion play,
+a fantasy kitchen, a three-instrument eight-step orchestra, and a connecting-path puzzle.
+Tracks, songs and rooms save with the friend. The shared physics playground supports
+up to four friends and twelve toys; extra creative pieces are limited to 64 per friend
+and furniture to 32 objects per room to bound rendering/physics work.
+
+Speech, effects and music have independent controls. Synthesized original music changes
+with the environment; speech uses the device's installed voices without recording or
+requesting microphone access. Gesture demonstrations are brief and noninteractive.
+Three flower levels change fruit speed, music tempo, physics pace and puzzle layouts.
+Reduce Motion has a guided alternative to physics rides. No lives, countdowns, streaks,
+currencies, unlock requirements or online services.
+
+Native build/model tests are automated. Real iPad interaction, installed Danish voice
+availability and sessions with children in the 3–4, 5–6 and 7–8 age groups still require
+hands-on validation; automated tests do not establish that children enjoy the design.

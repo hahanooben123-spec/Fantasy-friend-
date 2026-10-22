@@ -14,6 +14,8 @@ struct WorldBackdrop: View {
             else { artwork }
         }
         .accessibilityHidden(true)
+        .onAppear { if immersive { SoundService.shared.setWorld(world) } }
+        .onChange(of: world) { value in if immersive { SoundService.shared.setWorld(value) } }
         .task(id: "\(scenePhase)-\(reducedMotion)-\(animated)") {
             drift = false
             guard animated && !reducedMotion && scenePhase == .active else { return }

@@ -1,7 +1,7 @@
 import Foundation
 
 enum MiniGameKind: String, CaseIterable, Identifiable {
-    case apples, bubbles, hide
+    case apples, bubbles, hide, slide, trampoline, kitchen, orchestra, path
     var id: String { rawValue }
     var titleKey: String { "game_" + rawValue }
     var hintKey: String { "hint_" + rawValue }
@@ -12,12 +12,15 @@ struct AppleDrop: Identifiable {
     let id = UUID()
     var x: Double
     var y: Double
+    var fruit = 0
 }
 
 struct AppleRain {
     private(set) var drops: [AppleDrop] = []
     private(set) var flowers: [Double] = []
     private(set) var caught = 0
+    private(set) var fruitBasket: [Int] = []
+    private var spawnSequence = 0
     private(set) var playerX = 0.5
     private var spawnClock = 1.3
 
@@ -28,20 +31,23 @@ struct AppleRain {
 
     /// Clamping prevents a background pause from advancing the whole game at once.
     @discardableResult
-    mutating func step(_ delta: Double, spawnX: Double, catchRadius: Double = 0.15) -> Bool {
+    mutating func step(_ delta: Double, spawnX: Double, catchRadius: Double = 0.15, level: Int = 1) -> Bool {
         guard delta.isFinite, delta > 0 else { return false }
         let dt = min(delta, 0.08)
         spawnClock += dt
-        if spawnClock >= 1.6 && drops.count < 5 {
+        if spawnClock >= (level == 1 ? 1.8 : level == 2 ? 1.6 : 1.3) && drops.count < 5 {
             spawnClock = 0
-            drops.append(AppleDrop(x: min(0.83, max(0.17, spawnX)), y: -0.06))
+            drops.append(AppleDrop(x: min(0.83, max(0.17, spawnX)), y: -0.06, fruit: spawnSequence % 3))
+            spawnSequence += 1
         }
         var collected = false
-        for index in drops.indices { drops[index].y += dt * 0.18 }
+        for index in drops.indices { drops[index].y += dt * (level == 1 ? 0.16 : level == 2 ? 0.18 : 0.22) }
         var remaining: [AppleDrop] = []
         for apple in drops {
             if apple.y >= 0.70 && apple.y <= 0.79 && abs(apple.x - playerX) <= catchRadius {
                 caught += 1
+                fruitBasket.append(apple.fruit)
+                if fruitBasket.count > 12 { fruitBasket.removeFirst() }
                 collected = true
                 continue
             }

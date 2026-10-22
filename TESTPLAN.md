@@ -94,3 +94,23 @@ Status: **Swift 6-build og 13 automatiske tests bestået på iPhone-simulator fo
 - Bubble party: all six targets respond, create new colors and play enabled sounds. Fast repeated taps remain safe.
 - Hide-and-seek: three of six bushes contain the selected character. Flowers do not reduce progress. Find all three, then hide again.
 - Pause/resume, reset, back, background/foreground, mute, Reduce Motion and iPad rotation; no catch-up jump on return and no collection changes.
+
+## Creative expansion acceptance
+- Reopen an older collection; create, edit and reload extra parts, per-part colors,
+  body stretching, personality, sibling copies, furniture, slide tracks and songs.
+- Free studio: tap tray then stage, drag from tray, move added pieces, mirror, duplicate,
+  rotate, scale and recolor. Undo. Check hints do not intercept touch or cover selections.
+- Village room: add/move/remove furniture, undo, tap lamp, move friend; reload the room.
+- Shared yard: add up to four friends, balls, blocks and balloons; collide, drag, jump,
+  reset, pause, background, reduce motion. No physical poses overwrite saved friends.
+- Slide: edit five points with drag and slider, undo, save, ride, drag a stuck friend,
+  build again. Trampoline: move platform, jump and land on cushions. Test both motion settings.
+- Kitchen: mix up to five foods, taste every flavor reaction, clear and repeat.
+- Orchestra: tap instruments, program and remove notes, play/pause, save/reopen, mute,
+  change tempo, background/foreground. Background music yields to orchestra and speech.
+- Path: connect endpoints, send friend across, new puzzle, pause/resume.
+- Apple picnic: fruit variety, no penalty on misses, continue or leave at a natural break.
+  Bubbles: grow, merge, release friend. Hide-and-seek: optional clue and new hiding spots.
+- Observe unprompted use with children (parent permission) in three age groups.
+  Record hesitation, accidental touches, help needed, repeated play and original ideas.
+  This field study is pending and must not be described as completed.

@@ -129,9 +129,10 @@ struct AdventureHeading: View {
     @Environment(\.presentationMode) private var presentation
     let title: String
     let subtitle: String
+    @State private var leaving = false
     var body: some View {
         HStack(spacing: 12) {
-            RoundButton(icon: "chevron.left", label: store.t("back")) { presentation.wrappedValue.dismiss() }
+            RoundButton(icon: "chevron.left", label: store.t("back")) { leaving = true }.disabled(leaving)
             VStack(alignment: .leading, spacing: 3) {
                 Text(title).font(.system(size: 27, weight: .heavy, design: .rounded)).lineLimit(2).minimumScaleFactor(0.75)
                 Text(subtitle).font(.system(.caption, design: .rounded)).lineLimit(2)
@@ -140,6 +141,19 @@ struct AdventureHeading: View {
         }.foregroundColor(GameStyle.ink).padding(.horizontal, 12).padding(.vertical, 9)
             .background(RoundedRectangle(cornerRadius: 28).fill(.white.opacity(0.78)))
             .padding(.horizontal, 12).padding(.top, 8)
+            .overlay(alignment: .trailing) {
+                if leaving {
+                    HStack(spacing: 2) {
+                        Text(store.t("bye")).font(.system(.caption, design: .rounded).weight(.bold))
+                        CharacterView(friend: store.friends.first ?? FantasyFriend(), happy: true).frame(width: 60, height: 65).rotationEffect(.degrees(-12))
+                    }.padding(8).background(Capsule().fill(.white)).padding(.trailing, 10).allowsHitTesting(false)
+                }
+            }
+            .task(id: leaving) {
+                guard leaving else { return }
+                do { try await Task.sleep(nanoseconds: 320_000_000) } catch { return }
+                presentation.wrappedValue.dismiss()
+            }
     }
 }
 

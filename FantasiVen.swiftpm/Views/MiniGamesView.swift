@@ -30,7 +30,7 @@ struct MiniGamesView: View {
                                     .background(RoundedRectangle(cornerRadius: 30).fill(.white.opacity(0.9)))
                             }.buttonStyle(SquishStyle())
                             ForEach(MiniGameKind.allCases) { kind in
-                                NavigationLink(destination: MiniGameSessionView(kind: kind, friend: friend).id(friend.id)) {
+                                NavigationLink(destination: GameDestinationView(kind: kind, friend: friend).id(friend.id)) {
                                     HStack(spacing: 14) {
                                         MiniGameArt(kind: kind)
                                         VStack(alignment: .leading, spacing: 7) {
@@ -82,9 +82,9 @@ struct MiniGamesView: View {
 extension MiniGameKind {
     var tint: Color {
         switch self {
-        case .apples: return Color(red: 1, green: 0.70, blue: 0.15)
-        case .bubbles: return Color(red: 0.22, green: 0.77, blue: 1)
-        case .hide: return Color(red: 0.64, green: 0.87, blue: 0.22)
+        case .slide, .trampoline, .apples: return Color(red: 1, green: 0.70, blue: 0.15)
+        case .orchestra, .path, .bubbles: return Color(red: 0.22, green: 0.77, blue: 1)
+        case .kitchen, .hide: return Color(red: 0.64, green: 0.87, blue: 0.22)
         }
     }
 }

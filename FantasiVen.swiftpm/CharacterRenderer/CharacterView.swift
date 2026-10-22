@@ -193,6 +193,11 @@ private struct CreaturePainter {
     }
 
     func drawPiece(_ attachment: Attachment) {
+        if let color = friend.partColors?[attachment.rawValue] {
+            var colored = friend; colored.partColors = nil; colored.color = color; colored.accent = color
+            CreaturePainter(context: context, friend: colored).drawPiece(attachment)
+            return
+        }
         switch attachment {
         case .leftArm: drawArm(side: 0)
         case .rightArm: drawArm(side: 1)

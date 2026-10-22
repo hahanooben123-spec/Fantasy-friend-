@@ -15,6 +15,11 @@ struct MiniGameArt: View {
                         .frame(width: index == 1 ? 61 : 43, height: index == 1 ? 61 : 43)
                         .offset(x: [CGFloat(-23), 18, -6][index], y: [CGFloat(-16), 0, 26][index])
                 }
+            case .slide: TrackArtwork(track: SlideTrack()).padding(6)
+            case .trampoline: ToyGlyph(kind: .jump).padding(10)
+            case .kitchen: ToyGlyph(kind: .berry).padding(7)
+            case .orchestra: ToyGlyph(kind: .music).padding(7)
+            case .path: DestinationArt(kind: .village)
             case .hide:
                 BushToy().padding(.top, 32)
                 HStack(spacing: 10) {

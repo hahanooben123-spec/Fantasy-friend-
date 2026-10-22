@@ -33,7 +33,7 @@ struct FreeStudioView: View {
                         RoundButton(icon: "checkmark", label: store.t("done")) { presentation.wrappedValue.dismiss() }
                     }
                     Text(store.t(pending ? "tapPlace" : "freeHint")).font(.system(.subheadline, design: .rounded).weight(.bold)).multilineTextAlignment(.center)
-                    stage.frame(height: 360)
+                    stage.frame(height: 360).overlay(TouchDemonstration(activity: reaction))
                     if selectedPiece != nil { pieceTools }
                     HStack {
                         ForEach(PieceKind.allCases) { item in
@@ -227,6 +227,10 @@ struct FreeStudioView: View {
     private func applyTemplate(_ index: Int) {
         var copy = friend
         copy.body = [BodyKind.round, .oval, .cloud, .chubby][index]
+        copy.pieces = nil; copy.doodles = nil; copy.placements = nil; copy.partColors = nil
+        copy.accessories = index == 3 ? [1, 6] : []
+        copy.eyes = index == 1 ? 1 : index == 2 ? 3 : 0; copy.mouth = 0
+        selected = nil; pending = true
         copy.bodyWidth = nil; copy.bodyHeight = nil
         commit(copy)
     }

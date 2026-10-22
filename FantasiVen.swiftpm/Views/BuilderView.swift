@@ -122,6 +122,7 @@ struct BuilderView: View {
                     var strokes = value.doodles ?? []; strokes.append(stroke); value.doodles = strokes
                 } })
                 .overlay(StudioBurst(revision: revision))
+                .overlay(TouchDemonstration(activity: revision))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             if let attachment = attachment, part != .paint {
                 HStack(spacing: 10) {
@@ -309,6 +310,15 @@ struct BuilderView: View {
                 if let target = attachment {
                     CharacterView(friend: friend, piece: target).frame(height: 120)
                     placementTools(target)
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 12) {
+                        ForEach(0..<16) { color in
+                            Button {
+                                change { value in var colors = value.partColors ?? [:]; colors[target.rawValue] = color; value.partColors = colors }
+                            } label: {
+                                Circle().fill(GameStyle.palette[color]).frame(width: 48, height: 48).overlay(Circle().stroke(.white, lineWidth: 3))
+                            }.accessibilityLabel(store.t("color") + " \(color + 1)")
+                        }
+                    }
                 }
                 Text(store.t("dragHint")).font(.system(.subheadline, design: .rounded)).multilineTextAlignment(.center)
                 }.padding(24).frame(maxWidth: 560).frame(maxWidth: .infinity)

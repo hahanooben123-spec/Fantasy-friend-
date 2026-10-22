@@ -166,7 +166,7 @@ enum Words {
         "confirmDelete": ("Slet denne ven permanent?", "Permanently delete this friend?"),
         "cancel": ("Annuller", "Cancel"), "continue": ("Fortsæt", "Continue"),
         "sound": ("Lyde", "Sounds"), "music": ("Rolig musik", "Calm music"),
-        "language": ("Sprog", "Language"), "privacy": ("Kun på din iPhone. Ingen reklamer, køb eller internet.", "Only on your iPhone. No ads, purchases or internet."),
+        "language": ("Sprog", "Language"), "privacy": ("Kun på din enhed. Ingen reklamer, køb eller internet.", "Only on your device. No ads, purchases or internet."),
         "tickle": ("Kilde", "Tickle"), "feed": ("Mad", "Feed"), "jump": ("Hop", "Jump"),
         "dance": ("Dans", "Dance"), "sleep": ("Sove", "Sleep"), "hug": ("Kram", "Hug"),
         "forest": ("Magisk skov", "Magic forest"), "rainbow": ("Regnbueland", "Rainbow land"),
