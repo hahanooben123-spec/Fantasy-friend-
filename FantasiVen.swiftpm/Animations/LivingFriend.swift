@@ -6,6 +6,7 @@ struct LivingFriend: View {
     let friend: FantasyFriend
     var action: PlayAction = .jump
     var signal = 0
+    var audible = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var blink = false
     @State private var gaze = CGPoint.zero
@@ -74,7 +75,7 @@ struct LivingFriend: View {
             sleeping = chosen == .sleep
             happy = chosen != .sleep
             lift = 0; tilt = 0; squash = 1; sparkle = false
-            if chosen == .sleep { SoundService.shared.play(.click) } else { SoundService.shared.react(voice: friend.voice?.rawValue ?? 0) }
+            if audible { if chosen == .sleep { SoundService.shared.play(.click) } else { SoundService.shared.react(voice: friend.voice?.rawValue ?? 0) } }
             withAnimation(.easeOut(duration: 0.2)) { sparkle = chosen != .sleep }
             do {
                 if !reduceMotion {

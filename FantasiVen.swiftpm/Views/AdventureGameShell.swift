@@ -7,12 +7,13 @@ struct AdventureGameShell<Content: View>: View {
     @ViewBuilder var content: (Bool) -> Content
     @State private var paused = false
     var body: some View {
+        GeometryReader { geometry in
         ZStack {
             WorldBackdrop(world: kind == .orchestra ? .stars : kind == .kitchen ? .castle : .clouds, animated: !paused)
             VStack(spacing: 12) {
                 AdventureHeading(title: store.t(kind.titleKey), subtitle: store.t(kind.hintKey))
                 HStack {
-                    FlowerDifficulty()
+                    if kind != .kitchen { FlowerDifficulty() }
                     Spacer()
                     RoundButton(icon: "speaker.wave.2.fill", label: store.t("help")) { SoundService.shared.speak(store.t(kind.hintKey), language: store.settings.language) }
                     RoundButton(icon: paused ? "play.fill" : "pause.fill", label: store.t(paused ? "resumeGame" : "pauseGame")) { paused.toggle() }
@@ -20,7 +21,7 @@ struct AdventureGameShell<Content: View>: View {
                 ScrollView(showsIndicators: false) {
                     content(!paused && phase == .active)
                         .disabled(paused || phase != .active)
-                        .padding(18).frame(maxWidth: 950).frame(maxWidth: .infinity)
+                        .padding(18).frame(width: min(950, geometry.size.width)).frame(maxWidth: .infinity)
                 }
             }
             if paused {
@@ -31,6 +32,7 @@ struct AdventureGameShell<Content: View>: View {
                     CandyButton(title: store.t("resumeGame"), icon: "play.fill") { paused = false }
                 }.padding(28).frame(maxWidth: 350).background(RoundedRectangle(cornerRadius: 36).fill(.white))
             }
+        }
         }.foregroundColor(GameStyle.ink).navigationBarHidden(true)
             .onAppear { SoundService.shared.setWorld(kind == .orchestra ? .stars : kind == .kitchen ? .castle : .clouds) }
             .onDisappear { SoundService.shared.stopSpeech() }

@@ -334,6 +334,7 @@ extension FantasiVenTests {
         simulation.configure(friends: [original], mode: .yard, reducedMotion: true)
         for _ in 0..<10 { simulation.addFriend(original) }
         for _ in 0..<20 { simulation.addToy(0) }
+        XCTAssertEqual(simulation.scene.scaleMode, .fill)
         XCTAssertEqual(simulation.friendCount, 4)
         XCTAssertEqual(simulation.toyCount, 12)
         simulation.beginDrag(CGPoint(x: 180, y: 280))

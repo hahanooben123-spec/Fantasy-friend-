@@ -51,7 +51,7 @@ jobs:
           xcrun simctl launch --terminate-running-process "$DEVICE_ID" dk.fantasiven.app --preview-creator
           sleep 4
           xcrun simctl io "$DEVICE_ID" screenshot ui-previews/Creator.png
-          for ROUTE in free hub slide trampoline kitchen orchestra path yard room; do
+          for ROUTE in free hub slide ride trampoline bounce kitchen orchestra path yard room; do
             xcrun simctl launch --terminate-running-process "$DEVICE_ID" dk.fantasiven.app "--preview-play=$ROUTE"
             sleep 3
             xcrun simctl io "$DEVICE_ID" screenshot "ui-previews/$ROUTE.png"

@@ -15,11 +15,12 @@ struct OrchestraGameView: View {
     var body: some View {
         AdventureGameShell(kind: .orchestra) { active in
             VStack(spacing: 22) {
+                GeometryReader { geometry in
                 HStack(spacing: 4) {
                     ForEach(0..<3) { row in
                         VStack(spacing: 5) {
-                            LivingFriend(friend: performer(row), action: .dance, signal: signals[row])
-                                .frame(height: 130)
+                            LivingFriend(friend: performer(row), action: .dance, signal: signals[row], audible: false)
+                                .frame(width: max(1, (geometry.size.width - 8) / 3), height: 130)
                             Button {
                                 SoundService.shared.instrument(row, beat: max(0, beat)); signals[row] += 1
                             } label: {
@@ -29,11 +30,12 @@ struct OrchestraGameView: View {
                                 }.frame(maxWidth: .infinity, minHeight: 80)
                                     .background(CandySurface(color: StudioStyle.colors[row], cornerRadius: 22)).contentShape(Rectangle())
                             }.buttonStyle(SquishStyle())
-                        }
+                        }.frame(width: max(1, (geometry.size.width - 8) / 3))
                     }
                 }
+                }.frame(height: 225)
                 Text(store.t("songHint")).font(.system(.subheadline, design: .rounded).weight(.bold))
-                    .multilineTextAlignment(.center).padding(12).background(Capsule().fill(.white.opacity(0.9)))
+                    .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true).padding(12).background(Capsule().fill(.white.opacity(0.9)))
                 ScrollView(.horizontal, showsIndicators: true) {
                     VStack(spacing: 12) {
                         ForEach(0..<3) { row in

@@ -21,6 +21,7 @@ struct PhysicsAdventureView: View {
     @Environment(\.accessibilityReduceMotion) private var reduced
     let kind: MiniGameKind
     let friend: FantasyFriend
+    var previewRide = false
     @StateObject private var physics = PlayPhysics()
     @State private var track = SlideTrack()
     @State private var selectedPoint = 0
@@ -37,7 +38,7 @@ struct PhysicsAdventureView: View {
                     ZStack {
                         RoundedRectangle(cornerRadius: 32).fill(.white.opacity(0.5))
                         if kind == .slide { TrackArtwork(track: track) }
-                        RoomFurniture(kind: 0).frame(width: 80, height: 90).position(x: proxy.size.width * 0.93, y: proxy.size.height * 0.88)
+                        RoomFurniture(kind: 0).frame(width: 80, height: 90).position(x: proxy.size.width * 0.86, y: proxy.size.height * 0.88)
                         if running {
                             PhysicsPlayfield(physics: physics, trampoline: kind == .trampoline)
                         } else if kind == .slide {
@@ -55,6 +56,10 @@ struct PhysicsAdventureView: View {
                                     .accessibilityLabel(store.t("bodyHeight") + " \(point + 1)")
                             }
                             CharacterView(friend: friend).frame(width: 90, height: 96).position(x: proxy.size.width * 0.1, y: proxy.size.height * 0.12)
+                        } else {
+                            CharacterView(friend: friend).frame(width: 95, height: 102).position(x: proxy.size.width * 0.5, y: proxy.size.height * 0.3)
+                            Capsule().fill(StudioStyle.colors[1]).overlay(Capsule().stroke(.white, lineWidth: 3))
+                                .frame(width: proxy.size.width * 0.32, height: 18).position(x: proxy.size.width * 0.5, y: proxy.size.height * 0.83)
                         }
                         if physics.arrived && running {
                             VStack {
@@ -100,7 +105,10 @@ struct PhysicsAdventureView: View {
                 physics.setActive(false)
                 if physics.arrived { SoundService.shared.play(.complete) }
             }
-        }.onAppear { track = friend.track ?? SlideTrack() }
+        }.onAppear {
+            track = friend.track ?? SlideTrack()
+            if previewRide { start(active: true) }
+        }
             .onChange(of: track) { _ in saved = false }
             .onDisappear { physics.setActive(false) }
     }

@@ -21,7 +21,7 @@ struct MiniGameArt: View {
             case .orchestra: ToyGlyph(kind: .music).padding(7)
             case .path: DestinationArt(kind: .village)
             case .hide:
-                BushToy().padding(.top, 32)
+                BushToy().scaleEffect(0.55).frame(width: 105, height: 80).offset(y: 24)
                 HStack(spacing: 10) {
                     Ellipse().fill(.white).frame(width: 23, height: 29).overlay(Circle().fill(GameStyle.ink).frame(width: 10, height: 10))
                     Ellipse().fill(.white).frame(width: 23, height: 29).overlay(Circle().fill(GameStyle.ink).frame(width: 10, height: 10))

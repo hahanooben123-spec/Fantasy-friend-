@@ -48,7 +48,7 @@ final class PlayPhysics: ObservableObject {
     var toyCount: Int { objects.count }
     var friendCount: Int { actors.count }
 
-    init() { scene.backgroundColor = .clear; scene.scaleMode = .aspectFit; scene.isPaused = true }
+    init() { scene.backgroundColor = .clear; scene.scaleMode = .fill; scene.isPaused = true }
 
     func configure(friends: [FantasyFriend], mode: Mode, reducedMotion: Bool) {
         endDrag(); scene.physicsWorld.removeAllJoints(); scene.removeAllChildren()
