@@ -75,3 +75,15 @@ Status: **Swift 6-build og 13 automatiske tests bestået på iPhone-simulator fo
 - Farvemagi skal bevare placeringer og maling. Et nyt valg efter Fortryd skal tømme Gendan.
 - Gem, genstart og se malingen i galleri og ragdoll-leg. Gamle venner skal åbne uden maling.
 - Test stor tekst, Reducer bevægelse og VoiceOver på pensler, farver, dele og værktøjer.
+
+## Samlet UI/UX-gennemgang
+
+- Afprøv alle tre illustrerede indgange fra menuen, indstillinger, Vennebyen, detaljer, Legestuen og tilbage-navigation. Gentag med tom samling.
+- På lille iPhone og bred iPad: alle hovedhandlinger skal være synlige eller tilgængelige via naturligt scroll. Ingen overlappende titler eller afklippede navne.
+- Tjek Vennebyens nye-nabo-kort, navne, figurhjem og slettebekræftelse.
+- Åbn/luk venne- og verdensvælgeren i Legestuen. Valg skal opdatere figuren og miljøet; test alle seks legetøjsknapper.
+- Træk ragdollen med den nye størrelse mod alle fire kanter og nulstil. Vælg ven med flyttede dele og maling.
+- Afprøv værkstedets Tilpas-ark: drej, skaler, nulstil, fjern og luk. Kontrollér fortsat fortryd/gendan og maling.
+- Navngiv med navnechips, tilfældigt navn og tastatur. Gem og genåbn.
+- Skift dansk/engelsk og lyd/musik. Afprøv store tekststørrelser, VoiceOver og Reducer bevægelse.
+- Kontroller at små miljøkort er statiske, og at baggrundsanimering stopper, når appen ikke er aktiv.

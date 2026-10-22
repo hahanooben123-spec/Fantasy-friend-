@@ -72,7 +72,7 @@ struct StudioCategoryTile: View {
                 ForEach(0..<4) { index in Circle().fill(GameStyle.palette[(index * 3 + (part == .accent ? 2 : 0)) % 16]).frame(width: 18, height: 18).overlay(Circle().stroke(.white, lineWidth: 2)) }
             }
         case .paint:
-            Image(systemName: "paintbrush.pointed.fill").font(.system(size: 32, weight: .bold)).foregroundColor(GameStyle.purple).rotationEffect(.degrees(-22))
+            ToyGlyph(kind: .brush).rotationEffect(.degrees(-12))
         }
     }
 }

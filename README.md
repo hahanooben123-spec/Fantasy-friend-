@@ -86,3 +86,11 @@ Byggeren har et større, åbent arbejdsområde, en farverig materialebakke med f
 Mal selv: Vælg pensel, farve og størrelse, og tegn direkte på kroppen. Malingen følger kropsformen, mens ansigtet forbliver tydeligt. Maling gemmes lokalt med figuren og vises også i galleri og leg. Vask-knappen fjerner malingen og kan fortrydes. En penselstreg er ét fortryd-trin; lange streger samples automatisk for at begrænse punktmængden.
 
 Farvemagi skifter kun farverne og bevarer figurens dele og maling. Overrask mig skaber en ny kombination med samme navn og ID. Fortryd og gendan gør det muligt at eksperimentere. Placering, drejning og størrelse findes fortsat ved den valgte del.
+
+## Samlet UI/UX-overhaling
+
+Menuen er et illustreret univers med indgange til værksted, Vennebyen og Legestuen. Hovedfiguren er den senest gemte ven, når samlingen ikke er tom. Vennebyen har farvede figurhjem og en tydelig indgang til at skabe en ny nabo. Egne sidehoveder og store tilbageknapper erstatter systemets navigationsbjælker i børneområdet.
+
+Legetøjsknapperne er originale Canvas-illustrationer. Valg af ven og miljø åbnes i egne vælgere, så hovedskærmen har mere plads til fysisk leg. Miljøer har stærkere illustrationer og diskret skybevægelse, som respekterer Reducer bevægelse og appens livscyklus. Miniaturemiljøer animeres ikke.
+
+I værkstedet vises Mal selv tidligt. Den valgte dels præcise indstillinger samles under Tilpas med store knapper. Navngivning har trykbare navneforslag. iPad er tilføjet som understøttet enhed sammen med iPhone. Den samlede ændring valideres som én milepæl, og manuel touch-/layoutgennemgang på enhed er fortsat nødvendig.

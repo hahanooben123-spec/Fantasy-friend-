@@ -17,6 +17,8 @@ struct BuilderView: View {
     @State private var paintColor = 10
     @State private var brushWidth: Double = 9
     @State private var revision = 0
+    @State private var tools = false
+    private let categories: [Part] = [.body, .paint, .color, .eyes, .mouth, .extras, .arms, .legs, .accent]
 
     init(original: FantasyFriend, existing: Bool) {
         self.original = original; self.existing = existing
@@ -59,6 +61,7 @@ struct BuilderView: View {
                 if store.save(friend) { naming = false; celebration = true; SoundService.shared.play(.complete) }
             }.environmentObject(store)
         }
+        .sheet(isPresented: $tools) { toolsSheet }
         .alert(store.t("discard"), isPresented: $discard) {
             Button(store.t("cancel"), role: .cancel) {}
             Button(store.t("leave"), role: .destructive) { presentation.wrappedValue.dismiss() }
@@ -115,7 +118,19 @@ struct BuilderView: View {
                 } })
                 .overlay(StudioBurst(revision: revision))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            if let attachment = attachment, part != .paint { placementTools(attachment).frame(height: 54) }
+            if let attachment = attachment, part != .paint {
+                HStack(spacing: 10) {
+                    Image(systemName: "hand.draw.fill").foregroundColor(GameStyle.purple)
+                    Text(store.t(attachment.rawValue)).font(.system(.subheadline, design: .rounded).weight(.heavy))
+                    Spacer()
+                    Button { tools = true } label: {
+                        Label(store.t("adjustPart"), systemImage: "slider.horizontal.3")
+                            .font(.system(.subheadline, design: .rounded).weight(.bold))
+                            .padding(.horizontal, 17).frame(minHeight: 46)
+                            .background(Capsule().fill(Color.white.opacity(0.95)))
+                    }.buttonStyle(SquishStyle())
+                }.padding(.horizontal, 12).frame(minHeight: 54)
+            }
         }
         .padding(8).frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(RoundedRectangle(cornerRadius: 36).fill(Color.white.opacity(0.32)))
@@ -158,7 +173,7 @@ struct BuilderView: View {
     @ViewBuilder private func categoryDock(wide: Bool) -> some View {
         if wide {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 7), count: 3), spacing: 9) {
-                ForEach(Part.allCases, id: \.rawValue) { item in categoryTile(item) }
+                ForEach(categories, id: \.rawValue) { item in categoryTile(item) }
             }.padding(.horizontal, 12)
         } else {
             ScrollView(.horizontal, showsIndicators: false) {
@@ -276,25 +291,50 @@ struct BuilderView: View {
         change { $0.setPlacement(pose, for: target) }
     }
 
+    private var toolsSheet: some View {
+        ZStack {
+            StudioBackdrop()
+            ScrollView {
+                VStack(spacing: 20) {
+                HStack {
+                    Text(store.t(attachment?.rawValue ?? "adjustPart")).font(.system(.title2, design: .rounded).weight(.heavy))
+                    Spacer()
+                    RoundButton(icon: "xmark", label: store.t("close")) { tools = false }
+                }
+                if let target = attachment {
+                    CharacterView(friend: friend, piece: target).frame(height: 120)
+                    placementTools(target)
+                }
+                Text(store.t("dragHint")).font(.system(.subheadline, design: .rounded)).multilineTextAlignment(.center)
+                }.padding(24).frame(maxWidth: 560).frame(maxWidth: .infinity)
+            }
+        }.foregroundColor(GameStyle.ink)
+    }
+
+    private func partTool(_ icon: String, _ title: String, tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 10) {
+                Image(systemName: icon).font(.system(size: 27, weight: .bold))
+                Text(title).font(.system(.subheadline, design: .rounded).weight(.bold)).lineLimit(2).multilineTextAlignment(.center)
+            }.frame(maxWidth: .infinity).frame(minHeight: 90)
+                .background(RoundedRectangle(cornerRadius: 26).fill(tint.opacity(0.45)))
+                .overlay(RoundedRectangle(cornerRadius: 26).stroke(.white, lineWidth: 3))
+        }.buttonStyle(SquishStyle())
+    }
+
     private func placementTools(_ target: Attachment) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                RoundButton(icon: "rotate.left", label: store.t("rotateLeft")) {
-                    adjust(target) { $0.rotation = $0.rotation <= -180 ? 165 : $0.rotation - 15 }
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
+            partTool("rotate.left", store.t("rotateLeft"), tint: StudioStyle.colors[3]) { adjust(target) { $0.rotation = $0.rotation <= -180 ? 165 : $0.rotation - 15 } }
+            partTool("rotate.right", store.t("rotateRight"), tint: StudioStyle.colors[3]) { adjust(target) { $0.rotation = $0.rotation >= 180 ? -165 : $0.rotation + 15 } }
+            partTool("minus.magnifyingglass", store.t("smaller"), tint: StudioStyle.colors[2]) { adjust(target) { $0.scale = max(0.5, $0.scale - 0.1) } }
+            partTool("plus.magnifyingglass", store.t("bigger"), tint: StudioStyle.colors[2]) { adjust(target) { $0.scale = min(1.5, $0.scale + 0.1) } }
+            partTool("arrow.counterclockwise", store.t("resetPart"), tint: StudioStyle.colors[0]) { change { $0.setPlacement(PartPlacement(), for: target) } }
+            if let index = target.extraIndex {
+                partTool("trash", store.t("removePart"), tint: StudioStyle.colors[1]) {
+                    change { $0.accessories.remove(index); $0.setPlacement(PartPlacement(), for: target) }
+                    attachment = nil; tools = false
                 }
-                RoundButton(icon: "rotate.right", label: store.t("rotateRight")) {
-                    adjust(target) { $0.rotation = $0.rotation >= 180 ? -165 : $0.rotation + 15 }
-                }
-                RoundButton(icon: "minus.magnifyingglass", label: store.t("smaller")) { adjust(target) { $0.scale = max(0.5, $0.scale - 0.1) } }
-                RoundButton(icon: "plus.magnifyingglass", label: store.t("bigger")) { adjust(target) { $0.scale = min(1.5, $0.scale + 0.1) } }
-                RoundButton(icon: "arrow.counterclockwise", label: store.t("resetPart")) { change { $0.setPlacement(PartPlacement(), for: target) } }
-                if let index = target.extraIndex {
-                    RoundButton(icon: "trash", label: store.t("removePart")) {
-                        change { $0.accessories.remove(index); $0.setPlacement(PartPlacement(), for: target) }
-                        attachment = nil
-                    }
-                }
-            }.padding(.horizontal, 24)
+            }
         }
     }
 
@@ -408,16 +448,25 @@ private struct NamingView: View {
     var save: () -> Void
     var body: some View {
         ZStack {
-            WorldBackdrop(world: .clouds)
+            StudioBackdrop()
             ScrollView {
                 VStack(spacing: 22) {
                     HStack { Spacer(); RoundButton(icon: "xmark", label: store.t("close")) { presentation.wrappedValue.dismiss() } }
-                    CharacterView(friend: friend).frame(height: 190)
+                    LivingFriend(friend: friend).frame(height: 210)
                     Text(store.t("name")).font(.system(.title2, design: .rounded).weight(.heavy))
                     TextField(store.t("name"), text: Binding(get: { friend.name }, set: { friend.name = String($0.prefix(30)) }))
                         .font(.system(.title2, design: .rounded)).multilineTextAlignment(.center)
                         .padding(18).background(RoundedRectangle(cornerRadius: 20).fill(.white))
                         .submitLabel(.done)
+                    HStack(spacing: 9) {
+                        ForEach(Array(Words.names.prefix(4)), id: \.self) { suggestion in
+                            Button { friend.name = suggestion } label: {
+                                Text(suggestion).font(.system(.caption, design: .rounded).weight(.heavy))
+                                    .padding(.horizontal, 10).frame(minHeight: 44)
+                                    .background(Capsule().fill(StudioStyle.colors[0].opacity(0.4)))
+                            }.buttonStyle(SquishStyle())
+                        }
+                    }
                     CandyButton(title: store.t("suggest"), icon: "shuffle", color: Color(red: 0.28, green: 0.66, blue: 0.60)) {
                         friend.name = Words.names.filter { $0 != friend.name }.randomElement() ?? "Bimse"
                     }

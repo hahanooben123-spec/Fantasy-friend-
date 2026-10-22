@@ -6,6 +6,20 @@ enum Words {
         return language == .da ? pair.0 : pair.1
     }
     static let entries: [String: (String, String)] = [
+        "friendVillage": ("Vennebyen", "Friend village"), "playRoom": ("Legestuen", "Playroom"),
+        "studioDoorHint": ("Mal, bland og skab en helt særlig ven", "Paint, mix and make a special friend"),
+        "villageDoorHint": ("Besøg alle dine fantasivenner", "Visit all your fantasy friends"),
+        "playDoorHint": ("Kram, dans og leg sammen", "Hug, dance and play together"),
+        "homePrompt": ("Hvad skal vi finde på?", "What shall we do today?"),
+        "homeFooter": ("En lille verden. En kæmpestor fantasi.", "A little world. A great big imagination."),
+        "villageSubtitle": ("Her bor alle dine fantasivenner", "All your fantasy friends live here"),
+        "newFriend": ("En ny nabo", "A new neighbor"),
+        "friendDetailHint": ("Tryk på mig og sig hej!", "Tap me and say hello!"),
+        "playTogether": ("Leg med mig", "Play with me"), "editLook": ("Giv mig et nyt look", "Give me a new look"),
+        "chooseFriend": ("Vælg ven", "Choose friend"), "chooseWorld": ("Vælg verden", "Choose world"),
+        "settingsHint": ("Gør legen til din egen", "Make playtime your own"),
+        "settingsGreeting": ("Skal vi skrue op for fantasien?", "Shall we turn up the imagination?"),
+        "adjustPart": ("Tilpas", "Adjust"),
         "creativeStudio": ("Fantasi-værksted", "Imagination studio"),
         "studioHint": ("Her bestemmer din fantasi!", "Your imagination makes the rules!"),
         "paint": ("Mal selv", "Paint"),

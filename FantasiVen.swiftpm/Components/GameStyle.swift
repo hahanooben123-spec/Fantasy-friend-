@@ -2,7 +2,7 @@ import SwiftUI
 
 enum GameStyle {
     static let ink = Color(red: 0.23, green: 0.19, blue: 0.36)
-    static let purple = Color(red: 0.49, green: 0.35, blue: 0.78)
+    static let purple = Color(red: 0.43, green: 0.28, blue: 0.73)
     static let palette: [Color] = [
         Color(red: 0.65, green: 0.49, blue: 0.88), Color(red: 0.96, green: 0.58, blue: 0.70),
         Color(red: 0.99, green: 0.73, blue: 0.46), Color(red: 0.98, green: 0.85, blue: 0.43),
@@ -28,18 +28,19 @@ struct CandyButton: View {
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").font(.system(size: 14, weight: .heavy))
             }
-            .foregroundColor(.white).padding(.horizontal, 21).frame(minHeight: 58)
-            .background(RoundedRectangle(cornerRadius: 24).fill(color))
-            .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.35), lineWidth: 2))
-            .shadow(color: color.opacity(0.25), radius: 0, y: 5)
+            .foregroundColor(.white).padding(.horizontal, 21).frame(minHeight: 64)
+            .background(RoundedRectangle(cornerRadius: 27).fill(LinearGradient(colors: [color.opacity(0.88), color], startPoint: .topLeading, endPoint: .bottomTrailing)))
+            .overlay(RoundedRectangle(cornerRadius: 27).stroke(Color.white.opacity(0.35), lineWidth: 2))
+            .shadow(color: color.opacity(0.25), radius: 0, y: 6)
         }.buttonStyle(SquishStyle())
     }
 }
 
 struct SquishStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reducedMotion
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label.scaleEffect(configuration.isPressed ? 0.94 : 1)
-            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+        configuration.label.scaleEffect(configuration.isPressed && !reducedMotion ? 0.94 : 1)
+            .animation(reducedMotion ? nil : .easeOut(duration: 0.16), value: configuration.isPressed)
     }
 }
 
@@ -51,7 +52,9 @@ struct RoundButton: View {
         Button(action: action) {
             Image(systemName: icon).font(.system(size: 21, weight: .bold))
                 .foregroundColor(GameStyle.ink).frame(width: 50, height: 50)
-                .background(Circle().fill(Color.white.opacity(0.9)))
+                .background(Circle().fill(Color.white.opacity(0.94)))
+                .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                .shadow(color: GameStyle.purple.opacity(0.1), radius: 0, y: 3)
         }.buttonStyle(SquishStyle()).accessibilityLabel(label)
     }
 }

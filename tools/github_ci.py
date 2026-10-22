@@ -5,6 +5,7 @@ import json
 import subprocess
 import urllib.request
 import zipfile
+from pathlib import Path
 
 BASE = "https://api.github.com/repos/hahanooben123-spec/Fantasy-friend-"
 
@@ -17,12 +18,28 @@ def request(path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=["status", "logs"])
+    parser.add_argument("action", choices=["status", "logs", "screenshots"])
     parser.add_argument("--run", type=int)
     args = parser.parse_args()
     if args.action == "status":
         data = json.loads(request("/actions/runs?per_page=3"))
         print(json.dumps([{k: run.get(k) for k in ["id", "head_sha", "status", "conclusion", "html_url"]} for run in data["workflow_runs"]], indent=2))
+    elif args.action == "screenshots":
+        if not args.run:
+            parser.error("--run is required for screenshots")
+        items = json.loads(request(f"/actions/runs/{args.run}/artifacts"))["artifacts"]
+        artifact = next(item for item in items if item["name"] == "ui-previews")
+        archive = zipfile.ZipFile(io.BytesIO(request(f"/actions/artifacts/{artifact['id']}/zip")))
+        folder = (Path(__file__).resolve().parents[1] / "artifacts" / "screenshots" / str(args.run)).resolve()
+        folder.mkdir(parents=True, exist_ok=True)
+        for name in archive.namelist():
+            if not name.lower().endswith(".png"):
+                continue
+            target = (folder / Path(name).name).resolve()
+            if target.parent != folder:
+                raise ValueError("Invalid artifact path")
+            target.write_bytes(archive.read(name))
+            print(target)
     else:
         if not args.run:
             parser.error("--run is required for logs")

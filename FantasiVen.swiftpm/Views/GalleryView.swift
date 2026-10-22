@@ -5,31 +5,32 @@ struct GalleryView: View {
     var onEdit: (FantasyFriend, Bool) -> Void
     var body: some View {
         ZStack {
-            WorldBackdrop(world: .clouds)
-            if store.friends.isEmpty {
-                EmptyCollectionView { onEdit(FantasyFriend(), false) }
-            } else {
-                ScrollView {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), spacing: 16)], spacing: 18) {
-                        ForEach(store.friends) { friend in
-                            NavigationLink(destination: FriendDetailView(friendID: friend.id, onEdit: onEdit)) {
-                                VStack(spacing: 0) {
-                                    CharacterView(friend: friend).frame(height: 155)
-                                    Text(friend.name).font(.system(.headline, design: .rounded)).lineLimit(2).frame(minHeight: 44).padding(.horizontal, 8)
-                                }.padding(8).frame(maxWidth: .infinity)
-                                    .background(RoundedRectangle(cornerRadius: 29).fill(.white.opacity(0.72)))
+            WorldBackdrop(world: .meadow)
+            VStack(spacing: 14) {
+                AdventureHeading(title: store.t("friendVillage"), subtitle: store.t("villageSubtitle"))
+                if store.friends.isEmpty { EmptyCollectionView { onEdit(FantasyFriend(), false) } }
+                else {
+                    ScrollView {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 148, maximum: 235), spacing: 16)], spacing: 22) {
+                            Button { onEdit(FantasyFriend(), false) } label: {
+                                VStack(spacing: 12) {
+                                    DestinationArt(kind: .studio).frame(height: 151)
+                                    Label(store.t("newFriend"), systemImage: "plus.circle.fill")
+                                        .font(.system(.headline, design: .rounded).weight(.heavy)).multilineTextAlignment(.center)
+                                }.foregroundColor(GameStyle.ink).padding(12).frame(maxWidth: .infinity).frame(height: 246)
+                                    .background(RoundedRectangle(cornerRadius: 38).fill(StudioStyle.colors[0].opacity(0.65)))
+                                    .overlay(RoundedRectangle(cornerRadius: 38).stroke(.white, style: StrokeStyle(lineWidth: 3, dash: [9, 6])))
                             }.buttonStyle(SquishStyle())
-                        }
-                    }.padding(20)
+                            ForEach(store.friends) { friend in
+                                NavigationLink(destination: FriendDetailView(friendID: friend.id, onEdit: onEdit)) {
+                                    FriendHomeCard(friend: friend)
+                                }.buttonStyle(SquishStyle()).accessibilityLabel(friend.name)
+                            }
+                        }.padding(.horizontal, 20).padding(.vertical, 10).frame(maxWidth: 1150).frame(maxWidth: .infinity)
+                    }
                 }
             }
-        }.foregroundColor(GameStyle.ink).navigationTitle(store.t("friends"))
-            .navigationBarTitleDisplayMode(.inline).navigationBarHidden(false)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { onEdit(FantasyFriend(), false) } label: { Image(systemName: "plus.circle.fill").font(.title2).frame(width: 44, height: 44) }.accessibilityLabel(store.t("create"))
-                }
-            }
+        }.foregroundColor(GameStyle.ink).navigationBarHidden(true)
     }
 }
 
@@ -38,12 +39,15 @@ struct EmptyCollectionView: View {
     var create: () -> Void
     var body: some View {
         ScrollView {
-            VStack(spacing: 22) {
-                CharacterView(friend: FantasyFriend()).frame(height: 220)
-                Text(store.t("empty")).font(.system(.title2, design: .rounded).weight(.heavy)).multilineTextAlignment(.center)
+            VStack(spacing: 18) {
+                ZStack {
+                    DestinationArt(kind: .village).opacity(0.65).frame(height: 210)
+                    LivingFriend(friend: FantasyFriend()).frame(height: 238).offset(y: 20)
+                }.frame(height: 260)
+                Text(store.t("empty")).font(.system(size: 29, weight: .heavy, design: .rounded)).multilineTextAlignment(.center)
                 Text(store.t("emptyHint")).font(.system(.body, design: .rounded)).multilineTextAlignment(.center)
-                CandyButton(title: store.t("create"), icon: "plus", action: create)
-            }.padding(28).frame(maxWidth: 500).frame(maxWidth: .infinity)
+                CandyButton(title: store.t("create"), icon: "paintbrush.pointed.fill", color: GameStyle.purple, action: create)
+            }.padding(26).frame(maxWidth: 520).frame(maxWidth: .infinity)
         }
     }
 }
@@ -58,37 +62,37 @@ struct FriendDetailView: View {
     @State private var gatePassed = false
     private var friend: FantasyFriend? { store.friends.first { $0.id == friendID } }
     var body: some View {
-        ZStack {
-            WorldBackdrop(world: friend?.world ?? .forest)
-            if let friend = friend {
-                ScrollView {
-                    VStack(spacing: 20) {
-                        LivingFriend(friend: friend).frame(height: 320)
-                        Text(friend.name).font(.system(.largeTitle, design: .rounded).weight(.heavy))
-                        NavigationLink(destination: PlaygroundView(initialID: friend.id, onCreate: { onEdit(FantasyFriend(), false) })) {
-                            MenuTile(title: store.t("play"), icon: "sparkles", color: Color(red: 0.26, green: 0.65, blue: 0.57))
+        GeometryReader { geometry in
+            ZStack {
+                WorldBackdrop(world: friend?.world ?? .forest)
+                if let friend = friend {
+                    VStack(spacing: 8) {
+                        AdventureHeading(title: friend.name, subtitle: store.t("friendDetailHint"))
+                        ScrollView {
+                            VStack(spacing: 19) {
+                                LivingFriend(friend: friend).frame(height: min(geometry.size.height * 0.48, 420))
+                                NavigationLink(destination: PlaygroundView(initialID: friend.id, onCreate: { onEdit(FantasyFriend(), false) })) {
+                                    MenuTile(title: store.t("playTogether"), icon: "sparkles", color: Color(red: 0.22, green: 0.62, blue: 0.5))
+                                }.buttonStyle(SquishStyle())
+                                CandyButton(title: store.t("editLook"), icon: "paintbrush.pointed.fill") { onEdit(friend, true) }
+                                Button { gate = true } label: {
+                                    Label(store.t("delete"), systemImage: "lock.fill").font(.system(.footnote, design: .rounded)).frame(minHeight: 48)
+                                }.foregroundColor(GameStyle.ink.opacity(0.65))
+                            }.padding(.horizontal, 24).padding(.bottom, 24).frame(maxWidth: 560).frame(maxWidth: .infinity)
                         }
-                        CandyButton(title: store.t("edit"), icon: "paintbrush.fill") { onEdit(friend, true) }
-                        Button { gate = true } label: {
-                            Label(store.t("delete"), systemImage: "lock.fill").font(.system(.footnote, design: .rounded)).frame(minHeight: 48)
-                        }.foregroundColor(GameStyle.ink.opacity(0.7))
-                    }.padding(24).frame(maxWidth: 500).frame(maxWidth: .infinity)
+                    }
                 }
             }
-        }.foregroundColor(GameStyle.ink)
-            .navigationTitle(friend?.name ?? "FantasiVen").navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $gate, onDismiss: { confirm = gatePassed; gatePassed = false }) {
-                ParentGate {
-                    gatePassed = true
-                    gate = false
-                }.environmentObject(store)
+        }.foregroundColor(GameStyle.ink).navigationBarHidden(true)
+        .sheet(isPresented: $gate, onDismiss: { confirm = gatePassed; gatePassed = false }) {
+            ParentGate { gatePassed = true; gate = false }.environmentObject(store)
+        }
+        .alert(store.t("confirmDelete"), isPresented: $confirm) {
+            Button(store.t("cancel"), role: .cancel) {}
+            Button(store.t("delete"), role: .destructive) {
+                if let friend = friend, store.delete(friend) { presentation.wrappedValue.dismiss() }
             }
-            .alert(store.t("confirmDelete"), isPresented: $confirm) {
-                Button(store.t("cancel"), role: .cancel) {}
-                Button(store.t("delete"), role: .destructive) {
-                    if let friend = friend, store.delete(friend) { presentation.wrappedValue.dismiss() }
-                }
-            }
+        }
     }
 }
 

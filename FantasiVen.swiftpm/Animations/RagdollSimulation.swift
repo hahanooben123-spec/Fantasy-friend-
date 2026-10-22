@@ -14,7 +14,7 @@ struct RagdollFrame {
 @MainActor
 final class RagdollSimulation: ObservableObject {
     nonisolated static let stageSize = CGSize(width: 600, height: 440)
-    nonisolated static let characterScale: CGFloat = 0.78
+    nonisolated static let characterScale: CGFloat = 0.98
     @Published private(set) var frame = RagdollFrame()
     let scene = SKScene(size: stageSize)
     private let body = SKNode()

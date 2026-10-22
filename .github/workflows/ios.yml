@@ -16,6 +16,22 @@ jobs:
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
       - name: Run persistence and model tests
         run: xcodebuild -project FantasiVen.xcodeproj -scheme FantasiVen -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE_ID" -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO -resultBundlePath TestResults.xcresult test
+      - name: Capture real simulator UI previews
+        run: |
+          mkdir -p ui-previews
+          xcrun simctl status_bar "$DEVICE_ID" override --time "9:41" --batteryState charged --batteryLevel 100
+          xcrun simctl launch --terminate-running-process "$DEVICE_ID" dk.fantasiven.app
+          sleep 3
+          xcrun simctl io "$DEVICE_ID" screenshot ui-previews/Home.png
+          xcrun simctl launch --terminate-running-process "$DEVICE_ID" dk.fantasiven.app --preview-creator
+          sleep 3
+          xcrun simctl io "$DEVICE_ID" screenshot ui-previews/Creator.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-previews
+          path: ui-previews/
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -18,7 +18,7 @@ struct RagdollPlayground: View {
             let size = CGSize(width: width, height: width * 440 / 600)
             ZStack(alignment: .topTrailing) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 30).fill(Color.white.opacity(0.19))
+                    RoundedRectangle(cornerRadius: 36).fill(Color.white.opacity(0.08))
                     SpriteView(scene: simulation.scene, options: [.allowsTransparency])
                         .allowsHitTesting(false).accessibilityHidden(true)
                     RagdollCharacterView(frame: simulation.frame)
