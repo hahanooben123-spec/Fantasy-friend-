@@ -6,6 +6,15 @@ enum Words {
         return language == .da ? pair.0 : pair.1
     }
     static let entries: [String: (String, String)] = [
+        "creativeStudio": ("Fantasi-værksted", "Imagination studio"),
+        "studioHint": ("Her bestemmer din fantasi!", "Your imagination makes the rules!"),
+        "paint": ("Mal selv", "Paint"),
+        "paintHint": ("Mal farver og mønstre på kroppen", "Paint colors and patterns on the body"),
+        "colorMagic": ("Farvemagi", "Color magic"), "surprise": ("Overrask mig", "Surprise me"),
+        "done": ("Færdig", "Done"), "redo": ("Gendan", "Redo"),
+        "brush": ("Pensel", "Brush"), "clearPaint": ("Vask malingen af", "Wash off paint"),
+        "brushSize": ("Penselstørrelse", "Brush size"),
+        "piecesHint": ("Vælg, træk og prøv dig frem", "Choose, drag and experiment"),
         "ragdollHint": ("Grib din ven, træk rundt og slip!", "Grab your friend, move and let go!"),
         "resetPlay": ("Sæt vennen på plads", "Put your friend back"),
         "workshop": ("Figurværksted", "Character workshop"),
@@ -60,7 +69,7 @@ enum Words {
         "spikes": ("Små pigge", "Little spikes"), "flower": ("Blomst", "Flower"),
         "scarf": ("Halstørklæde", "Scarf"), "freckles": ("Fregner", "Freckles")
     ]
-    static let partKeys = ["body", "color", "accent", "eyes", "mouth", "arms", "legs", "extras"]
+    static let partKeys = ["body", "color", "accent", "eyes", "mouth", "arms", "legs", "extras", "paint"]
     static let bodyKeys = ["round", "oval", "pear", "cushion", "drop", "cloud", "bean", "chubby"]
     static let worldKeys = ["forest", "rainbow", "stars", "clouds", "meadow", "castle"]
     static let extraKeys = ["horns", "ears", "antennae", "wings", "tail", "hat", "bow", "glasses", "crown", "spots", "stripes", "spikes", "flower", "scarf", "freckles"]

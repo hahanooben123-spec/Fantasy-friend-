@@ -2,7 +2,7 @@ import Foundation
 
 enum BodyKind: Int, Codable, CaseIterable { case round, oval, pear, cushion, drop, cloud, bean, chubby }
 enum World: Int, Codable, CaseIterable { case forest, rainbow, stars, clouds, meadow, castle }
-enum Part: Int, CaseIterable { case body, color, accent, eyes, mouth, arms, legs, extras }
+enum Part: Int, CaseIterable { case body, color, accent, eyes, mouth, arms, legs, extras, paint }
 
 struct FantasyFriend: Identifiable, Codable, Equatable {
     var id = UUID()
@@ -18,6 +18,7 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
     var world: World = .forest
     // Optional so friends saved before free placement still decode unchanged.
     var placements: [String: PartPlacement]?
+    var doodles: [DoodleStroke]?
 
     func placement(for attachment: Attachment) -> PartPlacement {
         placements?[attachment.rawValue] ?? PartPlacement()
@@ -48,7 +49,8 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
         (0..<12).contains(eyes) && (0..<10).contains(mouth) &&
         (0..<8).contains(arms) && (0..<8).contains(legs) &&
         accessories.allSatisfy { (0..<15).contains($0) } && name.count <= 30 &&
-        (placements ?? [:]).allSatisfy { Attachment(rawValue: $0.key) != nil && $0.value.isValid }
+        (placements ?? [:]).allSatisfy { Attachment(rawValue: $0.key) != nil && $0.value.isValid } &&
+        (doodles ?? []).allSatisfy(\.isValid)
     }
 }
 

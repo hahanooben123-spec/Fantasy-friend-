@@ -63,3 +63,15 @@ Status: **Swift 6-build og 13 automatiske tests bestået på iPhone-simulator fo
 - Skift ven og miljø under leg. Forlad legepladsen og sæt appen i baggrunden.
 - Genåbn byggeren: ragdoll-leg må ikke have ændret de gemte placeringer.
 - Slå Reducer bevægelse til: direkte flytning skal virke uden dinglen eller fald.
+
+## Kreativt værksted
+
+- Afprøv bredt iPad-vindue og smalt vindue: bakke ved siden af/under figuren, stor figur, tilgængelige Færdig/Fortryd/Gendan.
+- Gennemgå alle illustrerede kategorier og grid med dele; øjne og munde skal være tydelige nærbilleder.
+- Træk fra bakken og flyt direkte på figuren. Placering, størrelse og drejning skal fortsat virke.
+- Mal prikker og streger i alle farver og tre størrelser. Langsom/hurtig maling, meget lang streg og annulleret berøring.
+- Malingen skal ligge på kroppen og bevare synlige øjne og mund. Skift krop og kontrollér at malingen følger den.
+- Vask malingen af. Fortryd og gendan både vask, penselstrøg, farvemagi, flytning og tilfældig figur.
+- Farvemagi skal bevare placeringer og maling. Et nyt valg efter Fortryd skal tømme Gendan.
+- Gem, genstart og se malingen i galleri og ragdoll-leg. Gamle venner skal åbne uden maling.
+- Test stor tekst, Reducer bevægelse og VoiceOver på pensler, farver, dele og værktøjer.

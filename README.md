@@ -78,3 +78,11 @@ Legepladsen bruger nu SpriteKit-fysik med en krop, fire separate lemmer, pin-led
 Den eksisterende Canvas-renderer tegner vennen ud fra fysikkens positioner og vinkler, inklusive den gemte pynt og delplaceringer. Fysikpositioner er midlertidige og skrives aldrig til samlingen. Legeknapperne giver fortsat ansigtsreaktioner og nu også fysiske impulser. Fysikken pauses, når legepladsen forlades eller appen går i baggrunden. Ved Reducer bevægelse kan figuren flyttes direkte uden tyngdekraft eller dinglende lemmer.
 
 Den samlede bevægelses- og berøringsoplevelse skal fortsat afprøves manuelt i Playgrounds på iPad eller Xcode Simulator. SpriteKit er et indbygget Apple-framework; der er ingen nye pakker eller tjenester.
+
+## Farverigt fantasi-værksted
+
+Byggeren har et større, åbent arbejdsområde, en farverig materialebakke med flere dele synlige samtidig og illustrerede kategorier. På brede iPad-vinduer står figur og bakke ved siden af hinanden. På smalle vinduer ligger bakken under figuren. Øjne og munde vises i nærbillede.
+
+Mal selv: Vælg pensel, farve og størrelse, og tegn direkte på kroppen. Malingen følger kropsformen, mens ansigtet forbliver tydeligt. Maling gemmes lokalt med figuren og vises også i galleri og leg. Vask-knappen fjerner malingen og kan fortrydes. En penselstreg er ét fortryd-trin; lange streger samples automatisk for at begrænse punktmængden.
+
+Farvemagi skifter kun farverne og bevarer figurens dele og maling. Overrask mig skaber en ny kombination med samme navn og ID. Fortryd og gendan gør det muligt at eksperimentere. Placering, drejning og størrelse findes fortsat ved den valgte del.

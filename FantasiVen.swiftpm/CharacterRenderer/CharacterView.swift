@@ -6,10 +6,20 @@ struct CharacterView: View {
     var happy = false
     var asleep = false
     var piece: Attachment? = nil
+    var detail: Part? = nil
 
     var body: some View {
         Canvas { context, size in
-            if let piece = piece {
+            if detail == .eyes || detail == .mouth {
+                let rect = detail == .eyes ? CGRect(x: 85, y: 121, width: 129, height: 65) : CGRect(x: 119, y: 184, width: 68, height: 48)
+                let scale = min(size.width / rect.width, size.height / rect.height) * 0.82
+                context.translateBy(x: size.width / 2, y: size.height / 2)
+                context.scaleBy(x: scale, y: scale)
+                context.translateBy(x: -rect.midX, y: -rect.midY)
+                let painter = CreaturePainter(context: context, friend: friend)
+                if detail == .eyes { painter.drawEyes(closed: false, happy: false) }
+                else { painter.drawMouth(happy: false, asleep: false) }
+            } else if let piece = piece {
                 let rect = AttachmentLayout.bounds(for: piece, friend: friend)
                 let scale = min(size.width / rect.width, size.height / rect.height) * 0.84
                 context.translateBy(x: size.width / 2, y: size.height / 2)
@@ -107,10 +117,28 @@ private struct CreaturePainter {
             let paintingContext = friend.placement(for: attachment) == PartPlacement() ? clipped : context
             CreaturePainter(context: paintingContext, friend: friend).placed(for: attachment).drawPiece(attachment)
         }
+        drawDoodles(in: clipped)
         ellipse(95, 106, 15, 28, .white.opacity(0.18))
         ellipse(87, 180, 27, 15, Color.pink.opacity(0.32)); ellipse(190, 180, 27, 15, Color.pink.opacity(0.32))
         drawEyes(closed: blink || asleep, happy: happy)
         drawMouth(happy: happy, asleep: asleep)
+    }
+
+    func drawDoodles(in canvas: GraphicsContext) {
+        for stroke in friend.doodles ?? [] {
+            guard stroke.isValid, let first = stroke.points.first else { continue }
+            let color = GameStyle.palette[stroke.color]
+            let start = CGPoint(x: first.x * 300, y: first.y * 320)
+            if stroke.points.count == 1 {
+                let radius = CGFloat(stroke.width) / 2
+                canvas.fill(Path(ellipseIn: CGRect(x: start.x - radius, y: start.y - radius, width: radius * 2, height: radius * 2)), with: .color(color))
+            } else {
+                var line = Path()
+                line.move(to: start)
+                for point in stroke.points.dropFirst() { line.addLine(to: CGPoint(x: point.x * 300, y: point.y * 320)) }
+                canvas.stroke(line, with: .color(color), style: StrokeStyle(lineWidth: CGFloat(stroke.width), lineCap: .round, lineJoin: .round))
+            }
+        }
     }
 
     func drawPiece(_ attachment: Attachment) {

@@ -174,4 +174,30 @@ final class FantasiVenTests: XCTestCase {
         XCTAssertEqual(simulation.frame.friend.placement(for: .hat), friend.placement(for: .hat))
         simulation.setActive(false)
     }
+
+    func testPaintRoundTripsAndOldFriendsHaveBlankCanvas() throws {
+        var friend = FantasyFriend()
+        let old = try JSONDecoder().decode(FantasyFriend.self, from: JSONEncoder().encode(friend))
+        XCTAssertNil(old.doodles)
+        friend.doodles = [DoodleStroke(points: [DoodlePoint(x: 0.3, y: 0.4), DoodlePoint(x: 0.6, y: 0.7)], color: 4, width: 9)]
+        XCTAssertTrue(friend.isValid)
+        let restored = try JSONDecoder().decode(FantasyFriend.self, from: JSONEncoder().encode(friend))
+        XCTAssertEqual(restored, friend)
+        friend.doodles = [DoodleStroke(points: [DoodlePoint(x: -0.1, y: 0.5)], color: 4, width: 9)]
+        XCTAssertFalse(friend.isValid)
+    }
+
+    @MainActor
+    func testPaintPersistsThroughSaveAndReopen() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = FriendStore(directory: directory)
+        var friend = FantasyFriend()
+        friend.doodles = [DoodleStroke(points: [DoodlePoint(x: 0.5, y: 0.6)], color: 10, width: 17)]
+        XCTAssertTrue(store.save(friend))
+        XCTAssertEqual(FriendStore(directory: directory).friends.first?.doodles, friend.doodles)
+        friend.doodles = nil
+        XCTAssertTrue(store.save(friend))
+        XCTAssertNil(FriendStore(directory: directory).friends.first?.doodles)
+    }
 }
