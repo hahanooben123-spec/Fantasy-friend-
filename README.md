@@ -54,7 +54,7 @@ Tilføj eventuelt egne `click.wav`, `reaction.wav`, `complete.wav` og `music.wav
 
 ## Verifikation og næste fase
 
-**Dette projekt er udviklet på Windows uden Swift/Xcode. Det er ikke kompileret eller visuelt afprøvet i en iOS-simulator endnu.** Python-kontrollen verificerer filreferencer, projektobjekter, scheme-XML, plist-filer, ikon og tekstnøgler; den erstatter ikke kompilering eller XCTest.
+**Koden i commit 2d73361 er bygget med Swift 6 på GitHubs macOS-runner, og alle 13 XCTest-tests er bestået på iPhone-simulator.** Den faktiske touchoplevelse og det visuelle resultat af de nye funktioner mangler fortsat manuel afprøvning på iPad/iPhone. Python-kontrollen verificerer filreferencer, projektobjekter, scheme-XML, plist-filer, ikon og tekstnøgler; den erstatter ikke kompilering eller XCTest.
 
 ```sh
 python tools/check_project.py
@@ -63,7 +63,7 @@ xcodebuild -project FantasiVen.xcodeproj -scheme FantasiVen -sdk iphonesimulator
 xcodebuild -project FantasiVen.xcodeproj -scheme FantasiVen -destination 'platform=iOS Simulator,name=DIN IPHONE' CODE_SIGNING_ALLOWED=NO test
 ```
 
-Der er XCTest-dækning af Codable-rundtur, gem/rediger/genåbn/slet, defekt fil, mislykket skrivning og indstillinger. GitHub-workflowet bygger først og kører derefter testene på macOS, når projektet lægges i et GitHub-repository. Det er ikke kørt fra denne mappe.
+Der er XCTest-dækning af Codable-rundtur, gem/rediger/genåbn/slet, defekt fil, mislykket skrivning og indstillinger. GitHub-workflowet bygger først og kører derefter testene på macOS, når projektet lægges i et GitHub-repository. Den bekræftede kørsel for figurværksted og ragdoll er [iOS validation #39817770698](https://github.com/hahanooben123-spec/Fantasy-friend-/actions/runs/39817770698): build og 13 tests bestået.
 
 Gennemfør [TESTPLAN.md](TESTPLAN.md) før næste udviklingsfase. Prioritér først at få en grøn Xcode-kompilering og afprøve spilsløjfen på en lille og en stor iPhone. Dernæst visuel polering på enhed, diskrete miljøanimationer, finere lyd og flere udtryksfulde lemmer. Baggrundene er statiske i denne MVP. Muligheder vises som små figurforhåndsvisninger; øjne og mund kan senere få mere detaljerede nærbilleder. Appen er en første kildekodeversion, ikke en App Store-valideret udgivelse.
 
@@ -77,4 +77,4 @@ Legepladsen bruger nu SpriteKit-fysik med en krop, fire separate lemmer, pin-led
 
 Den eksisterende Canvas-renderer tegner vennen ud fra fysikkens positioner og vinkler, inklusive den gemte pynt og delplaceringer. Fysikpositioner er midlertidige og skrives aldrig til samlingen. Legeknapperne giver fortsat ansigtsreaktioner og nu også fysiske impulser. Fysikken pauses, når legepladsen forlades eller appen går i baggrunden. Ved Reducer bevægelse kan figuren flyttes direkte uden tyngdekraft eller dinglende lemmer.
 
-Den nye fysik og dens samspil med SwiftUI skal verificeres i Playgrounds på iPad eller Xcode Simulator. SpriteKit er et indbygget Apple-framework; der er ingen nye pakker eller tjenester.
+Den samlede bevægelses- og berøringsoplevelse skal fortsat afprøves manuelt i Playgrounds på iPad eller Xcode Simulator. SpriteKit er et indbygget Apple-framework; der er ingen nye pakker eller tjenester.

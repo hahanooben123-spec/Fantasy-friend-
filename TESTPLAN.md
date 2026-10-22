@@ -1,6 +1,6 @@
 # Første gennemgang på iPhone
 
-Status: **Afventer Xcode og enhed/simulator.** Markér først punkter som godkendt efter faktisk afprøvning.
+Status: **Swift 6-build og 13 automatiske tests bestået på iPhone-simulator for commit 2d73361. Manuel UI- og touchtest af den nye version afventer iPad/iPhone.** Markér først punkter som godkendt efter faktisk afprøvning.
 
 ## Fase 1: Projekt og navigation
 
