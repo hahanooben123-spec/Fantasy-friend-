@@ -1,5 +1,25 @@
 name: iOS validation
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    paths:
+      - 'FantasiVen.swiftpm/**'
+      - 'FantasiVen.xcodeproj/**'
+      - 'Configuration/**'
+      - 'Tests/**'
+      - 'tools/check_project.py'
+  pull_request:
+    paths:
+      - 'FantasiVen.swiftpm/**'
+      - 'FantasiVen.xcodeproj/**'
+      - 'Configuration/**'
+      - 'Tests/**'
+      - 'tools/check_project.py'
+  workflow_dispatch:
+    inputs:
+      screenshots_only:
+        description: 'Build and capture UI without repeating the test suite'
+        type: boolean
+        default: false
 jobs:
   build-and-test:
     runs-on: macos-15
@@ -7,24 +27,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check project integrity
+        if: github.event.inputs.screenshots_only != 'true'
         run: python3 tools/check_project.py
       - name: Build with Swift 6
-        run: xcodebuild -project FantasiVen.xcodeproj -scheme FantasiVen -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+        run: xcodebuild -project FantasiVen.xcodeproj -scheme FantasiVen -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build
       - name: Select installed iPhone simulator
         run: |
           DEVICE_ID=$(xcrun simctl list devices available --json | python3 -c "import json,sys; data=json.load(sys.stdin); print(next(d['udid'] for devices in data['devices'].values() for d in devices if d['name'].startswith('iPhone')))")
           echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
       - name: Run persistence and model tests
-        run: xcodebuild -project FantasiVen.xcodeproj -scheme FantasiVen -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE_ID" -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO -resultBundlePath TestResults.xcresult test
+        if: github.event.inputs.screenshots_only != 'true'
+        run: xcodebuild -project FantasiVen.xcodeproj -scheme FantasiVen -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE_ID" -derivedDataPath build/DerivedData -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO -resultBundlePath TestResults.xcresult test
       - name: Capture real simulator UI previews
         run: |
           mkdir -p ui-previews
+          xcrun simctl boot "$DEVICE_ID" || true
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          xcrun simctl install "$DEVICE_ID" build/DerivedData/Build/Products/Debug-iphonesimulator/FantasiVen.app
           xcrun simctl status_bar "$DEVICE_ID" override --time "9:41" --batteryState charged --batteryLevel 100
           xcrun simctl launch --terminate-running-process "$DEVICE_ID" dk.fantasiven.app
-          sleep 3
+          sleep 4
           xcrun simctl io "$DEVICE_ID" screenshot ui-previews/Home.png
           xcrun simctl launch --terminate-running-process "$DEVICE_ID" dk.fantasiven.app --preview-creator
-          sleep 3
+          sleep 4
           xcrun simctl io "$DEVICE_ID" screenshot ui-previews/Creator.png
       - uses: actions/upload-artifact@v4
         if: always()
@@ -33,7 +58,7 @@ jobs:
           path: ui-previews/
           retention-days: 7
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && github.event.inputs.screenshots_only != 'true'
         with:
           name: iOS-test-results
           path: TestResults.xcresult
