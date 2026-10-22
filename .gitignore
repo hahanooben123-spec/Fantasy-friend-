@@ -1,0 +1,11 @@
+.DS_Store
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.swiftpm/
+!FantasiVen.swiftpm/
+build/
+__pycache__/
+*.xcresult/
+FantasiVen-MVP.zip
