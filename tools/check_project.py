@@ -29,13 +29,13 @@ def check():
     assert icon[:8] == b'\x89PNG\r\n\x1a\n'
     assert struct.unpack('>II', icon[16:24]) == (1024, 1024)
     words = (ROOT/'FantasiVen.swiftpm/Localization/Words.swift').read_text(encoding='utf-8')
-    keys = re.findall(r'^\s*"([A-Za-z]+)":', words, re.M)
+    keys = re.findall(r'^\s*"([A-Za-z_][A-Za-z0-9_]*)":', words, re.M)
     # Several entries share a line; parse every key at its dictionary separator.
-    keys = re.findall(r'"([A-Za-z]+)":\s*\(', words)
+    keys = re.findall(r'"([A-Za-z_][A-Za-z0-9_]*)":\s*\(', words)
     assert len(keys) == len(set(keys)), 'Duplicate localization key'
     for source in sources:
         text = source.read_text(encoding='utf-8')
-        for key in re.findall(r'\bt\("([A-Za-z]+)"\)', text):
+        for key in re.findall(r'\bt\("([A-Za-z_][A-Za-z0-9_]*)"\)', text):
             assert key in keys, (source, key)
         for forbidden in ['URLSession', 'WKWebView', 'StoreKit', 'AdSupport', 'AppTrackingTransparency']:
             assert forbidden not in text, (source, forbidden)

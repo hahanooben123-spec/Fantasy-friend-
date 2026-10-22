@@ -138,7 +138,7 @@ final class PlayPhysics: ObservableObject {
     func beginDrag(_ point: CGPoint) {
         guard held == nil else { return }
         heldActor = actors.firstIndex { hypot($0.node.position.x - point.x, $0.node.position.y - point.y) < 70 }
-        let node = heldActor.map { actors[$0].node } ?? objects.reversed().first { hypot($0.node.position.x - point.x, $0.node.position.y - point.y) < 45 }?.node
+        let node = heldActor.map { actors[$0].node } ?? objects.reversed().first { hypot($0.node.position.x - point.x, $0.node.position.y - point.y) < 60 }?.node
         guard let node = node, let body = node.physicsBody else { return }
         held = node
         guard !reduced else { return }

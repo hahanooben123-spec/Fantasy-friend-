@@ -29,6 +29,7 @@ struct MiniGamesView: View {
                                 }.padding(.horizontal, 18).padding(.vertical, 5)
                                     .background(RoundedRectangle(cornerRadius: 30).fill(.white.opacity(0.9)))
                             }.buttonStyle(SquishStyle())
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 280, maximum: 450))], spacing: 20) {
                             ForEach(MiniGameKind.allCases) { kind in
                                 NavigationLink(destination: GameDestinationView(kind: kind, friend: friend).id(friend.id)) {
                                     HStack(spacing: 14) {
@@ -44,6 +45,7 @@ struct MiniGamesView: View {
                                         .background(CandySurface(color: kind.tint, cornerRadius: 34))
                                         .contentShape(RoundedRectangle(cornerRadius: 34))
                                 }.buttonStyle(SquishStyle())
+                            }
                             }
                             Text(store.t("gamesGentle")).font(.system(.caption, design: .rounded).weight(.semibold)).multilineTextAlignment(.center)
                         }.padding(20).frame(maxWidth: 760).frame(maxWidth: .infinity)

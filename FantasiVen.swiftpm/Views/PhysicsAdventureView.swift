@@ -101,6 +101,7 @@ struct PhysicsAdventureView: View {
                 if physics.arrived { SoundService.shared.play(.complete) }
             }
         }.onAppear { track = friend.track ?? SlideTrack() }
+            .onChange(of: track) { _ in saved = false }
             .onDisappear { physics.setActive(false) }
     }
     private func start(active: Bool) {

@@ -14,6 +14,7 @@ struct FreeStudioView: View {
     @State private var reaction = 0
     @State private var localHistory: [FantasyFriend] = []
     @State private var moving: CreativePiece?
+    @State private var shapeBefore: FantasyFriend?
     private var pieces: [CreativePiece] { friend.pieces ?? [] }
     private var selectedPiece: CreativePiece? { pieces.first { $0.id == selected } }
     private var count: Int { kind == .extra ? 15 : kind == .eye ? 12 : 8 }
@@ -33,7 +34,7 @@ struct FreeStudioView: View {
                         RoundButton(icon: "checkmark", label: store.t("done")) { presentation.wrappedValue.dismiss() }
                     }
                     Text(store.t(pending ? "tapPlace" : "freeHint")).font(.system(.subheadline, design: .rounded).weight(.bold)).multilineTextAlignment(.center)
-                    stage.frame(height: 360).overlay(TouchDemonstration(activity: reaction))
+                    stage.frame(height: 360).overlay(StudioBurst(revision: reaction)).overlay(TouchDemonstration(activity: reaction))
                     if selectedPiece != nil { pieceTools }
                     HStack {
                         ForEach(PieceKind.allCases) { item in
@@ -128,11 +129,14 @@ struct FreeStudioView: View {
         Image(systemName: horizontal ? "arrow.left.and.right" : "arrow.up.and.down")
             .font(.system(size: 18, weight: .heavy)).frame(width: 44, height: 44).background(Circle().fill(StudioStyle.colors[0]))
             .position(x: horizontal ? width * 0.86 : width * 0.5, y: horizontal ? height * 0.55 : height * 0.88)
-            .gesture(DragGesture(coordinateSpace: .named("sculpt")).onEnded { value in
+            .gesture(DragGesture(coordinateSpace: .named("sculpt")).onChanged { value in
+                if shapeBefore == nil { shapeBefore = friend }
                 var copy = friend
                 if horizontal { copy.bodyWidth = min(1.2, max(0.75, abs(value.location.x / width - 0.5) / 0.3)) }
                 else { copy.bodyHeight = min(1.2, max(0.75, abs(value.location.y / height - 0.53) / 0.3)) }
-                commit(copy)
+                friend = copy
+            }.onEnded { _ in
+                finishShape()
             })
             .accessibilityLabel(store.t(horizontal ? "bodyWidth" : "bodyHeight"))
     }
@@ -174,10 +178,26 @@ struct FreeStudioView: View {
     private var bodyTools: some View {
         VStack(alignment: .leading) {
             Text(store.t("bodyWidth")).font(.headline)
-            Slider(value: Binding(get: { friend.widthFactor }, set: { value in var copy = friend; copy.bodyWidth = value; friend = copy }), in: 0.75...1.2)
+            bodySlider(horizontal: true)
             Text(store.t("bodyHeight")).font(.headline)
-            Slider(value: Binding(get: { friend.heightFactor }, set: { value in var copy = friend; copy.bodyHeight = value; friend = copy }), in: 0.75...1.2)
+            bodySlider(horizontal: false)
         }.padding().background(RoundedRectangle(cornerRadius: 24).fill(.white.opacity(0.9)))
+    }
+    private func bodySlider(horizontal: Bool) -> some View {
+        Slider(value: Binding(get: { horizontal ? friend.widthFactor : friend.heightFactor }, set: { value in
+            if shapeBefore == nil { shapeBefore = friend }
+            var copy = friend
+            if horizontal { copy.bodyWidth = value } else { copy.bodyHeight = value }
+            friend = copy
+        }), in: 0.75...1.2, onEditingChanged: { editing in if !editing { finishShape() } })
+    }
+    private func finishShape() {
+        if let previous = shapeBefore {
+            localHistory.append(previous)
+            if localHistory.count > 40 { localHistory.removeFirst() }
+        }
+        shapeBefore = nil; reaction += 1
+        SoundService.shared.react(voice: friend.voice?.rawValue ?? 0)
     }
     private var personalityTools: some View {
         VStack(spacing: 12) {
