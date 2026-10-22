@@ -18,8 +18,10 @@ struct PlaygroundView: View {
                 if let friend = friend {
                     VStack(spacing: 10) {
                         Text(friend.name).font(.system(.title, design: .rounded).weight(.heavy)).lineLimit(1)
-                        LivingFriend(friend: friend, action: action, signal: signal)
-                            .id(friend.id).frame(height: min(geometry.size.height * 0.42, 340))
+                        RagdollPlayground(friend: friend, action: action, signal: signal)
+                            .id(friend.id).frame(height: min(geometry.size.height * 0.45, 390))
+                        Label(store.t("ragdollHint"), systemImage: "hand.draw.fill")
+                            .font(.system(.caption, design: .rounded)).foregroundColor(GameStyle.purple)
                         ScrollView(showsIndicators: false) {
                             VStack(spacing: 16) {
                                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {

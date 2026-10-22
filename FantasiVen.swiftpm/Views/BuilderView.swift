@@ -11,7 +11,8 @@ struct BuilderView: View {
     @State private var naming = false
     @State private var celebration = false
     @State private var discard = false
-    @State private var revision = 0
+    @State private var attachment: Attachment?
+    @State private var draggedChoice: PartDragChoice?
     private let symbols = ["circle.hexagongrid.fill", "paintpalette.fill", "drop.fill", "eye.fill", "face.smiling.fill", "hand.wave.fill", "figure.walk", "sparkles"]
 
     init(original: FantasyFriend, existing: Bool) {
@@ -32,11 +33,15 @@ struct BuilderView: View {
                         Text(store.t("create")).font(.system(.title3, design: .rounded).weight(.bold))
                         Spacer()
                         RoundButton(icon: "arrow.uturn.backward", label: store.t("undo")) {
-                            if let previous = history.popLast() { withAnimation { friend = previous }; revision += 1 }
+                            if let previous = history.popLast() { withAnimation { friend = previous } }
                         }.disabled(history.isEmpty).opacity(history.isEmpty ? 0.4 : 1)
                     }.padding(.horizontal, 20)
-                    LivingFriend(friend: friend, action: .hug, signal: revision)
-                        .frame(height: max(140, min(geometry.size.height * 0.39, 330)))
+                    CharacterWorkshop(friend: friend, category: part, selection: $attachment, draggedChoice: $draggedChoice,
+                        onMove: { target, pose in change { $0.setPlacement(pose, for: target) } },
+                        onDropPart: drop)
+                        .frame(height: max(170, min(geometry.size.height * 0.43, 390)))
+                    Label(store.t("dragHint"), systemImage: "hand.draw.fill")
+                        .font(.system(.caption, design: .rounded)).foregroundColor(GameStyle.purple)
                     HStack {
                         Text(store.t(Words.partKeys[part.rawValue])).font(.system(.title2, design: .rounded).weight(.heavy))
                         Spacer()
@@ -64,6 +69,10 @@ struct BuilderView: View {
                                     }
                                 }.padding(.horizontal, 24)
                             }
+                            if [.arms, .legs, .extras].contains(part) {
+                                attachmentPicker
+                                if let attachment = attachment { placementTools(attachment) }
+                            }
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
                                     ForEach(0..<optionCount, id: \.self) { index in option(index) }
@@ -86,6 +95,19 @@ struct BuilderView: View {
                 }
             }
         }.foregroundColor(GameStyle.ink)
+        .onChange(of: part) { value in
+            if attachment?.category != value {
+                attachment = AttachmentLayout.attachments(in: friend).first { $0.category == value }
+            }
+        }
+        .onChange(of: friend) { value in
+            if let selected = attachment, !AttachmentLayout.attachments(in: value).contains(selected) {
+                attachment = AttachmentLayout.attachments(in: value).first { $0.category == part }
+            }
+        }
+        .onChange(of: attachment) { value in
+            if let value = value { part = value.category }
+        }
         .sheet(isPresented: $naming) {
             NamingView(friend: $friend) {
                 if store.save(friend) {
@@ -97,6 +119,79 @@ struct BuilderView: View {
             Button(store.t("cancel"), role: .cancel) {}
             Button(store.t("leave"), role: .destructive) { presentation.wrappedValue.dismiss() }
         } message: { Text(store.t("discardHint")) }
+    }
+
+    private func thumbnailAttachment(_ index: Int) -> Attachment? {
+        switch part {
+        case .arms: return .leftArm
+        case .legs: return .leftLeg
+        case .extras: return .extra(index)
+        default: return nil
+        }
+    }
+
+    private func drop(_ choice: PartDragChoice, at point: CGPoint, size: CGSize) {
+        let target = choice.attachment(at: point, stageSize: size)
+        change { value in
+            switch choice.category {
+            case .arms: value.arms = choice.index
+            case .legs: value.legs = choice.index
+            case .extras: value.accessories.insert(choice.index)
+            default: return
+            }
+            value.setPlacement(AttachmentLayout.placed(target, in: value, at: point, stageSize: size), for: target)
+        }
+        attachment = target
+        part = target.category
+    }
+
+    private var attachmentPicker: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(AttachmentLayout.attachments(in: friend).filter { $0.category == part }) { target in
+                    Button { attachment = target } label: {
+                        Text(store.t(target.rawValue))
+                            .font(.system(.caption, design: .rounded).weight(.bold))
+                            .padding(.horizontal, 16).frame(minHeight: 44)
+                            .background(Capsule().fill(attachment == target ? GameStyle.purple : Color.white.opacity(0.8)))
+                            .foregroundColor(attachment == target ? .white : GameStyle.ink)
+                    }.buttonStyle(SquishStyle()).accessibilityAddTraits(attachment == target ? .isSelected : [])
+                }
+            }.padding(.horizontal, 24)
+        }
+    }
+
+    private func adjust(_ target: Attachment, update: (inout PartPlacement) -> Void) {
+        var pose = friend.placement(for: target)
+        update(&pose)
+        pose = AttachmentLayout.constrained(pose, for: target, friend: friend)
+        change { $0.setPlacement(pose, for: target) }
+    }
+
+    private func placementTools(_ target: Attachment) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                RoundButton(icon: "arrow.left", label: store.t("moveLeft")) { adjust(target) { $0.x = max(-1, $0.x - 0.025) } }
+                RoundButton(icon: "arrow.right", label: store.t("moveRight")) { adjust(target) { $0.x = min(1, $0.x + 0.025) } }
+                RoundButton(icon: "arrow.up", label: store.t("moveUp")) { adjust(target) { $0.y = max(-1, $0.y - 0.025) } }
+                RoundButton(icon: "arrow.down", label: store.t("moveDown")) { adjust(target) { $0.y = min(1, $0.y + 0.025) } }
+                RoundButton(icon: "rotate.left", label: store.t("rotateLeft")) {
+                    adjust(target) { $0.rotation = $0.rotation <= -180 ? 165 : $0.rotation - 15 }
+                }
+                RoundButton(icon: "rotate.right", label: store.t("rotateRight")) {
+                    adjust(target) { $0.rotation = $0.rotation >= 180 ? -165 : $0.rotation + 15 }
+                }
+                RoundButton(icon: "minus.magnifyingglass", label: store.t("smaller")) { adjust(target) { $0.scale = max(0.5, $0.scale - 0.1) } }
+                RoundButton(icon: "plus.magnifyingglass", label: store.t("bigger")) { adjust(target) { $0.scale = min(1.5, $0.scale + 0.1) } }
+                RoundButton(icon: "arrow.counterclockwise", label: store.t("resetPart")) { change { $0.setPlacement(PartPlacement(), for: target) } }
+                if let index = target.extraIndex {
+                    RoundButton(icon: "trash", label: store.t("removePart")) {
+                        change { $0.accessories.remove(index); $0.setPlacement(PartPlacement(), for: target) }
+                        attachment = nil
+                    }
+                }
+            }.padding(.horizontal, 24)
+        }
     }
 
     private var optionCount: Int {
@@ -116,6 +211,7 @@ struct BuilderView: View {
     }
     private func preview(_ index: Int) -> FantasyFriend {
         var value = friend
+        value.placements = nil
         apply(index, to: &value)
         if part == .extras { value.accessories = [index] }
         return value
@@ -130,24 +226,54 @@ struct BuilderView: View {
         case .arms: value.arms = index
         case .legs: value.legs = index
         case .extras:
-            if value.accessories.contains(index) { value.accessories.remove(index) } else { value.accessories.insert(index) }
+            value.accessories.insert(index)
         }
     }
     private func change(_ update: (inout FantasyFriend) -> Void) {
+        var updated = friend
+        update(&updated)
+        for target in AttachmentLayout.attachments(in: updated) {
+            let pose = updated.placement(for: target)
+            if pose != PartPlacement() { updated.setPlacement(AttachmentLayout.constrained(pose, for: target, friend: updated), for: target) }
+        }
+        guard updated != friend else { return }
         history.append(friend)
         if history.count > 60 { history.removeFirst() }
-        update(&friend); revision += 1
+        friend = updated
         SoundService.shared.play(.click)
     }
     private func option(_ index: Int) -> some View {
         let label: String = part == .body ? store.t(Words.bodyKeys[index]) : (part == .extras ? store.t(Words.extraKeys[index]) : "\(store.t(Words.partKeys[part.rawValue])) \(index + 1)")
-        return Button { change { apply(index, to: &$0) } } label: {
+        return optionWithDrag(index, label: label)
+    }
+
+    @ViewBuilder
+    private func optionWithDrag(_ index: Int, label: String) -> some View {
+        if [.arms, .legs, .extras].contains(part) {
+            optionButton(index, label: label)
+                .onDrag {
+                    let choice = PartDragChoice(category: part, index: index)
+                    draggedChoice = choice
+                    return choice.provider()
+                }
+        } else {
+            optionButton(index, label: label)
+        }
+    }
+
+    private func optionButton(_ index: Int, label: String) -> some View {
+        Button {
+            if part != .extras || !friend.accessories.contains(index) { change { apply(index, to: &$0) } }
+            if part == .extras { attachment = .extra(index) }
+            else if part == .arms { attachment = .leftArm }
+            else if part == .legs { attachment = .leftLeg }
+        } label: {
             VStack(spacing: 2) {
                 if part == .color || part == .accent {
                     Circle().fill(GameStyle.palette[index]).frame(width: 50, height: 50)
                         .overlay(Circle().stroke(.white, lineWidth: 3))
                 } else {
-                    CharacterView(friend: preview(index)).frame(width: 80, height: 86)
+                    CharacterView(friend: preview(index), piece: thumbnailAttachment(index)).frame(width: 80, height: 86)
                 }
                 if part == .body || part == .extras { Text(label).font(.system(size: 10, weight: .bold, design: .rounded)).lineLimit(1).minimumScaleFactor(0.7) }
                 if selected(index) { Image(systemName: "checkmark.circle.fill").foregroundColor(GameStyle.purple).font(.system(size: 16)) }

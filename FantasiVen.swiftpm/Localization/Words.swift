@@ -6,6 +6,17 @@ enum Words {
         return language == .da ? pair.0 : pair.1
     }
     static let entries: [String: (String, String)] = [
+        "ragdollHint": ("Grib din ven, træk rundt og slip!", "Grab your friend, move and let go!"),
+        "resetPlay": ("Sæt vennen på plads", "Put your friend back"),
+        "workshop": ("Figurværksted", "Character workshop"),
+        "dragHint": ("Træk en del fra bakken op på din ven. Flyt den med fingeren!", "Drag a part from the tray onto your friend. Move it with your finger!"),
+        "leftArm": ("Venstre arm", "Left arm"), "rightArm": ("Højre arm", "Right arm"),
+        "leftLeg": ("Venstre ben", "Left leg"), "rightLeg": ("Højre ben", "Right leg"),
+        "moveLeft": ("Flyt til venstre", "Move left"), "moveRight": ("Flyt til højre", "Move right"),
+        "moveUp": ("Flyt op", "Move up"), "moveDown": ("Flyt ned", "Move down"),
+        "rotateLeft": ("Drej til venstre", "Rotate left"), "rotateRight": ("Drej til højre", "Rotate right"),
+        "smaller": ("Gør mindre", "Make smaller"), "bigger": ("Gør større", "Make bigger"),
+        "resetPart": ("Nulstil delen", "Reset part"), "removePart": ("Fjern pynten", "Remove accessory"),
         "eyebrow": ("EN LILLE VERDEN AF FANTASI", "A LITTLE WORLD OF IMAGINATION"),
         "tagline": ("Skab din helt egen fantasiven!", "Create your very own fantasy friend!"),
         "create": ("Skab en ven", "Create a friend"), "friends": ("Mine venner", "My friends"),

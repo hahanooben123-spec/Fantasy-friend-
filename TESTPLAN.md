@@ -38,3 +38,28 @@ Status: **Afventer Xcode og enhed/simulator.** Markér først punkter som godken
 - Aktivér Reducer bevægelse, VoiceOver og stor tekst. Kontrollér læselighed, fokus og knapnavne.
 - Kør i både systemets lyse og mørke tilstand: spillets bevidst lyse tema skal være konsistent.
 - Brug Instruments til hukommelse/CPU på fysisk iPhone, især ved gentagen åbning/lukning af bygger og leg.
+
+## Fri placering: regression på iPad
+
+- Hold på en arm-miniature og træk den op. Slip på venstre/højre side, og kontrollér at kun den tilsvarende arms placering ændres.
+- Flyt hver arm og hvert ben separat direkte på figuren. De skal følge fingeren uden hop. Afprøv både let tryk og træk.
+- Træk horn, hat, briller, hale og hver anden pyntetype op fra bakken. Flyt igen og kombinér flere dele.
+- Annullér et træk uden for værkstedet: figuren skal være uændret. Start straks et nyt træk.
+- Vælg overlappende dele via navneknapperne og flyt dem separat. Nulstil eller fjern en del, som ligger bag kroppen.
+- Drej og ændr størrelse ved alle fire kanter. Delene må ikke forsvinde ud af tegneområdet.
+- Flyt med pileknapperne og VoiceOver. Afprøv alle værktøjsknapper.
+- Ét fuldført træk skal kræve præcis ét tryk på Fortryd. En annulleret eller uændret placering skal ikke optage et trin.
+- Gem en ven med forskellige arm-/benplaceringer og drejet pynt. Genåbn appen og kontrollér galleri, redigering og leg.
+- Åbn gamle venner uden placeringer. De skal ligne sig selv og kunne gemmes med nye placeringer.
+- Gentag på to forskellige vinduesstørrelser i Playgrounds. Relativ placering og fingerposition skal passe.
+
+## Ragdoll
+
+- Grib kroppen, hver arm og hvert ben. Træk langsomt/hurtigt og slip over gulvet.
+- Kontrollér at arme og ben forbliver hængslet til kroppen, og at pynt følger den.
+- Test alle kropsformer og venner med flyttede/drejede/skalerede lemmer.
+- Flyt fingeren uden for legefeltet, og slip; vennen skal blive i feltet.
+- Tryk på alle seks legeknapper og nulstilling før/efter et træk.
+- Skift ven og miljø under leg. Forlad legepladsen og sæt appen i baggrunden.
+- Genåbn byggeren: ragdoll-leg må ikke have ændret de gemte placeringer.
+- Slå Reducer bevægelse til: direkte flytning skal virke uden dinglen eller fald.

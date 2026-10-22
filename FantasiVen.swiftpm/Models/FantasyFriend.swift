@@ -16,6 +16,19 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
     var legs = 0
     var accessories: Set<Int> = [1]
     var world: World = .forest
+    // Optional so friends saved before free placement still decode unchanged.
+    var placements: [String: PartPlacement]?
+
+    func placement(for attachment: Attachment) -> PartPlacement {
+        placements?[attachment.rawValue] ?? PartPlacement()
+    }
+
+    mutating func setPlacement(_ placement: PartPlacement, for attachment: Attachment) {
+        var values = placements ?? [:]
+        if placement == PartPlacement() { values.removeValue(forKey: attachment.rawValue) }
+        else { values[attachment.rawValue] = placement }
+        placements = values.isEmpty ? nil : values
+    }
 
     static func random() -> FantasyFriend {
         var friend = FantasyFriend()
@@ -34,7 +47,8 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
         (0..<16).contains(color) && (0..<16).contains(accent) &&
         (0..<12).contains(eyes) && (0..<10).contains(mouth) &&
         (0..<8).contains(arms) && (0..<8).contains(legs) &&
-        accessories.allSatisfy { (0..<15).contains($0) } && name.count <= 30
+        accessories.allSatisfy { (0..<15).contains($0) } && name.count <= 30 &&
+        (placements ?? [:]).allSatisfy { Attachment(rawValue: $0.key) != nil && $0.value.isValid }
     }
 }
 

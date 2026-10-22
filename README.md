@@ -11,6 +11,16 @@ Et originalt, lokalt iPhone-spil til børn på 3–8 år. Swift 6, SwiftUI og iO
 
 Alternativt: Åbn **FantasiVen.swiftpm** i en Swift Playgrounds-version, der understøtter Swift 6 og AppleProductTypes. Pakken og Xcode-projektet bruger samme kildefiler. Playgrounds-kompatibilitet skal verificeres på en Apple-enhed; almindelig `swift build` på Windows understøtter ikke AppleProductTypes eller SwiftUI.
 
+## Fri placering i figurværkstedet
+
+Arme, ben og pynt kan nu trækkes fra bakken op på figuren. Hold kort på en miniature i bakken for at starte træk. Ved arme/ben vælges venstre eller højre side efter, hvor delen slippes. Træk derefter direkte på delen for at flytte den igen. Tryk på en del eller vælg dens navneknap for at markere den. Bakken viser nu de enkelte løse dele frem for hele figuren.
+
+Den valgte del kan flyttes med pile, drejes, ændres i størrelse, nulstilles eller fjernes (pynt). Venstre/højre arm og ben har hver sin placering; typen af arme/ben vælges fortsat for parret. Pynt som ører, horn og vinger flyttes som den viste gruppe. Et træk giver ét fortryd-trin. Placering, rotation og størrelse gemmes sammen med vennen og bruges også i galleri og leg. Ældre venner åbner med deres normale placeringer.
+
+Figuren står stille under placering, så den ikke bevæger sig væk fra fingeren. Delene holdes inden for tegneområdet. Berøringsreaktioner og vejrtrækning bruges fortsat i menu, detaljer og legeplads.
+
+Denne udvidelses berørings- og drop-adfærd skal afprøves på iPad i Playgrounds. Enhedens bekræftede prototypekørsel gælder versionen før udvidelsen.
+
 ## Første version
 
 - Illustreret hovedmenu med en ven, der reagerer på berøring.
@@ -60,3 +70,11 @@ Gennemfør [TESTPLAN.md](TESTPLAN.md) før næste udviklingsfase. Prioritér fø
 Til App Store mangler bl.a. valgt signing/team, endeligt bundle-ID, enheds-QA, VoiceOver/Dynamic Type-gennemgang, screenshots, alderskategori og udgivelsesmetadata. Privatlivsmanifestet skal gennemgås mod den endelige binærfil og den aktuelle SDK før indsendelse.
 
 Projektet kan regenereres med `python tools/generate_project.py`. Appikonet er originalt og kan regenereres med `python tools/make_icon.py`. Generatorerne kræver kun Pythons standardbibliotek.
+
+## Ragdoll i legepladsen
+
+Legepladsen bruger nu SpriteKit-fysik med en krop, fire separate lemmer, pin-led, tyngdekraft og bløde kollisioner mod gulv og vægge. Træk i kroppen eller et lem for at løfte og flytte vennen; et fjederled følger fingeren. Slip for at lade den falde og dingle. Nulstillingsknappen sætter den tilbage.
+
+Den eksisterende Canvas-renderer tegner vennen ud fra fysikkens positioner og vinkler, inklusive den gemte pynt og delplaceringer. Fysikpositioner er midlertidige og skrives aldrig til samlingen. Legeknapperne giver fortsat ansigtsreaktioner og nu også fysiske impulser. Fysikken pauses, når legepladsen forlades eller appen går i baggrunden. Ved Reducer bevægelse kan figuren flyttes direkte uden tyngdekraft eller dinglende lemmer.
+
+Den nye fysik og dens samspil med SwiftUI skal verificeres i Playgrounds på iPad eller Xcode Simulator. SpriteKit er et indbygget Apple-framework; der er ingen nye pakker eller tjenester.
