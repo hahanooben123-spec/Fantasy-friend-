@@ -3,17 +3,27 @@ import argparse
 import io
 import json
 import subprocess
+import time
+import urllib.parse
 import urllib.request
 import zipfile
 from pathlib import Path
 
 BASE = "https://api.github.com/repos/hahanooben123-spec/Fantasy-friend-"
 
+class SafeRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if redirected is not None and urllib.parse.urlsplit(req.full_url).hostname != urllib.parse.urlsplit(newurl).hostname:
+            redirected.remove_header("Authorization")
+        return redirected
+
 def request(path):
     result = subprocess.run(["git", "credential", "fill"], input="protocol=https\nhost=github.com\n\n", text=True, capture_output=True, check=True)
     credential = dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
-    req = urllib.request.Request(BASE + path, headers={"Authorization": "Bearer " + credential["password"], "Accept": "application/vnd.github+json"})
-    with urllib.request.urlopen(req, timeout=60) as response:
+    separator = "&" if "?" in path else "?"
+    req = urllib.request.Request(BASE + path + separator + "fresh=" + str(time.time_ns()), headers={"Authorization": "Bearer " + credential["password"], "Accept": "application/vnd.github+json"})
+    with urllib.request.build_opener(SafeRedirect()).open(req, timeout=60) as response:
         return response.read()
 
 def main():
