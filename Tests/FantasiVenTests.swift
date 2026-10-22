@@ -201,3 +201,69 @@ final class FantasiVenTests: XCTestCase {
         XCTAssertNil(FriendStore(directory: directory).friends.first?.doodles)
     }
 }
+
+extension FantasiVenTests {
+    func testAppleCatchesAndMissesAreGentleAndBounded() {
+        var catching = AppleRain()
+        for _ in 0..<900 { catching.step(1.0 / 30, spawnX: 0.5) }
+        XCTAssertGreaterThan(catching.caught, 10)
+        XCTAssertTrue(catching.flowers.isEmpty)
+        XCTAssertLessThanOrEqual(catching.drops.count, 5)
+
+        var missing = AppleRain()
+        missing.move(to: 1)
+        for _ in 0..<1800 { missing.step(1.0 / 30, spawnX: 0.17) }
+        XCTAssertEqual(missing.caught, 0)
+        XCTAssertEqual(missing.flowers.count, 8)
+        XCTAssertLessThanOrEqual(missing.drops.count, 5)
+    }
+
+    func testAppleClockDoesNotCatchUpAfterAnInterruption() {
+        var game = AppleRain()
+        game.move(to: -20)
+        XCTAssertEqual(game.playerX, 0.14)
+        game.move(to: .nan)
+        XCTAssertEqual(game.playerX, 0.14)
+        for _ in 0..<12 { game.step(1.0 / 30, spawnX: 0.5) }
+        let before = game.drops.first!.y
+        game.step(3600, spawnX: 0.5)
+        XCTAssertEqual(game.drops.first!.y - before, 0.08 * 0.18, accuracy: 0.00001)
+        game.step(.infinity, spawnX: 0.5)
+        XCTAssertEqual(game.caught, 0)
+        XCTAssertTrue(game.flowers.isEmpty)
+    }
+
+    func testBubblesRejectRepeatedAndInvalidTaps() {
+        var game = BubbleGarden()
+        XCTAssertTrue(game.pop(slot: 2, generation: 0))
+        XCTAssertFalse(game.pop(slot: 2, generation: 0))
+        XCTAssertFalse(game.pop(slot: -1, generation: 0))
+        XCTAssertFalse(game.pop(slot: 6, generation: 0))
+        XCTAssertTrue(game.pop(slot: 2, generation: 1))
+        XCTAssertEqual(game.popped, 2)
+        XCTAssertEqual(game.generations.count, 6)
+        for _ in 0..<1000 {
+            XCTAssertTrue(game.pop(slot: 2, generation: game.generations[2]))
+        }
+        XCTAssertEqual(game.generations.count, 6)
+    }
+
+    func testHideAndSeekHasThreeFriendsAndNoPenaltyForFlowers() {
+        var game = HideAndSeek(spots: [5, 2, 1, 0, 3, 4])
+        XCTAssertEqual(game.hiding, [5, 2, 1])
+        XCTAssertFalse(game.reveal(0))
+        XCTAssertEqual(game.found, 0)
+        XCTAssertFalse(game.reveal(99))
+        XCTAssertTrue(game.reveal(5))
+        XCTAssertFalse(game.reveal(5))
+        XCTAssertEqual(game.found, 1)
+        XCTAssertTrue(game.reveal(1))
+        XCTAssertTrue(game.reveal(2))
+        XCTAssertTrue(game.complete)
+        XCTAssertEqual(game.opened.count, 4)
+        let fresh = HideAndSeek(spots: [-1, 8, 2, 2])
+        XCTAssertEqual(fresh.hiding.count, 3)
+        XCTAssertTrue(fresh.opened.isEmpty)
+        XCTAssertFalse(fresh.complete)
+    }
+}

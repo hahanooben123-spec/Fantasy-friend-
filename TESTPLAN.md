@@ -87,3 +87,10 @@ Status: **Swift 6-build og 13 automatiske tests bestået på iPhone-simulator fo
 - Navngiv med navnechips, tilfældigt navn og tastatur. Gem og genåbn.
 - Skift dansk/engelsk og lyd/musik. Afprøv store tekststørrelser, VoiceOver og Reducer bevægelse.
 - Kontroller at små miljøkort er statiske, og at baggrundsanimering stopper, når appen ikke er aktiv.
+
+## Mini games
+- From Små eventyr choose a saved character, including painted and moved parts; empty collection offers creation.
+- Apple rain: drag/tap across the playfield; arrow buttons and VoiceOver adjust movement too. Apples caught at basket height increase the count. Missed apples become flowers with no penalty.
+- Bubble party: all six targets respond, create new colors and play enabled sounds. Fast repeated taps remain safe.
+- Hide-and-seek: three of six bushes contain the selected character. Flowers do not reduce progress. Find all three, then hide again.
+- Pause/resume, reset, back, background/foreground, mute, Reduce Motion and iPad rotation; no catch-up jump on return and no collection changes.

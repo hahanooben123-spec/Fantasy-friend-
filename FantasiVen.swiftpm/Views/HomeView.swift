@@ -67,6 +67,8 @@ struct HomeView: View {
                                     }
                                 }.buttonStyle(SquishStyle())
                             }
+                            NavigationLink(destination: MiniGamesView(onCreate: create)) { MiniGamesDoor() }
+                                .buttonStyle(SquishStyle())
                             Text(store.t("homeFooter")).font(.system(.caption, design: .rounded).weight(.semibold)).padding(.top, 7).opacity(0.7)
                         }.padding(.horizontal, wide ? 28 : 19).padding(.top, 12).padding(.bottom, 24)
                             .frame(maxWidth: 1100).frame(maxWidth: .infinity)
