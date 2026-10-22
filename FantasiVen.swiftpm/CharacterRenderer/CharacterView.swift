@@ -8,6 +8,7 @@ struct CharacterView: View {
     var piece: Attachment? = nil
     var detail: Part? = nil
     var gaze = CGPoint.zero
+    var zoom: CGFloat = 1
 
     var body: some View {
         Canvas { context, size in
@@ -28,7 +29,8 @@ struct CharacterView: View {
                 context.translateBy(x: -rect.midX, y: -rect.midY)
                 CreaturePainter(context: context, friend: friend).drawPiece(piece)
             } else {
-                context.scaleBy(x: size.width / 300, y: size.height / 320)
+                context.translateBy(x: size.width * (1 - zoom) / 2, y: size.height * (1 - zoom) / 2)
+                context.scaleBy(x: size.width / 300 * zoom, y: size.height / 320 * zoom)
                 CreaturePainter(context: context, friend: friend, gaze: gaze).draw(blink: blink, happy: happy, asleep: asleep)
             }
         }
@@ -90,17 +92,17 @@ private struct CreaturePainter {
         var transformed = context
         transformed.translateBy(x: rect.midX + CGFloat(pose.x) * 300, y: rect.midY + CGFloat(pose.y) * 320)
         transformed.rotate(by: .degrees(pose.rotation))
-        transformed.scaleBy(x: CGFloat(pose.scale), y: CGFloat(pose.scale))
+        transformed.scaleBy(x: CGFloat(pose.scale) * ((friend.mirroredParts?.contains(attachment.rawValue) ?? false) ? -1 : 1), y: CGFloat(pose.scale))
         transformed.translateBy(x: -rect.midX, y: -rect.midY)
         return CreaturePainter(context: transformed, friend: friend)
     }
 
     func draw(blink: Bool, happy: Bool, asleep: Bool) {
         for attachment in [Attachment.tail, .wings, .spikes] {
-            if let index = attachment.extraIndex, friend.accessories.contains(index), friend.placement(for: attachment) == PartPlacement() { drawPiece(attachment) }
+            if let index = attachment.extraIndex, friend.accessories.contains(index), friend.placement(for: attachment) == PartPlacement() { placed(for: attachment).drawPiece(attachment) }
         }
         let limbs: [Attachment] = [.leftArm, .rightArm, .leftLeg, .rightLeg]
-        for attachment in limbs where friend.placement(for: attachment) == PartPlacement() { drawPiece(attachment) }
+        for attachment in limbs where friend.placement(for: attachment) == PartPlacement() { placed(for: attachment).drawPiece(attachment) }
         drawBody(blink: blink, happy: happy, asleep: asleep)
         // Moved limbs remain visible even when children place them on the tummy.
         for attachment in limbs where friend.placement(for: attachment) != PartPlacement() { placed(for: attachment).drawPiece(attachment) }
@@ -118,7 +120,8 @@ private struct CreaturePainter {
 
     func drawCreative(_ piece: CreativePiece, preview: Bool = false) {
         var sample = friend
-        sample.placements = nil; sample.pieces = nil
+        sample.placements = nil; sample.pieces = nil; sample.hiddenParts = nil; sample.mirroredParts = nil; sample.facePlacements = nil
+        sample.partColors = piece.kind == .eye ? ["eyes": piece.color] : nil
         sample.color = piece.color; sample.accent = piece.accent
         var rect: CGRect
         switch piece.kind {
@@ -155,7 +158,7 @@ private struct CreaturePainter {
         context.fill(silhouette, with: .linearGradient(Gradient(colors: [GameStyle.mixed(primary, with: .white, amount: 0.25), primary, GameStyle.mixed(primary, with: ink, amount: 0.26)]), startPoint: CGPoint(x: 85, y: 76), endPoint: CGPoint(x: 207, y: 260)))
         context.stroke(silhouette, with: .color(GameStyle.mixed(primary, with: ink, amount: 0.72)), lineWidth: 3.5)
         var clipped = context; clipped.clip(to: silhouette)
-        clipped.fill(Path(ellipseIn: CGRect(x: 105, y: 196, width: 96, height: 72)), with: .color(accent.opacity(0.52)))
+        clipped.fill(Path(ellipseIn: CGRect(x: 105, y: 196, width: 96, height: 72)), with: .color(.white.opacity(0.12)))
         if friend.accessories.contains(9) {
             let attachment = Attachment.extra(9)
             let paintingContext = friend.placement(for: attachment) == PartPlacement() ? clipped : context
@@ -171,8 +174,8 @@ private struct CreaturePainter {
         clipped.fill(Path(ellipseIn: CGRect(x: 84, y: 90, width: 24, height: 45)), with: .color(.white.opacity(0.36)))
         clipped.fill(Path(ellipseIn: CGRect(x: 110, y: 84, width: 10, height: 13)), with: .color(.white.opacity(0.62)))
         ellipse(87, 180, 27, 15, Color(red: 1, green: 0.23, blue: 0.42).opacity(0.48)); ellipse(190, 180, 27, 15, Color(red: 1, green: 0.23, blue: 0.42).opacity(0.48))
-        drawEyes(closed: blink || asleep, happy: happy)
-        drawMouth(happy: happy, asleep: asleep)
+        if !friend.isHidden("eyes") { drawEyes(closed: blink || asleep, happy: happy) }
+        if !friend.isHidden("mouth") { drawMouth(happy: happy, asleep: asleep) }
     }
 
     func drawDoodles(in canvas: GraphicsContext) {
@@ -193,6 +196,7 @@ private struct CreaturePainter {
     }
 
     func drawPiece(_ attachment: Attachment) {
+        guard !friend.isHidden(attachment.rawValue) else { return }
         if let color = friend.partColors?[attachment.rawValue] {
             var colored = friend; colored.partColors = nil; colored.color = color; colored.accent = color
             CreaturePainter(context: context, friend: colored).drawPiece(attachment)
@@ -315,10 +319,23 @@ private struct CreaturePainter {
         }
     }
 
+    private func facialContext(_ key: String, center: CGPoint) -> GraphicsContext {
+        let pose = friend.facePlacements?[key] ?? PartPlacement()
+        var canvas = context
+        canvas.translateBy(x: center.x + pose.x * 300, y: center.y + pose.y * 320)
+        canvas.rotate(by: .degrees(pose.rotation))
+        canvas.scaleBy(x: pose.scale * ((friend.mirroredParts?.contains(key) ?? false) ? -1 : 1), y: pose.scale)
+        canvas.translateBy(x: -center.x, y: -center.y)
+        return canvas
+    }
     func drawEyes(closed: Bool, happy: Bool) {
+        CreaturePainter(context: facialContext("eyes", center: CGPoint(x: 150, y: 157)), friend: friend, gaze: gaze, singleEye: singleEye).drawEyesArtwork(closed: closed, happy: happy)
+    }
+    func drawEyesArtwork(closed: Bool, happy: Bool) {
+        let ink = friend.partColors?["eyes"].map { GameStyle.palette[$0] } ?? self.ink
         let kind = friend.eyes
         let centers: [CGFloat] = singleEye || kind == 5 ? [150] : (kind == 6 ? [110, 150, 190] : [120, 181])
-        let radius: CGFloat = singleEye ? 22 : kind == 1 ? 10 : (kind == 5 ? 31 : (kind == 6 ? 15 : 22))
+        let radius: CGFloat = kind == 1 ? 13 : (kind == 5 ? 35 : (kind == 6 && !singleEye ? 17 : 28))
         for x in centers {
             let y: CGFloat = 157
             if closed || kind == 3 || happy {
@@ -350,19 +367,26 @@ private struct CreaturePainter {
     }
 
     func drawMouth(happy: Bool, asleep: Bool) {
+        CreaturePainter(context: facialContext("mouth", center: CGPoint(x: 151, y: 207)), friend: friend).drawMouthArtwork(happy: happy, asleep: asleep)
+    }
+    func drawMouthArtwork(happy: Bool, asleep: Bool) {
+        let ink = friend.partColors?["mouth"].map { GameStyle.palette[$0] } ?? self.ink
         let kind = happy ? 1 : friend.mouth
         if asleep || kind == 3 { ellipse(142, 192, 17, 23, ink); ellipse(146, 196, 7, 5, .white.opacity(0.45)); return }
         if kind == 0 || kind == 2 || kind == 6 || kind == 9 {
-            let width: CGFloat = kind == 2 ? 10 : 21
+            let width: CGFloat = kind == 2 ? 10 : 28
             curve(CGPoint(x: 151 - width, y: 196), CGPoint(x: 151 + width, y: kind == 6 ? 189 : 196), CGPoint(x: 151, y: kind == 9 ? 204 : 221), ink, 5)
             if kind == 9 { ellipse(173, 191, 6, 6, ink) }
         } else {
-            var mouth = Path(); mouth.move(to: CGPoint(x: 125, y: 191))
-            mouth.addQuadCurve(to: CGPoint(x: 177, y: 191), control: CGPoint(x: 151, y: 201))
-            mouth.addCurve(to: CGPoint(x: 125, y: 191), control1: CGPoint(x: 178, y: 233), control2: CGPoint(x: 123, y: 233))
+            var mouth = Path(); mouth.move(to: CGPoint(x: 118, y: 195))
+            mouth.addQuadCurve(to: CGPoint(x: 184, y: 195), control: CGPoint(x: 151, y: 201))
+            mouth.addCurve(to: CGPoint(x: 118, y: 195), control1: CGPoint(x: 186, y: 246), control2: CGPoint(x: 115, y: 246))
             context.fill(mouth, with: .color(ink))
             var clipped = context; clipped.clip(to: mouth)
-            clipped.fill(Path(ellipseIn: CGRect(x: 138, y: kind == 4 ? 202 : 212, width: 31, height: 22)), with: .color(Color(red: 1, green: 0.5, blue: 0.62)))
+            clipped.fill(Path(ellipseIn: CGRect(x: 133, y: kind == 4 ? 207 : 219, width: 40, height: 24)), with: .color(Color(red: 1, green: 0.5, blue: 0.62)))
+            if kind == 1 {
+                clipped.fill(Path(roundedRect: CGRect(x: 128, y: 193, width: 47, height: 12), cornerRadius: 5), with: .color(.white))
+            }
             if kind == 5 || kind == 7 {
                 for x in [136, 150, 164] as [CGFloat] { clipped.fill(Path(roundedRect: CGRect(x: x, y: 191, width: 10, height: kind == 7 ? 14 : 8), cornerRadius: 3), with: .color(.white)) }
             }

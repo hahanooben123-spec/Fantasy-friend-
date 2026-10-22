@@ -6,6 +6,12 @@ enum Words {
         return language == .da ? pair.0 : pair.1
     }
     static let entries: [String: (String, String)] = [
+        "creatorTitle": ("Fantasi-værkstedet", "Imagination workshop"),
+        "creatorTagline": ("Din ven. Dine skøre idéer.", "Your friend. Your wild ideas."),
+        "creatorGreeting": ("Hvem skal vi skabe i dag?", "Who shall we make today?"),
+        "creatorTrayHint": ("Tryk eller træk", "Tap or drag"),
+        "creatorTouchHint": ("Træk i delene · stræk kroppen", "Move the parts · stretch the body"),
+        "creatorExtraEye": ("Et øje mere!", "One more eye!"),
         "freeStudio": ("Fri fantasi", "Free imagination"),
         "help": ("Vis mig hvordan", "Show me how"),
         "tapPlace": ("Vælg en del. Tryk på din ven, hvor den skal sidde!", "Choose a part. Tap your friend where it should go!"),

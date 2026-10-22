@@ -358,3 +358,50 @@ extension FantasiVenTests {
         XCTAssertLessThanOrEqual(game.drops.count, 5)
     }
 }
+
+extension FantasiVenTests {
+    func testWorkshopEditsPersistWithoutChangingIdentity() throws {
+        let original = FantasyFriend.studioStarter()
+        var edited = CreatorGeometry.moved(.eyes, original: original, delta: CGSize(width: 30, height: -16))
+        edited = CreatorGeometry.transformed(.eyes, original: edited, rotation: 27, scale: 1.3)
+        edited.hide("leftArm"); edited.hide("mouth")
+        edited.mirroredParts = ["eyes", "rightArm"]
+        edited.partColors = ["eyes": 4, "mouth": 2]
+        XCTAssertTrue(edited.isValid)
+        XCTAssertEqual(edited.id, original.id)
+        XCTAssertEqual(edited.facePlacements?["eyes"]?.x ?? 0, 0.1, accuracy: 0.001)
+        XCTAssertFalse(original.isHidden("leftArm"))
+        let data = try JSONEncoder().encode(edited)
+        XCTAssertEqual(try JSONDecoder().decode(FantasyFriend.self, from: data), edited)
+    }
+    func testWorkshopHitTestingIgnoresRemovedPartsAndPrefersTopPiece() {
+        var friend = FantasyFriend.studioStarter()
+        friend.hide("eyes")
+        XCTAssertNotEqual(CreatorGeometry.hit(CGPoint(x:150,y:157), friend:friend, margin:0), .eyes)
+        let piece = CreativePiece(kind:.eye, variant:0, x:0.5, y:0.5)
+        friend.pieces = [piece]
+        XCTAssertEqual(CreatorGeometry.hit(CGPoint(x:150,y:160), friend:friend, margin:0), .piece(piece.id))
+    }
+    func testWorkshopGestureUsesOriginalPoseAndRespectsLimits() {
+        let original = FantasyFriend.studioStarter()
+        let moved = CreatorGeometry.moved(.mouth, original:original, delta:CGSize(width:900,height:-900))
+        XCTAssertEqual(moved.facePlacements?["mouth"]?.x, 0.3)
+        XCTAssertEqual(moved.facePlacements?["mouth"]?.y, -0.3)
+        let enlarged = CreatorGeometry.transformed(.mouth, original:moved, rotation:400, scale:7)
+        XCTAssertEqual(enlarged.facePlacements?["mouth"]?.scale, 1.5)
+        XCTAssertEqual(enlarged.facePlacements?["mouth"]?.rotation, 40)
+        XCTAssertTrue(enlarged.isValid)
+        XCTAssertNil(original.facePlacements)
+    }
+    func testWorkshopRejectsUnknownPartEditsAndReadsOlderFriends() throws {
+        var friend = FantasyFriend.studioStarter()
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(friend)) as? [String:Any])
+        for key in ["hiddenParts","mirroredParts","facePlacements"] { json.removeValue(forKey:key) }
+        let older = try JSONDecoder().decode(FantasyFriend.self, from:JSONSerialization.data(withJSONObject:json))
+        XCTAssertTrue(older.isValid)
+        friend.hiddenParts = ["unknown"]
+        XCTAssertFalse(friend.isValid)
+        friend.hiddenParts = nil; friend.facePlacements = ["tail": PartPlacement()]
+        XCTAssertFalse(friend.isValid)
+    }
+}

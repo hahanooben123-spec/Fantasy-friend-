@@ -9,7 +9,7 @@ struct EditorRequest: Identifiable {
 struct HomeView: View {
     @EnvironmentObject private var store: FriendStore
     @State private var editor: EditorRequest?
-    private var mascot: FantasyFriend { store.friends.first ?? FantasyFriend() }
+    private var mascot: FantasyFriend { store.friends.first ?? FantasyFriend.studioStarter() }
 
     var body: some View {
         NavigationView {
@@ -43,7 +43,7 @@ struct HomeView: View {
         .task {
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--preview-creator") {
-                openEditor(FantasyFriend(), existing: false)
+                openEditor(FantasyFriend.studioStarter(), existing: false)
             }
             #endif
         }
@@ -78,7 +78,7 @@ struct HomeView: View {
     private func sample(color: Int, body: BodyKind, extra: Int) -> FantasyFriend {
         var value = FantasyFriend(); value.color = color; value.body = body; value.accessories = [extra]; return value
     }
-    private func create() { openEditor(FantasyFriend(), existing: false) }
+    private func create() { openEditor(FantasyFriend.studioStarter(), existing: false) }
     private func openEditor(_ friend: FantasyFriend, existing: Bool) { editor = EditorRequest(friend: friend, existing: existing) }
 }
 

@@ -8,11 +8,11 @@ struct GalleryView: View {
             WorldBackdrop(world: .meadow)
             VStack(spacing: 14) {
                 AdventureHeading(title: store.t("friendVillage"), subtitle: store.t("villageSubtitle"))
-                if store.friends.isEmpty { EmptyCollectionView { onEdit(FantasyFriend(), false) } }
+                if store.friends.isEmpty { EmptyCollectionView { onEdit(FantasyFriend.studioStarter(), false) } }
                 else {
                     ScrollView {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 148, maximum: 235), spacing: 16)], spacing: 22) {
-                            Button { onEdit(FantasyFriend(), false) } label: {
+                            Button { onEdit(FantasyFriend.studioStarter(), false) } label: {
                                 VStack(spacing: 12) {
                                     DestinationArt(kind: .studio).frame(height: 151)
                                     Label(store.t("newFriend"), systemImage: "plus.circle.fill")
@@ -71,7 +71,7 @@ struct FriendDetailView: View {
                         ScrollView {
                             VStack(spacing: 19) {
                                 LivingFriend(friend: friend).frame(height: min(geometry.size.height * 0.48, 420))
-                                NavigationLink(destination: PlaygroundView(initialID: friend.id, onCreate: { onEdit(FantasyFriend(), false) })) {
+                                NavigationLink(destination: PlaygroundView(initialID: friend.id, onCreate: { onEdit(FantasyFriend.studioStarter(), false) })) {
                                     MenuTile(title: store.t("playTogether"), icon: "sparkles", color: Color(red: 0.22, green: 0.62, blue: 0.5))
                                 }.buttonStyle(SquishStyle())
                                 CandyButton(title: store.t("editLook"), icon: "paintbrush.pointed.fill") { onEdit(friend, true) }

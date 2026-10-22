@@ -21,6 +21,14 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
     var doodles: [DoodleStroke]?
     var pieces: [CreativePiece]?
     var partColors: [String: Int]?
+    var hiddenParts: Set<String>?
+    var mirroredParts: Set<String>?
+    var facePlacements: [String: PartPlacement]?
+
+    func isHidden(_ key: String) -> Bool { hiddenParts?.contains(key) ?? false }
+    mutating func show(_ key: String) { hiddenParts?.remove(key) }
+    mutating func hide(_ key: String) { var values = hiddenParts ?? []; values.insert(key); hiddenParts = values }
+
     var bodyWidth: Double?
     var bodyHeight: Double?
     var voice: VoiceKind?
@@ -46,6 +54,14 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
         placements = values.isEmpty ? nil : values
     }
 
+    static func studioStarter() -> FantasyFriend {
+        var friend = FantasyFriend()
+        friend.body = .round; friend.color = 6; friend.accent = 3
+        friend.eyes = 0; friend.mouth = 1; friend.arms = 5; friend.legs = 3
+        friend.accessories = [2]
+        return friend
+    }
+
     static func random() -> FantasyFriend {
         var friend = FantasyFriend()
         friend.body = BodyKind.allCases.randomElement() ?? .round
@@ -66,7 +82,10 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
         accessories.allSatisfy { (0..<15).contains($0) } && name.count <= 30 &&
         (placements ?? [:]).allSatisfy { Attachment(rawValue: $0.key) != nil && $0.value.isValid } &&
         (doodles ?? []).allSatisfy(\.isValid) &&
-        (partColors ?? [:]).allSatisfy { Attachment(rawValue: $0.key) != nil && (0..<16).contains($0.value) } &&
+        (partColors ?? [:]).allSatisfy { (Attachment(rawValue: $0.key) != nil || ["eyes", "mouth"].contains($0.key)) && (0..<16).contains($0.value) } &&
+        (hiddenParts ?? []).allSatisfy { Set(Attachment.allCases.map(\.rawValue) + ["eyes", "mouth"]).contains($0) } &&
+        (mirroredParts ?? []).allSatisfy { Set(Attachment.allCases.map(\.rawValue) + ["eyes", "mouth"]).contains($0) } &&
+        (facePlacements ?? [:]).allSatisfy { ["eyes", "mouth"].contains($0.key) && $0.value.isValid } &&
         (pieces ?? []).count <= 64 && (pieces ?? []).allSatisfy(\.isValid) &&
         Set((pieces ?? []).map(\.id)).count == (pieces ?? []).count &&
         widthFactor.isFinite && heightFactor.isFinite &&

@@ -5,7 +5,12 @@ struct CreatureShape: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
         switch kind {
-        case .round: p.addEllipse(in: CGRect(x: 61, y: 83, width: 178, height: 173))
+        case .round:
+            p.move(to: CGPoint(x: 150, y: 78))
+            p.addCurve(to: CGPoint(x: 241, y: 172), control1: CGPoint(x: 210, y: 73), control2: CGPoint(x: 249, y: 115))
+            p.addCurve(to: CGPoint(x: 151, y: 258), control1: CGPoint(x: 253, y: 230), control2: CGPoint(x: 207, y: 264))
+            p.addCurve(to: CGPoint(x: 59, y: 172), control1: CGPoint(x: 90, y: 266), control2: CGPoint(x: 52, y: 226))
+            p.addCurve(to: CGPoint(x: 150, y: 78), control1: CGPoint(x: 48, y: 118), control2: CGPoint(x: 90, y: 78)); p.closeSubpath()
         case .oval: p.addEllipse(in: CGRect(x: 77, y: 62, width: 146, height: 197))
         case .cushion: p.addRoundedRect(in: CGRect(x: 64, y: 87, width: 172, height: 163), cornerSize: CGSize(width: 48, height: 48))
         case .pear:
