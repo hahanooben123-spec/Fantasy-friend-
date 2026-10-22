@@ -40,8 +40,9 @@ struct AppleToy: View {
             context.fill(body, with: .linearGradient(Gradient(colors: [Color(red: 1, green: 0.43, blue: 0.47), Color(red: 0.88, green: 0.19, blue: 0.32)]), startPoint: CGPoint(x: 25, y: 25), endPoint: CGPoint(x: 75, y: 90)))
             var stem = Path(); stem.move(to: CGPoint(x: 49, y: 29)); stem.addQuadCurve(to: CGPoint(x: 56, y: 7), control: CGPoint(x: 46, y: 15))
             context.stroke(stem, with: .color(Color(red: 0.45, green: 0.28, blue: 0.22)), style: StrokeStyle(lineWidth: 6, lineCap: .round))
-            context.fill(Path(ellipseIn: CGRect(x: 57, y: 9, width: 25, height: 12)), with: .color(Color(red: 0.32, green: 0.68, blue: 0.38)))
-            context.fill(Path(ellipseIn: CGRect(x: 24, y: 34, width: 11, height: 22)), with: .color(.white.opacity(0.4)))
+            context.fill(Path(ellipseIn: CGRect(x: 57, y: 9, width: 25, height: 12)), with: .color(Color(red: 0.36, green: 0.75, blue: 0.08)))
+            context.stroke(body, with: .color(GameStyle.ink.opacity(0.85)), lineWidth: 3)
+            context.fill(Path(ellipseIn: CGRect(x: 24, y: 34, width: 11, height: 22)), with: .color(.white.opacity(0.55)))
         }
     }
 }
@@ -59,11 +60,11 @@ struct BubbleToy: View {
 struct BushToy: View {
     var body: some View {
         ZStack {
-            Capsule().fill(Color(red: 0.22, green: 0.57, blue: 0.42)).frame(height: 57).offset(y: 17)
+            Capsule().fill(Color(red: 0.08, green: 0.48, blue: 0.22)).frame(height: 57).offset(y: 17)
             HStack(spacing: -13) {
-                Circle().fill(Color(red: 0.45, green: 0.78, blue: 0.46)).frame(width: 60, height: 60)
-                Circle().fill(Color(red: 0.36, green: 0.73, blue: 0.45)).frame(width: 76, height: 76).offset(y: -13)
-                Circle().fill(Color(red: 0.43, green: 0.78, blue: 0.54)).frame(width: 60, height: 60)
+                Circle().fill(Color(red: 0.46, green: 0.79, blue: 0.08)).frame(width: 60, height: 60)
+                Circle().fill(Color(red: 0.22, green: 0.68, blue: 0.11)).frame(width: 76, height: 76).offset(y: -13)
+                Circle().fill(Color(red: 0.36, green: 0.78, blue: 0.12)).frame(width: 60, height: 60)
             }
             ForEach(0..<3) { i in
                 Circle().fill(Color(red: 1, green: 0.74, blue: 0.75)).frame(width: 9, height: 9)

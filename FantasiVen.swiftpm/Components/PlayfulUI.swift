@@ -45,7 +45,9 @@ struct ToyGlyph: View {
                 line([CGPoint(x: 39, y: 38), CGPoint(x: 74, y: 28)], GameStyle.purple, 6)
             case .moon:
                 var crescent = Path(); crescent.addEllipse(in: CGRect(x: 15, y: 15, width: 70, height: 70)); crescent.addEllipse(in: CGRect(x: 39, y: 3, width: 65, height: 65))
-                context.fill(crescent, with: .color(Color(red: 1, green: 0.80, blue: 0.29)), style: FillStyle(eoFill: true))
+                var moonContext = context
+                moonContext.clip(to: Path(ellipseIn: CGRect(x: 15, y: 15, width: 70, height: 70)))
+                moonContext.fill(crescent, with: .color(Color(red: 1, green: 0.80, blue: 0.29)), style: FillStyle(eoFill: true))
                 line([CGPoint(x: 28, y: 52), CGPoint(x: 34, y: 55), CGPoint(x: 41, y: 52)], GameStyle.ink, 3)
             case .heart:
                 var heart = Path(); heart.move(to: CGPoint(x: 50, y: 84)); heart.addCurve(to: CGPoint(x: 14, y: 35), control1: CGPoint(x: 25, y: 67), control2: CGPoint(x: 7, y: 51)); heart.addCurve(to: CGPoint(x: 50, y: 29), control1: CGPoint(x: 15, y: 7), control2: CGPoint(x: 41, y: 7)); heart.addCurve(to: CGPoint(x: 86, y: 35), control1: CGPoint(x: 59, y: 7), control2: CGPoint(x: 85, y: 7)); heart.addCurve(to: CGPoint(x: 50, y: 84), control1: CGPoint(x: 93, y: 51), control2: CGPoint(x: 75, y: 67))
@@ -69,7 +71,7 @@ struct DestinationArt: View {
             oval(CGRect(x: 12, y: 142, width: 220, height: 19), GameStyle.ink.opacity(0.08))
             switch kind {
             case .studio:
-                rounded(CGRect(x: 41, y: 70, width: 151, height: 76), 23, Color(red: 1, green: 0.89, blue: 0.67))
+                rounded(CGRect(x: 41, y: 70, width: 151, height: 76), 23, Color(red: 1, green: 0.78, blue: 0.24))
                 polygon([CGPoint(x: 26, y: 75), CGPoint(x: 119, y: 13), CGPoint(x: 208, y: 75)], StudioStyle.colors[1])
                 rounded(CGRect(x: 101, y: 97, width: 38, height: 50), 15, GameStyle.purple)
                 for x in [60, 154] { rounded(CGRect(x: x, y: 92, width: 24, height: 24), 8, .white.opacity(0.9)) }
@@ -102,7 +104,7 @@ struct DestinationCard: View {
     let subtitle: String
     var compact = false
     private var tint: Color {
-        switch kind { case .studio: return Color(red: 1, green: 0.78, blue: 0.37); case .village: return Color(red: 0.94, green: 0.64, blue: 0.78); case .playground: return Color(red: 0.48, green: 0.82, blue: 0.75) }
+        switch kind { case .studio: return StudioStyle.colors[0]; case .village: return StudioStyle.colors[1]; case .playground: return StudioStyle.colors[2] }
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -117,9 +119,8 @@ struct DestinationCard: View {
             }.padding(.horizontal, 17).padding(.bottom, 17)
         }
         .foregroundColor(GameStyle.ink).frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 32).fill(LinearGradient(colors: [tint.opacity(0.65), tint], startPoint: .top, endPoint: .bottom)))
-        .overlay(RoundedRectangle(cornerRadius: 32).stroke(.white.opacity(0.85), lineWidth: 3))
-        .shadow(color: tint.opacity(0.5), radius: 0, y: 7)
+        .background(CandySurface(color: tint, cornerRadius: 32))
+        .contentShape(RoundedRectangle(cornerRadius: 32))
     }
 }
 
@@ -147,7 +148,7 @@ struct FriendHomeCard: View {
     var body: some View {
         VStack(spacing: 0) {
             ZStack {
-                RoundedRectangle(cornerRadius: 68).fill(GameStyle.palette[friend.color].opacity(0.3))
+                RoundedRectangle(cornerRadius: 68).fill(GameStyle.mixed(GameStyle.palette[friend.color], with: .white, amount: 0.64))
                 Ellipse().fill(GameStyle.palette[friend.accent].opacity(0.4)).frame(height: 23).offset(y: 70)
                 CharacterView(friend: friend).padding(.horizontal, 12).padding(.top, 6).padding(.bottom, 12)
             }.frame(height: 181)
@@ -155,7 +156,7 @@ struct FriendHomeCard: View {
                 .lineLimit(2).multilineTextAlignment(.center).frame(maxWidth: .infinity, minHeight: 45)
                 .background(Capsule().fill(Color.white.opacity(0.94))).padding(.horizontal, 10).padding(.top, -10)
         }.padding(8).padding(.bottom, 6)
-        .background(RoundedRectangle(cornerRadius: 38).fill(.white.opacity(0.65)))
+        .background(RoundedRectangle(cornerRadius: 38).fill(.white.opacity(0.9)))
         .overlay(RoundedRectangle(cornerRadius: 38).stroke(.white.opacity(0.9), lineWidth: 3))
     }
 }
@@ -166,7 +167,10 @@ struct BrandTitle: View {
         HStack(spacing: -1) {
             ForEach(Array("FantasiVen".enumerated()), id: \.offset) { index, letter in
                 Text(String(letter)).font(.system(size: size, weight: .heavy, design: .rounded))
-                    .foregroundColor([GameStyle.purple, Color(red: 0.82, green: 0.29, blue: 0.53), Color(red: 0.16, green: 0.55, blue: 0.48)][index % 3])
+                    .foregroundColor([GameStyle.purple, Color(red: 0.86, green: 0.10, blue: 0.35), Color(red: 0.02, green: 0.43, blue: 0.32)][index % 3])
+                    .shadow(color: .white, radius: 0, x: -2, y: -2)
+                    .shadow(color: .white, radius: 0, x: 2, y: 2)
+                    .shadow(color: GameStyle.ink.opacity(0.6), radius: 0, y: 3)
                     .rotationEffect(.degrees(index.isMultiple(of: 2) ? -5 : 4)).offset(y: index.isMultiple(of: 3) ? -3 : 1)
             }
         }.shadow(color: .white.opacity(0.9), radius: 0, y: 3).accessibilityElement(children: .ignore).accessibilityLabel("FantasiVen")

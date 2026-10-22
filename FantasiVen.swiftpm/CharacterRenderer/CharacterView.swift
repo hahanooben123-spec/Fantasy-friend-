@@ -44,16 +44,26 @@ private struct CreaturePainter {
     var ink: Color { GameStyle.ink }
 
     func ellipse(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, _ color: Color) {
-        context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: w, height: h)), with: .color(color))
+        let shape = Path(ellipseIn: CGRect(x: x, y: y, width: w, height: h))
+        context.fill(shape, with: .color(color))
+        if w >= 20 && h >= 20 {
+            context.stroke(shape, with: .color(ink.opacity(0.7)), lineWidth: 2.2)
+        }
     }
     func line(_ points: [CGPoint], _ color: Color, _ width: CGFloat = 5) {
         guard let first = points.first else { return }
         var path = Path(); path.move(to: first)
         for point in points.dropFirst() { path.addLine(to: point) }
+        if width >= 6 {
+            context.stroke(path, with: .color(ink.opacity(0.85)), style: StrokeStyle(lineWidth: width + 3, lineCap: .round, lineJoin: .round))
+        }
         context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
     }
     func curve(_ start: CGPoint, _ end: CGPoint, _ control: CGPoint, _ color: Color, _ width: CGFloat = 5) {
         var path = Path(); path.move(to: start); path.addQuadCurve(to: end, control: control)
+        if width >= 7 {
+            context.stroke(path, with: .color(ink.opacity(0.85)), style: StrokeStyle(lineWidth: width + 3, lineCap: .round))
+        }
         context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round))
     }
     func polygon(_ points: [CGPoint], _ color: Color) {
@@ -61,6 +71,7 @@ private struct CreaturePainter {
         var path = Path(); path.move(to: first)
         for p in points.dropFirst() { path.addLine(to: p) }; path.closeSubpath()
         context.fill(path, with: .color(color))
+        context.stroke(path, with: .color(ink.opacity(0.8)), style: StrokeStyle(lineWidth: 2, lineJoin: .round))
     }
     func star(_ x: CGFloat, _ y: CGFloat, _ radius: CGFloat, _ color: Color) {
         polygon((0..<10).map { i in
@@ -103,10 +114,10 @@ private struct CreaturePainter {
 
     func drawBody(blink: Bool, happy: Bool, asleep: Bool) {
         let silhouette = CreatureShape(kind: friend.body).path(in: CGRect(x: 0, y: 0, width: 300, height: 320))
-        context.fill(silhouette, with: .linearGradient(Gradient(colors: [primary.opacity(0.78), primary, primary]), startPoint: CGPoint(x: 85, y: 76), endPoint: CGPoint(x: 207, y: 260)))
-        context.stroke(silhouette, with: .color(primary.opacity(0.45)), lineWidth: 2)
+        context.fill(silhouette, with: .linearGradient(Gradient(colors: [GameStyle.mixed(primary, with: .white, amount: 0.25), primary, GameStyle.mixed(primary, with: ink, amount: 0.26)]), startPoint: CGPoint(x: 85, y: 76), endPoint: CGPoint(x: 207, y: 260)))
+        context.stroke(silhouette, with: .color(GameStyle.mixed(primary, with: ink, amount: 0.72)), lineWidth: 3.5)
         var clipped = context; clipped.clip(to: silhouette)
-        clipped.fill(Path(ellipseIn: CGRect(x: 105, y: 196, width: 96, height: 72)), with: .color(accent.opacity(0.33)))
+        clipped.fill(Path(ellipseIn: CGRect(x: 105, y: 196, width: 96, height: 72)), with: .color(accent.opacity(0.52)))
         if friend.accessories.contains(9) {
             let attachment = Attachment.extra(9)
             let paintingContext = friend.placement(for: attachment) == PartPlacement() ? clipped : context
@@ -118,8 +129,10 @@ private struct CreaturePainter {
             CreaturePainter(context: paintingContext, friend: friend).placed(for: attachment).drawPiece(attachment)
         }
         drawDoodles(in: clipped)
-        ellipse(95, 106, 15, 28, .white.opacity(0.18))
-        ellipse(87, 180, 27, 15, Color.pink.opacity(0.32)); ellipse(190, 180, 27, 15, Color.pink.opacity(0.32))
+        // Highlights stay clipped to every body shape, including narrow beans and drops.
+        clipped.fill(Path(ellipseIn: CGRect(x: 84, y: 90, width: 24, height: 45)), with: .color(.white.opacity(0.36)))
+        clipped.fill(Path(ellipseIn: CGRect(x: 110, y: 84, width: 10, height: 13)), with: .color(.white.opacity(0.62)))
+        ellipse(87, 180, 27, 15, Color(red: 1, green: 0.23, blue: 0.42).opacity(0.48)); ellipse(190, 180, 27, 15, Color(red: 1, green: 0.23, blue: 0.42).opacity(0.48))
         drawEyes(closed: blink || asleep, happy: happy)
         drawMouth(happy: happy, asleep: asleep)
     }
@@ -227,12 +240,12 @@ private struct CreaturePainter {
 
         case 9:
             for p in [CGPoint(x: 81, y: 159), CGPoint(x: 211, y: 208), CGPoint(x: 97, y: 223), CGPoint(x: 194, y: 104)] {
-                context.fill(Path(ellipseIn: CGRect(x: p.x, y: p.y, width: 21, height: 17)), with: .color(accent.opacity(0.65)))
+                context.fill(Path(ellipseIn: CGRect(x: p.x, y: p.y, width: 21, height: 17)), with: .color(accent.opacity(0.85)))
             }
 
         case 10:
             for y in stride(from: 111, through: 251, by: 33) {
-                context.fill(Path(roundedRect: CGRect(x: 50, y: CGFloat(y), width: 200, height: 9), cornerRadius: 5), with: .color(accent.opacity(0.4)))
+                context.fill(Path(roundedRect: CGRect(x: 50, y: CGFloat(y), width: 200, height: 9), cornerRadius: 5), with: .color(accent.opacity(0.75)))
             }
 
         case 11:

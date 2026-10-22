@@ -160,7 +160,7 @@ struct BuilderView: View {
             }
         }.padding(.top, 12).frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(RoundedRectangle(cornerRadius: 32).fill(Color.white.opacity(0.87)))
-            .overlay(RoundedRectangle(cornerRadius: 32).stroke(StudioStyle.color(part).opacity(0.45), lineWidth: 3))
+            .overlay(RoundedRectangle(cornerRadius: 32).stroke(StudioStyle.color(part), lineWidth: 3))
     }
 
     private var categorySample: FantasyFriend {
@@ -317,7 +317,7 @@ struct BuilderView: View {
                 Image(systemName: icon).font(.system(size: 27, weight: .bold))
                 Text(title).font(.system(.subheadline, design: .rounded).weight(.bold)).lineLimit(2).multilineTextAlignment(.center)
             }.frame(maxWidth: .infinity).frame(minHeight: 90)
-                .background(RoundedRectangle(cornerRadius: 26).fill(tint.opacity(0.45)))
+                .background(RoundedRectangle(cornerRadius: 26).fill(tint.opacity(0.65)))
                 .overlay(RoundedRectangle(cornerRadius: 26).stroke(.white, lineWidth: 3))
         }.buttonStyle(SquishStyle())
     }
@@ -434,7 +434,7 @@ struct BuilderView: View {
                 }.font(.system(size: 10, weight: .heavy, design: .rounded)).frame(height: 16)
             }
             .foregroundColor(GameStyle.ink).padding(7).frame(maxWidth: .infinity).frame(height: swatch ? 89 : 114)
-            .background(RoundedRectangle(cornerRadius: 25).fill(tint.opacity(selected(index) ? 0.35 : 0.13)))
+            .background(RoundedRectangle(cornerRadius: 25).fill(tint.opacity(selected(index) ? 0.65 : 0.24)))
             .overlay(RoundedRectangle(cornerRadius: 25).stroke(selected(index) ? GameStyle.purple : Color.white, lineWidth: selected(index) ? 3 : 2))
             .rotationEffect(.degrees(selected(index) ? (index.isMultiple(of: 2) ? -2 : 2) : 0))
         }.buttonStyle(SquishStyle()).accessibilityLabel(label).accessibilityAddTraits(selected(index) ? .isSelected : [])

@@ -54,9 +54,8 @@ struct HomeView: View {
                                         Spacer(minLength: 0)
                                         Image(systemName: "arrow.right").font(.system(size: 21, weight: .heavy)).padding(.trailing, 14)
                                     }.foregroundColor(GameStyle.ink).padding(7)
-                                        .background(RoundedRectangle(cornerRadius: 32).fill(LinearGradient(colors: [Color(red: 1, green: 0.88, blue: 0.55), StudioStyle.colors[0]], startPoint: .topLeading, endPoint: .bottomTrailing)))
-                                        .overlay(RoundedRectangle(cornerRadius: 32).stroke(.white.opacity(0.9), lineWidth: 3))
-                                        .shadow(color: StudioStyle.colors[0].opacity(0.4), radius: 0, y: 7)
+                                        .background(CandySurface(color: StudioStyle.colors[0], cornerRadius: 32))
+                                        .contentShape(RoundedRectangle(cornerRadius: 32))
                                 }.buttonStyle(SquishStyle())
                                 HStack(alignment: .top, spacing: 14) {
                                     NavigationLink(destination: GalleryView(onEdit: openEditor)) {

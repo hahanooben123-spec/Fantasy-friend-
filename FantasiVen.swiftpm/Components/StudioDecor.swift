@@ -2,11 +2,11 @@ import SwiftUI
 
 enum StudioStyle {
     static let colors: [Color] = [
-        Color(red: 1, green: 0.73, blue: 0.32), Color(red: 0.98, green: 0.51, blue: 0.64),
-        Color(red: 0.38, green: 0.78, blue: 0.76), Color(red: 0.64, green: 0.58, blue: 0.93),
-        Color(red: 1, green: 0.64, blue: 0.42), Color(red: 0.43, green: 0.76, blue: 0.93),
-        Color(red: 0.67, green: 0.81, blue: 0.38), Color(red: 0.88, green: 0.55, blue: 0.81),
-        Color(red: 0.99, green: 0.76, blue: 0.31)
+        Color(red: 1, green: 0.72, blue: 0.04), Color(red: 1, green: 0.32, blue: 0.53),
+        Color(red: 0.04, green: 0.75, blue: 0.67), Color(red: 0.65, green: 0.36, blue: 0.96),
+        Color(red: 1, green: 0.49, blue: 0.12), Color(red: 0.12, green: 0.68, blue: 1),
+        Color(red: 0.62, green: 0.86, blue: 0.12), Color(red: 0.94, green: 0.36, blue: 0.78),
+        Color(red: 1, green: 0.78, blue: 0.02)
     ]
     static func color(_ part: Part) -> Color { colors[part.rawValue % colors.count] }
 }
@@ -15,21 +15,21 @@ struct StudioBackdrop: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                LinearGradient(colors: [Color(red: 1, green: 0.94, blue: 0.83), Color(red: 1, green: 0.86, blue: 0.86)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                LinearGradient(colors: [Color(red: 1, green: 0.87, blue: 0.36), Color(red: 1, green: 0.69, blue: 0.33)], startPoint: .topLeading, endPoint: .bottomTrailing)
                 Canvas { context, size in
                     let shapes: [(CGRect, Color)] = [
                         (CGRect(x: -85, y: -110, width: 330, height: 300), StudioStyle.colors[0]),
                         (CGRect(x: size.width - 155, y: 50, width: 240, height: 260), StudioStyle.colors[2]),
                         (CGRect(x: -80, y: size.height - 180, width: 290, height: 300), StudioStyle.colors[3])
                     ]
-                    for (rect, color) in shapes { context.fill(Path(ellipseIn: rect), with: .color(color.opacity(0.22))) }
+                    for (rect, color) in shapes { context.fill(Path(ellipseIn: rect), with: .color(color.opacity(0.5))) }
                     for index in 0..<26 {
                         let x = CGFloat((index * 73 + 19) % 307) / 307 * size.width
                         let y = CGFloat((index * 97 + 31) % 503) / 503 * size.height
                         var dash = Path()
                         dash.move(to: CGPoint(x: x, y: y))
                         dash.addQuadCurve(to: CGPoint(x: x + 12, y: y - 6), control: CGPoint(x: x + 3, y: y - 12))
-                        context.stroke(dash, with: .color(StudioStyle.colors[index % 9].opacity(0.32)), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                        context.stroke(dash, with: .color(StudioStyle.colors[index % 9].opacity(0.65)), style: StrokeStyle(lineWidth: 4, lineCap: .round))
                     }
                 }.frame(width: geometry.size.width, height: geometry.size.height)
             }
@@ -52,9 +52,10 @@ struct StudioCategoryTile: View {
             }
             .foregroundColor(GameStyle.ink)
             .frame(maxWidth: .infinity).frame(height: 76)
-            .background(RoundedRectangle(cornerRadius: 23).fill(StudioStyle.color(part).opacity(selected ? 1 : 0.3)))
+            .background(CandySurface(color: selected ? StudioStyle.color(part) : GameStyle.mixed(StudioStyle.color(part), with: .white, amount: 0.44), cornerRadius: 23))
             .overlay(RoundedRectangle(cornerRadius: 23).stroke(selected ? Color.white : .clear, lineWidth: 3))
             .shadow(color: StudioStyle.color(part).opacity(selected ? 0.35 : 0), radius: 0, y: 4)
+            .contentShape(RoundedRectangle(cornerRadius: 23))
             .rotationEffect(.degrees(selected ? -3 : 0))
         }.buttonStyle(SquishStyle()).accessibilityLabel(title).accessibilityAddTraits(selected ? .isSelected : [])
     }

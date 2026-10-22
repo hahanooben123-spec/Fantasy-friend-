@@ -82,7 +82,7 @@ struct PlaygroundView: View {
                         ToyGlyph(kind: toys[index]).frame(width: 53, height: 53)
                         Text(store.t(item.rawValue)).font(.system(.subheadline, design: .rounded).weight(.heavy))
                     }.foregroundColor(GameStyle.ink).frame(maxWidth: .infinity).frame(height: 96)
-                        .background(RoundedRectangle(cornerRadius: 28).fill(StudioStyle.colors[index].opacity(0.78)))
+                        .background(RoundedRectangle(cornerRadius: 28).fill(StudioStyle.colors[index]))
                         .overlay(RoundedRectangle(cornerRadius: 28).stroke(.white.opacity(0.85), lineWidth: 2))
                         .shadow(color: StudioStyle.colors[index].opacity(0.4), radius: 0, y: 5)
                         .rotationEffect(.degrees(index.isMultiple(of: 2) ? -2 : 2))

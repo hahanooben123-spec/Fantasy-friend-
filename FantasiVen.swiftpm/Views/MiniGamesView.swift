@@ -41,9 +41,8 @@ struct MiniGamesView: View {
                                         Image(systemName: "play.fill").font(.title2)
                                     }.padding(16).foregroundColor(GameStyle.ink)
                                         .frame(maxWidth: .infinity, minHeight: 145)
-                                        .background(RoundedRectangle(cornerRadius: 34).fill(kind.tint))
-                                        .overlay(RoundedRectangle(cornerRadius: 34).stroke(.white.opacity(0.9), lineWidth: 3))
-                                        .shadow(color: kind.tint.opacity(0.5), radius: 0, y: 6)
+                                        .background(CandySurface(color: kind.tint, cornerRadius: 34))
+                                        .contentShape(RoundedRectangle(cornerRadius: 34))
                                 }.buttonStyle(SquishStyle())
                             }
                             Text(store.t("gamesGentle")).font(.system(.caption, design: .rounded).weight(.semibold)).multilineTextAlignment(.center)
@@ -83,9 +82,9 @@ struct MiniGamesView: View {
 extension MiniGameKind {
     var tint: Color {
         switch self {
-        case .apples: return Color(red: 1, green: 0.82, blue: 0.59)
-        case .bubbles: return Color(red: 0.68, green: 0.88, blue: 1)
-        case .hide: return Color(red: 0.75, green: 0.91, blue: 0.65)
+        case .apples: return Color(red: 1, green: 0.70, blue: 0.15)
+        case .bubbles: return Color(red: 0.22, green: 0.77, blue: 1)
+        case .hide: return Color(red: 0.64, green: 0.87, blue: 0.22)
         }
     }
 }
@@ -102,8 +101,7 @@ struct MiniGamesDoor: View {
             Spacer(minLength: 0)
             Image(systemName: "play.fill").font(.title2).padding(.trailing, 19)
         }.foregroundColor(GameStyle.ink).padding(9).frame(maxWidth: .infinity)
-            .background(RoundedRectangle(cornerRadius: 30).fill(LinearGradient(colors: [.init(red: 0.79, green: 0.86, blue: 1), .init(red: 0.97, green: 0.76, blue: 0.89)], startPoint: .leading, endPoint: .trailing)))
-            .overlay(RoundedRectangle(cornerRadius: 30).stroke(.white, lineWidth: 3))
-            .shadow(color: GameStyle.purple.opacity(0.2), radius: 0, y: 5)
+            .background(CandySurface(color: Color(red: 0.49, green: 0.76, blue: 1), cornerRadius: 30))
+            .contentShape(RoundedRectangle(cornerRadius: 30))
     }
 }

@@ -1,18 +1,48 @@
 import SwiftUI
+import UIKit
 
 enum GameStyle {
-    static let ink = Color(red: 0.23, green: 0.19, blue: 0.36)
-    static let purple = Color(red: 0.43, green: 0.28, blue: 0.73)
+    static let ink = Color(red: 0.16, green: 0.11, blue: 0.25)
+    static let purple = Color(red: 0.47, green: 0.16, blue: 0.79)
+    // Keep hue order stable so existing friends and brush strokes retain their identity.
     static let palette: [Color] = [
-        Color(red: 0.65, green: 0.49, blue: 0.88), Color(red: 0.96, green: 0.58, blue: 0.70),
-        Color(red: 0.99, green: 0.73, blue: 0.46), Color(red: 0.98, green: 0.85, blue: 0.43),
-        Color(red: 0.63, green: 0.82, blue: 0.51), Color(red: 0.39, green: 0.76, blue: 0.67),
-        Color(red: 0.45, green: 0.75, blue: 0.90), Color(red: 0.49, green: 0.59, blue: 0.86),
-        Color(red: 0.85, green: 0.65, blue: 0.91), Color(red: 0.97, green: 0.77, blue: 0.79),
-        Color(red: 0.95, green: 0.59, blue: 0.48), Color(red: 0.72, green: 0.87, blue: 0.78),
-        Color(red: 0.66, green: 0.84, blue: 0.95), Color(red: 0.87, green: 0.80, blue: 0.67),
-        Color(red: 0.74, green: 0.67, blue: 0.85), Color(red: 0.97, green: 0.91, blue: 0.79)
+        Color(red: 0.59, green: 0.24, blue: 0.94), Color(red: 1, green: 0.30, blue: 0.54),
+        Color(red: 1, green: 0.52, blue: 0.08), Color(red: 1, green: 0.81, blue: 0.04),
+        Color(red: 0.52, green: 0.82, blue: 0.06), Color(red: 0.03, green: 0.71, blue: 0.48),
+        Color(red: 0.05, green: 0.65, blue: 0.98), Color(red: 0.26, green: 0.38, blue: 0.91),
+        Color(red: 0.82, green: 0.27, blue: 0.92), Color(red: 1, green: 0.55, blue: 0.68),
+        Color(red: 1, green: 0.30, blue: 0.19), Color(red: 0.22, green: 0.84, blue: 0.64),
+        Color(red: 0.31, green: 0.80, blue: 1), Color(red: 0.77, green: 0.53, blue: 0.29),
+        Color(red: 0.58, green: 0.39, blue: 0.79), Color(red: 1, green: 0.91, blue: 0.65)
     ]
+
+    /// Opaque paint mixing gives shadows depth without washing colors out with transparency.
+    static func mixed(_ color: Color, with other: Color, amount: CGFloat) -> Color {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        var r2: CGFloat = 0, g2: CGFloat = 0, b2: CGFloat = 0, a2: CGFloat = 0
+        guard UIColor(color).getRed(&r, green: &g, blue: &b, alpha: &a),
+              UIColor(other).getRed(&r2, green: &g2, blue: &b2, alpha: &a2) else { return color }
+        let t = min(1, max(0, amount))
+        return Color(red: Double(r + (r2-r)*t), green: Double(g + (g2-g)*t), blue: Double(b + (b2-b)*t))
+    }
+}
+
+/// A solid toy-like rim, gloss and contact shadow; never intercepts a child's touch.
+struct CandySurface: View {
+    var color: Color
+    var cornerRadius: CGFloat = 27
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius)
+            .fill(LinearGradient(colors: [GameStyle.mixed(color, with: .white, amount: 0.28), color, GameStyle.mixed(color, with: GameStyle.ink, amount: 0.12)], startPoint: .top, endPoint: .bottom))
+            .overlay(alignment: .top) {
+                RoundedRectangle(cornerRadius: max(8, cornerRadius - 7))
+                    .fill(LinearGradient(colors: [.white.opacity(0.5), .white.opacity(0.03)], startPoint: .top, endPoint: .bottom))
+                    .frame(height: 22).padding(7)
+            }
+            .overlay(RoundedRectangle(cornerRadius: cornerRadius).strokeBorder(GameStyle.ink.opacity(0.65), lineWidth: 2))
+            .shadow(color: GameStyle.mixed(color, with: GameStyle.ink, amount: 0.45), radius: 0, y: 5)
+            .allowsHitTesting(false)
+    }
 }
 
 struct CandyButton: View {
@@ -28,10 +58,10 @@ struct CandyButton: View {
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").font(.system(size: 14, weight: .heavy))
             }
-            .foregroundColor(.white).padding(.horizontal, 21).frame(minHeight: 64)
-            .background(RoundedRectangle(cornerRadius: 27).fill(LinearGradient(colors: [color.opacity(0.88), color], startPoint: .topLeading, endPoint: .bottomTrailing)))
-            .overlay(RoundedRectangle(cornerRadius: 27).stroke(Color.white.opacity(0.35), lineWidth: 2))
-            .shadow(color: color.opacity(0.25), radius: 0, y: 6)
+            .foregroundColor(.white).shadow(color: GameStyle.ink.opacity(0.35), radius: 0, y: 1)
+            .padding(.horizontal, 21).frame(minHeight: 64)
+            .background(CandySurface(color: color))
+            .contentShape(RoundedRectangle(cornerRadius: 27))
         }.buttonStyle(SquishStyle())
     }
 }
@@ -52,9 +82,8 @@ struct RoundButton: View {
         Button(action: action) {
             Image(systemName: icon).font(.system(size: 21, weight: .bold))
                 .foregroundColor(GameStyle.ink).frame(width: 50, height: 50)
-                .background(Circle().fill(Color.white.opacity(0.94)))
-                .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                .shadow(color: GameStyle.purple.opacity(0.1), radius: 0, y: 3)
+                .background(CandySurface(color: Color(red: 1, green: 0.91, blue: 0.48), cornerRadius: 25))
+                .contentShape(Circle())
         }.buttonStyle(SquishStyle()).accessibilityLabel(label)
     }
 }
