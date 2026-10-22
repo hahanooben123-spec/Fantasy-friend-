@@ -23,7 +23,7 @@ final class FriendStore: ObservableObject {
         let settingsURL = directory.appendingPathComponent("settings.json")
         if FileManager.default.fileExists(atPath: settingsURL.path) {
             do { settings = try JSONDecoder().decode(GameSettings.self, from: Data(contentsOf: settingsURL)) }
-            catch { error = t("loadError") }
+            catch { self.error = t("loadError") }
         }
         let url = directory.appendingPathComponent("friends.json")
         guard FileManager.default.fileExists(atPath: url.path) else { return }
