@@ -182,3 +182,5 @@ Pizzaværkstedet erstatter Fantasikøkkenet i minispilsmenuen. Forløbet består
 Original Canvas-grafik viser skål, dej, træbræt, ingredienser, krydderiglas og en varm stenovn. Skorpen bliver gylden under en kort bagning. Bagningen pauses sammen med spillet og i baggrunden; pizzaen brænder aldrig på. Efter bagning kan barnet tage pizzaen ud, dele op til otte stykker med vennen og begynde på en ny. Fortryd gemmer op til 30 ændringer under tilberedningen. Pizzaen er en legesession og gemmes ikke som en del af vennens samling.
 
 Implementeret uden kompilering, tests eller visuel kontrol efter brugerens ønske.
+
+Trin 3 er nu Pynt din pizza: en illustreret toppingbakke med ost, pepperoni, skinke, champignon, peberfrugt, oliven og ananas. Tryk placerer et stykke, og træk lægger flere stykker langs fingerens spor. Krydderier har en separat fane med oregano, basilikum og salt. Toppings er frit valgfrie, følger med gennem ovn og servering, og handlingerne kan fortrydes. Ost og øvrigt fyld får en varmere, bagt finish i ovnen. Ingen ny kompilering eller kontrolrunde kørt.

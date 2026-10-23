@@ -104,6 +104,12 @@ struct PizzaIllustration:View {
                 startPoint:CGPoint(x:70,y:80),endPoint:CGPoint(x:230,y:250)),
                 style:StrokeStyle(lineWidth:32,lineCap:.round,lineJoin:.round))
         }
+        for item in recipe.toppings {
+            var piece=topping
+            piece.translateBy(x:item.point.x*300,y:item.point.y*320)
+            piece.rotate(by:.degrees(item.angle))
+            PizzaToppingPainter.paint(piece,kind:item.kind,baked:baked)
+        }
         for item in recipe.spices {
             var sprinkle=topping
             sprinkle.translateBy(x:item.point.x*300,y:item.point.y*320)
@@ -228,5 +234,88 @@ struct PizzaIngredientArt:View {
                 c.fill(Path(roundedRect:CGRect(x:20,y:38,width:20,height:14),cornerRadius:4),with:.color(Color(red:1,green:0.88,blue:0.42)))
             }
         }.accessibilityHidden(true)
+    }
+}
+
+
+struct PizzaToppingArt:View {
+    let kind:PizzaToppingKind
+    var body:some View {
+        Canvas {c,s in
+            c.translateBy(x:s.width/2,y:s.height/2)
+            let scale=min(s.width,s.height)/29
+            c.scaleBy(x:scale,y:scale)
+            PizzaToppingPainter.paint(c,kind:kind,baked:0)
+        }.accessibilityHidden(true)
+    }
+}
+enum PizzaToppingPainter {
+    static func paint(_ c:GraphicsContext,kind:PizzaToppingKind,baked:Double) {
+        let cream=Color(red:1,green:0.94,blue:0.73)
+        let shadow=Path(ellipseIn:CGRect(x:-10,y:3,width:21,height:10))
+        c.fill(shadow,with:.color(Color(red:0.3,green:0.09,blue:0.04).opacity(0.16)))
+        switch kind {
+        case .cheese:
+            for i in 0..<7 {
+                var piece=c
+                piece.translateBy(x:CGFloat((i*7)%17-8),y:CGFloat((i*11)%15-7))
+                piece.rotate(by:.degrees(Double(i*49)))
+                let r=CGRect(x:-6-baked,y:-1.8,width:12+baked*2,height:3.6+baked)
+                ToyFinish.paint(piece,path:Path(roundedRect:r,cornerRadius:1.8+baked),
+                    color:GameStyle.mixed(cream,with:.orange,amount:baked*0.18),edge:0.3)
+            }
+        case .pepperoni:
+            var shape=Path()
+            for i in 0..<16 {
+                let a=Double(i)*Double.pi/8,r:CGFloat=i%2 == 0 ? 10 : 9.3
+                let point=CGPoint(x:CGFloat(cos(a))*r,y:CGFloat(sin(a))*r)
+                if i == 0 {shape.move(to:point)} else {shape.addLine(to:point)}
+            }
+            shape.closeSubpath()
+            ToyFinish.paint(c,path:shape,color:Color(red:0.88-baked*0.08,green:0.18,blue:0.12),edge:0.8)
+            for i in 0..<7 {
+                let x=CGFloat((i*11)%14-7),y=CGFloat((i*7)%13-6)
+                c.fill(Path(ellipseIn:CGRect(x:x,y:y,width:2.5,height:1.8)),with:.color(cream.opacity(0.7)))
+            }
+        case .ham:
+            var shape=Path();shape.move(to:CGPoint(x:-10,y:-6))
+            shape.addQuadCurve(to:CGPoint(x:8,y:-8),control:CGPoint(x:0,y:-12))
+            shape.addLine(to:CGPoint(x:11,y:6));shape.addQuadCurve(to:CGPoint(x:-7,y:9),control:CGPoint(x:0,y:5));shape.closeSubpath()
+            ToyFinish.paint(c,path:shape,color:Color(red:0.98,green:0.53-baked*0.06,blue:0.59),edge:0.7)
+            var fold=Path();fold.move(to:CGPoint(x:-5,y:-5));fold.addQuadCurve(to:CGPoint(x:5,y:6),control:CGPoint(x:-1,y:3))
+            c.stroke(fold,with:.color(cream.opacity(0.6)),style:StrokeStyle(lineWidth:1.5,lineCap:.round))
+        case .mushroom:
+            ToyFinish.paint(c,path:Path(roundedRect:CGRect(x:-3.5,y:0,width:7,height:11),cornerRadius:2),
+                color:cream,edge:0.6)
+            var cap=Path();cap.move(to:CGPoint(x:-12,y:2))
+            cap.addCurve(to:CGPoint(x:12,y:2),control1:CGPoint(x:-10,y:-16),control2:CGPoint(x:9,y:-16))
+            cap.addQuadCurve(to:CGPoint(x:-12,y:2),control:CGPoint(x:0,y:6));cap.closeSubpath()
+            ToyFinish.paint(c,path:cap,color:Color(red:0.81-baked*0.06,green:0.63-baked*0.06,blue:0.43),edge:0.7)
+            var gill=Path();gill.move(to:CGPoint(x:-8,y:1));gill.addQuadCurve(to:CGPoint(x:8,y:1),control:CGPoint(x:0,y:4))
+            c.stroke(gill,with:.color(Color(red:0.43,green:0.26,blue:0.19)),lineWidth:1)
+        case .pepper:
+            var ring=Path()
+            ring.move(to:CGPoint(x:-9,y:7))
+            ring.addCurve(to:CGPoint(x:-5,y:-8),control1:CGPoint(x:-14,y:0),control2:CGPoint(x:-14,y:-10))
+            ring.addCurve(to:CGPoint(x:9,y:-5),control1:CGPoint(x:0,y:-15),control2:CGPoint(x:13,y:-13))
+            ring.addCurve(to:CGPoint(x:7,y:9),control1:CGPoint(x:16,y:0),control2:CGPoint(x:15,y:12))
+            c.stroke(ring,with:.color(Color(red:0.09,green:0.39,blue:0.14)),style:StrokeStyle(lineWidth:5,lineCap:.round))
+            c.stroke(ring,with:.color(Color(red:0.48,green:0.78-baked*0.08,blue:0.15)),style:StrokeStyle(lineWidth:2.7,lineCap:.round))
+        case .olive:
+            let ring=Path(ellipseIn:CGRect(x:-8,y:-10,width:16,height:20))
+            c.stroke(ring,with:.color(Color(red:0.13,green:0.18,blue:0.12)),lineWidth:5)
+            var shine=Path();shine.move(to:CGPoint(x:-5,y:-6));shine.addQuadCurve(to:CGPoint(x:1,y:-8),control:CGPoint(x:-4,y:-10))
+            c.stroke(shine,with:.color(Color(red:0.65,green:0.69,blue:0.42)),style:StrokeStyle(lineWidth:1.6,lineCap:.round))
+        case .pineapple:
+            var chunk=Path();chunk.move(to:CGPoint(x:-10,y:6))
+            chunk.addQuadCurve(to:CGPoint(x:-5,y:-9),control:CGPoint(x:-12,y:-7))
+            chunk.addLine(to:CGPoint(x:10,y:-2));chunk.addQuadCurve(to:CGPoint(x:6,y:10),control:CGPoint(x:15,y:8));chunk.closeSubpath()
+            ToyFinish.paint(c,path:chunk,color:Color(red:1,green:0.82-baked*0.08,blue:0.16),edge:0.7)
+            for i in 0..<3 {
+                let x=CGFloat(i)*4-5
+                var fibre=Path();fibre.move(to:CGPoint(x:x,y:-3));fibre.addLine(to:CGPoint(x:x+2,y:6))
+                c.stroke(fibre,with:.color(cream.opacity(0.5)),lineWidth:0.8)
+            }
+        }
     }
 }

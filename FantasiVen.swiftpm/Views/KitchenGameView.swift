@@ -7,6 +7,8 @@ struct KitchenGameView:View {
     @State private var recipe=PizzaRecipe()
     @State private var step=0
     @State private var spice=0
+    @State private var topping=PizzaToppingKind.cheese
+    @State private var herbs=false
     @State private var history:[PizzaRecipe]=[]
     @State private var before:PizzaRecipe?
     @State private var inserted=false
@@ -31,7 +33,7 @@ struct KitchenGameView:View {
                             }
                         } else {
                             stage.frame(maxWidth:.infinity,maxHeight:.infinity)
-                            controls.frame(height:step == 0 || (step == 3 && !inserted) ? 205 : step == 2 ? 190 : 175)
+                            controls.frame(height:step == 0 || (step == 3 && !inserted) ? 205 : step == 2 ? 255 : 175)
                         }
                     }.padding(.top,77).padding(.horizontal,12).padding(.bottom,12)
                 }
@@ -61,7 +63,7 @@ struct KitchenGameView:View {
     }
     @ViewBuilder private var stage:some View {
         if step<3 {
-            PizzaWorkSurface(recipe:$recipe,step:step,spice:spice,onBegin:begin,onEnd:finish)
+            PizzaWorkSurface(recipe:$recipe,step:step,spice:spice,topping:topping,herbs:herbs,onBegin:begin,onEnd:finish)
                 .accessibilityElement(children:.ignore).accessibilityLabel(store.t(instruction))
                 .accessibilityAction {assist()}
         } else if served {
@@ -101,7 +103,7 @@ struct KitchenGameView:View {
     private var instruction:String {
         if step == 0 {return recipe.readyToShape ? "pizzaShapeHint" : "pizzaMixHint"}
         if step == 1 {return "pizzaSauceHint"}
-        if step == 2 {return "pizzaSpiceHint"}
+        if step == 2 {return herbs ? "pizzaHerbHint" : "pizzaToppingHint"}
         return served ? "pizzaEatHint" : inserted ? (baked>=1 ? "pizzaReady" : "pizzaBaking") : "pizzaOvenHint"
     }
     private var controls:some View {
@@ -123,17 +125,7 @@ struct KitchenGameView:View {
                 }
                 ProgressView(value:recipe.readyToShape ? recipe.formed : recipe.mixed).tint(.orange)
             } else if step == 2 {
-                HStack(spacing:6) {
-                    ForEach(0..<4) {index in
-                        Button {spice=index;SoundService.shared.play(.click)} label:{
-                            VStack(spacing:3) {
-                                PizzaIngredientArt(kind:index,spice:true).frame(width:26,height:28)
-                                Text(store.t("pizzaSpice\(index)")).font(.system(size:10,weight:.heavy,design:.rounded)).lineLimit(1)
-                            }.frame(maxWidth:.infinity,minHeight:49)
-                                .background(CandySurface(color:spice == index ? WorkshopLook.yellow : .white,cornerRadius:15))
-                        }.buttonStyle(SquishStyle()).accessibilityAddTraits(spice == index ? .isSelected : [])
-                    }
-                }
+                decorationTray
             } else if step == 3 && inserted && !served {
                 ProgressView(value:baked).tint(.orange).accessibilityLabel(store.t("pizzaBaking"))
             }
@@ -165,6 +157,50 @@ struct KitchenGameView:View {
         }.padding(14).frame(maxWidth:.infinity,maxHeight:.infinity)
             .background(CandySurface(color:WorkshopLook.cream,cornerRadius:26))
     }
+    private var decorationTray:some View {
+        VStack(spacing:7) {
+            HStack(spacing:7) {
+                Button {finish();herbs=false} label:{
+                    Text(store.t("pizzaToppings")).font(.system(size:12,weight:.heavy,design:.rounded))
+                        .frame(maxWidth:.infinity,minHeight:44)
+                        .background(Capsule().fill(herbs ? .white : WorkshopLook.yellow))
+                }.buttonStyle(SquishStyle()).accessibilityAddTraits(herbs ? [] : .isSelected)
+                Button {finish();herbs=true} label:{
+                    Text(store.t("pizzaHerbs")).font(.system(size:12,weight:.heavy,design:.rounded))
+                        .frame(maxWidth:.infinity,minHeight:44)
+                        .background(Capsule().fill(herbs ? WorkshopLook.yellow : .white))
+                }.buttonStyle(SquishStyle()).accessibilityAddTraits(herbs ? .isSelected : [])
+            }
+            if herbs {
+                HStack(spacing:8) {
+                    ForEach(0..<3) {index in
+                        Button {spice=index;SoundService.shared.play(.click)} label:{
+                            VStack(spacing:2) {
+                                PizzaIngredientArt(kind:index,spice:true).frame(width:25,height:30)
+                                Text(store.t("pizzaSpice\(index)")).font(.system(size:10,weight:.bold,design:.rounded))
+                            }.frame(maxWidth:.infinity,minHeight:60)
+                                .background(CandySurface(color:spice == index ? WorkshopLook.yellow : .white,cornerRadius:16))
+                        }.buttonStyle(SquishStyle())
+                    }
+                }
+            } else {
+                ScrollView(.horizontal,showsIndicators:false) {
+                    HStack(spacing:8) {
+                        ForEach(PizzaToppingKind.allCases,id:\.rawValue) {kind in
+                            Button {topping=kind;SoundService.shared.play(.click)} label:{
+                                VStack(spacing:2) {
+                                    PizzaToppingArt(kind:kind).frame(width:36,height:34)
+                                    Text(store.t(kind.key)).font(.system(size:10,weight:.heavy,design:.rounded)).lineLimit(1).minimumScaleFactor(0.75)
+                                }.frame(width:69,height:60)
+                                    .background(CandySurface(color:topping == kind ? WorkshopLook.yellow : .white,cornerRadius:16))
+                            }.buttonStyle(SquishStyle()).accessibilityLabel(store.t(kind.key))
+                                .accessibilityAddTraits(topping == kind ? .isSelected : [])
+                        }
+                    }.padding(.bottom,5).padding(.horizontal,2)
+                }.frame(height:67)
+            }
+        }
+    }
     private func begin() {if before == nil {before=recipe}}
     private func finish() {
         if let old=before,old != recipe {remember(old);SoundService.shared.play(.click)}
@@ -183,15 +219,17 @@ struct KitchenGameView:View {
                 else {value.formed=min(1,value.formed+0.25)}
             } else if step == 1 {value.spreadSauce()}
             else if step == 2 {
-                let a=Double(value.spices.count)*2.4
-                value.sprinkle(spice,at:PizzaPoint(x:0.5+cos(a)*0.2,y:0.48+sin(a)*0.2))
+                let count=herbs ? value.spices.count : value.toppings.count
+                let a=Double(count)*2.4
+                let point=PizzaPoint(x:0.5+cos(a)*0.2,y:0.48+sin(a)*0.2)
+                if herbs {value.sprinkle(spice,at:point)} else {value.place(topping,at:point)}
             }
         }
     }
     private func insert() {finish();inserted=true;ovenDrag = .zero;SoundService.shared.play(.click)}
     private func eat() {guard eaten<8 else {return};eaten+=1;signal+=1}
     private func reset() {
-        recipe=PizzaRecipe();step=0;history=[];before=nil;inserted=false;baked=0;served=false;eaten=0;signal=0
+        recipe=PizzaRecipe();step=0;herbs=false;topping = .cheese;spice=0;history=[];before=nil;inserted=false;baked=0;served=false;eaten=0;signal=0
     }
 }
 
@@ -199,11 +237,14 @@ private struct PizzaWorkSurface:View {
     @Binding var recipe:PizzaRecipe
     let step:Int
     let spice:Int
+    let topping:PizzaToppingKind
+    let herbs:Bool
     let onBegin:()->Void
     let onEnd:()->Void
     @State private var last:CGPoint?
     @State private var strokeID:UUID?
     @State private var turn=0.0
+    @State private var sprinkleTravel=0.0
     var body:some View {
         GeometryReader {proxy in
             let width=max(1,min(proxy.size.width,proxy.size.height*300/320))
@@ -213,7 +254,7 @@ private struct PizzaWorkSurface:View {
                 else {PizzaIllustration(recipe:recipe)}
             }.frame(width:size.width,height:size.height).contentShape(Rectangle())
                 .gesture(DragGesture(minimumDistance:0).onChanged {drag($0,size:size)}.onEnded {_ in
-                    last=nil;strokeID=nil;onEnd()
+                    last=nil;strokeID=nil;sprinkleTravel=0;onEnd()
                 })
                 .position(x:proxy.size.width/2,y:proxy.size.height/2)
         }.onChange(of:step) {_ in last=nil;strokeID=nil}
@@ -237,6 +278,12 @@ private struct PizzaWorkSurface:View {
                 }
                 if distance>0.006 {recipe.sauce[i].points.append(p)}
             }
-        } else if step == 2 && (distance>0.012 || last == nil) {recipe.sprinkle(spice,at:p)}
+        } else if step == 2 {
+            sprinkleTravel+=Double(distance)
+            if p.onDough && (last == nil || sprinkleTravel>(herbs ? 0.013 : 0.06)) {
+                if herbs {recipe.sprinkle(spice,at:p)} else {recipe.place(topping,at:p)}
+                sprinkleTravel=0
+            }
+        }
     }
 }
