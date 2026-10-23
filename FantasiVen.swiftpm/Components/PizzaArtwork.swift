@@ -58,6 +58,7 @@ struct PizzaIllustration:View {
     var board=true
     var eaten=0
     var landingID:UUID?
+    var sliceIndex:Int?
     var body:some View {
         Canvas {c,size in
             c.scaleBy(x:size.width/300,y:size.height/320)
@@ -82,6 +83,16 @@ struct PizzaIllustration:View {
                 }
             }
             var pizza=c
+            if let index=sliceIndex {
+                pizza.translateBy(x:-43,y:53)
+                pizza.translateBy(x:150,y:154)
+                pizza.rotate(by:.degrees(-Double(index)*45))
+                pizza.translateBy(x:-150,y:-154)
+                var wedge=Path();wedge.move(to:CGPoint(x:150,y:154))
+                wedge.addArc(center:CGPoint(x:150,y:154),radius:135,
+                    startAngle:.degrees(Double(index)*45-89),endAngle:.degrees(Double(index)*45-46),clockwise:false)
+                wedge.closeSubpath();pizza.clip(to:wedge)
+            }
             if eaten>0 {
                 var remaining=Path()
                 for i in min(8,eaten)..<8 {
@@ -93,7 +104,7 @@ struct PizzaIllustration:View {
                 pizza.clip(to:remaining)
             }
             draw(pizza)
-            if baked>=1 && eaten<8 {
+            if baked>=1 && eaten<8 && sliceIndex == nil {
                 for i in 0..<4 {
                     let x=CGFloat(i)*33+95
                     var steam=Path();steam.move(to:CGPoint(x:x,y:54))
@@ -135,6 +146,21 @@ struct PizzaIllustration:View {
                 style:StrokeStyle(lineWidth:32,lineCap:.round,lineJoin:.round))
             topping.stroke(path,with:.color(Color(red:1,green:0.62,blue:0.25).opacity(0.1)),
                 style:StrokeStyle(lineWidth:1.2,lineCap:.round,lineJoin:.round))
+        }
+        // Cheese pools grow and connect only where the child placed cheese.
+        if baked>0 {
+            let cheeses=recipe.toppings.filter {$0.kind == .cheese}
+            let color=Color(red:1,green:0.88,blue:0.43).opacity(baked*0.9)
+            for (index,item) in cheeses.enumerated() {
+                let a=CGPoint(x:item.point.x*300,y:item.point.y*320)
+                for other in cheeses.dropFirst(index+1) {
+                    let b=CGPoint(x:other.point.x*300,y:other.point.y*320)
+                    if hypot(a.x-b.x,a.y-b.y)<36*baked {
+                        var bridge=Path();bridge.move(to:a);bridge.addLine(to:b)
+                        topping.stroke(bridge,with:.color(color),style:StrokeStyle(lineWidth:15*baked,lineCap:.round))
+                    }
+                }
+            }
         }
         for item in recipe.toppings where item.id != landingID {
             var piece=topping
@@ -178,8 +204,32 @@ struct PizzaMixingBowl:View {
                 startPoint:CGPoint(x:0,y:100),endPoint:CGPoint(x:0,y:184)))
             var fill=c;fill.clip(to:opening)
             if !recipe.ingredients.isEmpty {
-                let dough=Path(ellipseIn:CGRect(x:50,y:133,width:204,height:55))
-                fill.fill(dough,with:.color(Color(red:1,green:0.91,blue:0.69)))
+                let contents=Path(ellipseIn:CGRect(x:47,y:131,width:208,height:57))
+                if recipe.ingredients.contains(1) {
+                    fill.fill(contents,with:.linearGradient(Gradient(colors:[Color(red:0.55,green:0.88,blue:0.96),Color(red:0.22,green:0.66,blue:0.81)]),
+                        startPoint:CGPoint(x:0,y:130),endPoint:CGPoint(x:0,y:180)))
+                    for i in 0..<3 {
+                        fill.stroke(Path(ellipseIn:CGRect(x:88+CGFloat(i)*13,y:142+CGFloat(i)*3,width:74,height:18)),
+                            with:.color(.white.opacity(0.45*(1-recipe.mixed))),lineWidth:1.5)
+                    }
+                }
+                if recipe.ingredients.contains(0) {
+                    var mound=Path();mound.move(to:CGPoint(x:71,y:175))
+                    mound.addQuadCurve(to:CGPoint(x:151,y:126),control:CGPoint(x:109,y:139))
+                    mound.addQuadCurve(to:CGPoint(x:231,y:175),control:CGPoint(x:187,y:133))
+                    mound.closeSubpath()
+                    fill.fill(mound,with:.linearGradient(Gradient(colors:[.white,Color(red:1,green:0.89,blue:0.67)]),
+                        startPoint:CGPoint(x:110,y:136),endPoint:CGPoint(x:160,y:178)))
+                }
+                if recipe.ingredients.contains(2) {
+                    for i in 0..<7 {
+                        let x=CGFloat((i*29)%140)+78,y=CGFloat((i*11)%23)+149
+                        let oil=Path(ellipseIn:CGRect(x:x,y:y,width:17,height:7))
+                        fill.fill(oil,with:.color(Color(red:1,green:0.76,blue:0.12).opacity(0.85*(1-recipe.mixed))))
+                        fill.stroke(oil,with:.color(.white.opacity(0.35*(1-recipe.mixed))),lineWidth:0.8)
+                    }
+                }
+                fill.fill(contents,with:.color(Color(red:1,green:0.91,blue:0.69).opacity(recipe.mixed)))
                 if recipe.mixed<1 {
                     for i in 0..<18 {
                         let a=Double(i)*2.4+turn*0.01,r=Double(i%5)*17
@@ -288,13 +338,32 @@ enum PizzaToppingPainter {
         c.fill(shadow,with:.color(Color(red:0.3,green:0.09,blue:0.04).opacity(0.16)))
         switch kind {
         case .cheese:
+            if baked>0.05 {
+                let melt=min(1,baked)
+                var pool=Path()
+                pool.move(to:CGPoint(x:-15*melt,y:-5))
+                pool.addCurve(to:CGPoint(x:8+7*melt,y:-6),control1:CGPoint(x:-13,y:-17*melt),control2:CGPoint(x:10,y:-15*melt))
+                pool.addCurve(to:CGPoint(x:9,y:11*melt),control1:CGPoint(x:24*melt,y:2),control2:CGPoint(x:15,y:12*melt))
+                pool.addCurve(to:CGPoint(x:-14*melt,y:7),control1:CGPoint(x:-2,y:7+8*melt),control2:CGPoint(x:-15,y:14*melt))
+                pool.addQuadCurve(to:CGPoint(x:-15*melt,y:-5),control:CGPoint(x:-22*melt,y:0))
+                pool.closeSubpath()
+                c.fill(pool,with:.radialGradient(Gradient(colors:[cream,Color(red:1,green:0.81,blue:0.31)]),
+                    center:CGPoint(x:-3,y:-4),startRadius:0,endRadius:22))
+                c.stroke(pool,with:.color(Color.orange.opacity(0.3*melt)),lineWidth:0.7)
+                for i in 0..<5 {
+                    let x=CGFloat((i*11)%21-10),y=CGFloat((i*7)%15-7)
+                    c.fill(Path(ellipseIn:CGRect(x:x,y:y,width:3+Double(i%2),height:2)),
+                        with:.color(Color(red:0.69,green:0.31,blue:0.08).opacity(max(0,melt-0.35)*0.8)))
+                    c.fill(Path(ellipseIn:CGRect(x:x-1,y:y-2,width:4,height:1.5)),with:.color(.white.opacity(0.5*melt)))
+                }
+            }
             for i in 0..<7 {
                 var piece=c
                 piece.translateBy(x:CGFloat((i*7)%17-8),y:CGFloat((i*11)%15-7))
                 piece.rotate(by:.degrees(Double(i*49)))
-                let r=CGRect(x:-6-baked,y:-1.8,width:12+baked*2,height:3.6+baked)
-                ToyFinish.paint(piece,path:Path(roundedRect:r,cornerRadius:1.8+baked),
-                    color:GameStyle.mixed(cream,with:.orange,amount:baked*0.18),edge:0.3)
+                let r=CGRect(x:-6,y:-1.8,width:12,height:3.6)
+                piece.fill(Path(roundedRect:r,cornerRadius:1.8),
+                    with:.color(cream.opacity(1-baked)))
             }
         case .pepperoni:
             var shape=Path()
@@ -426,5 +495,118 @@ struct PizzaLandingSpark:View {
                 await Task.yield()
                 withAnimation(.easeOut(duration:reduced ? 0.2 : 0.48)) {finished=true}
             }
+    }
+}
+
+
+/// Short-lived effects only redraw while pouring, baking or serving.
+struct PizzaPourEffect:View {
+    let kind:Int
+    let reduced:Bool
+    @State private var started=Date()
+    var body:some View {
+        TimelineView(.animation(minimumInterval:1.0/30,paused:reduced)) {timeline in
+            let time=reduced ? 0.45 : min(1,timeline.date.timeIntervalSince(started))
+            GeometryReader {proxy in
+                let size=proxy.size
+                ZStack {
+                    Canvas {c,s in
+                        let spout=CGPoint(x:s.width*0.48,y:s.height*0.30)
+                        let bottom=s.height*0.80
+                        let color:Color=kind == 0 ? Color(red:1,green:0.96,blue:0.81) : kind == 1 ? .cyan : Color(red:1,green:0.75,blue:0.12)
+                        if kind != 0 && time<0.88 {
+                            var stream=Path();stream.move(to:spout)
+                            stream.addQuadCurve(to:CGPoint(x:s.width*0.51,y:bottom),
+                                control:CGPoint(x:s.width*(0.46+sin(time*12)*0.025),y:s.height*0.56))
+                            c.stroke(stream,with:.color(color.opacity(0.82)),
+                                style:StrokeStyle(lineWidth:kind == 1 ? 8 : 5,lineCap:.round))
+                            c.stroke(stream,with:.color(.white.opacity(0.6)),
+                                style:StrokeStyle(lineWidth:2,lineCap:.round))
+                        }
+                        for i in 0..<(kind == 0 ? 42 : 20) {
+                            let phase=(time*1.8+Double(i)*0.071).truncatingRemainder(dividingBy:1)
+                            let spread=kind == 0 ? 24.0 : 8.0
+                            let x=spout.x+CGFloat(sin(Double(i)*2.4)*spread*phase)
+                            let y=spout.y+CGFloat(phase)*(bottom-spout.y)
+                            let radius:CGFloat=kind == 0 ? CGFloat(2+i%4) : 2
+                            c.fill(Path(ellipseIn:CGRect(x:x,y:y,width:radius*2,height:kind == 0 ? radius*1.3 : 7)),
+                                with:.color(color.opacity(time>0.85 ? max(0,(1-time)*6) : 0.85)))
+                        }
+                        for i in 0..<12 {
+                            let a=Double(i)*Double.pi/6
+                            let radius=CGFloat(12+time*35)
+                            let x=s.width*0.51+CGFloat(cos(a))*radius
+                            let y=bottom+CGFloat(sin(a))*radius*0.28
+                            c.fill(Path(ellipseIn:CGRect(x:x,y:y,width:kind == 0 ? 13 : 5,height:kind == 0 ? 8 : 3)),
+                                with:.color(color.opacity((1-time)*0.65)))
+                        }
+                    }
+                    PizzaIngredientArt(kind:kind)
+                        .frame(width:min(90,size.width*0.34),height:min(100,size.height*0.52))
+                        .rotationEffect(.degrees(reduced ? 35 : 25+min(1,time*4)*40))
+                        .position(x:size.width*0.35,y:size.height*0.18)
+                }
+            }
+        }.accessibilityHidden(true)
+    }
+}
+
+struct PizzaHeatEffects:View {
+    let progress:Double
+    let reduced:Bool
+    var body:some View {
+        TimelineView(.animation(minimumInterval:1.0/24,paused:reduced || progress>=1)) {timeline in
+            let time=reduced ? 0 : timeline.date.timeIntervalSinceReferenceDate
+            Canvas {c,s in
+                let center=CGPoint(x:s.width*0.5,y:s.height*0.60)
+                let ready=progress>=1
+                let pulse=ready ? 0.5 : 0.45+sin(time*3)*0.08
+                c.fill(Path(ellipseIn:CGRect(x:0,y:s.height*0.12,width:s.width,height:s.height*0.85)),
+                    with:.radialGradient(Gradient(colors:[Color.yellow.opacity(pulse),.orange.opacity(0.18),.clear]),
+                        center:center,startRadius:0,endRadius:s.width*0.6))
+                for i in 0..<9 {
+                    let phase=(time*0.20+Double(i)*0.117).truncatingRemainder(dividingBy:1)
+                    let x=s.width*(0.30+CGFloat(i%4)*0.12)+CGFloat(sin(time+Double(i))*5)
+                    let y=s.height*(0.64-CGFloat(phase)*0.38)
+                    let opacity=(1-phase)*(ready ? 0.2 : 0.65)
+                    c.fill(Path(ellipseIn:CGRect(x:x,y:y,width:3,height:5)),with:.color(.yellow.opacity(opacity)))
+                }
+                if ready {
+                    for i in 0..<12 {
+                        let a=Double(i)*Double.pi/6
+                        let from=CGPoint(x:center.x+CGFloat(cos(a))*s.width*0.36,y:center.y+CGFloat(sin(a))*s.height*0.34)
+                        let to=CGPoint(x:center.x+CGFloat(cos(a))*s.width*0.44,y:center.y+CGFloat(sin(a))*s.height*0.42)
+                        var ray=Path();ray.move(to:from);ray.addLine(to:to)
+                        c.stroke(ray,with:.color(.yellow.opacity(0.8)),style:StrokeStyle(lineWidth:4,lineCap:.round))
+                    }
+                }
+            }
+        }.accessibilityHidden(true)
+    }
+}
+
+struct PizzaBiteFlight:View {
+    let recipe:PizzaRecipe
+    let revision:Int
+    let reduced:Bool
+    @State private var arrived=false
+    @State private var visible=true
+    var body:some View {
+        GeometryReader {proxy in
+            PizzaIllustration(recipe:recipe,baked:1,board:false,sliceIndex:(revision-1)%8)
+                .frame(width:110,height:118)
+                .scaleEffect(reduced ? 1 : arrived ? 0.35 : 1.7)
+                .rotationEffect(.degrees(reduced ? 0 : arrived ? -15 : 12))
+                .position(x:arrived ? min(75,proxy.size.width*0.17) : proxy.size.width*0.56,
+                          y:arrived ? proxy.size.height-min(85,proxy.size.width*0.20) : proxy.size.height*0.45)
+                .opacity(visible ? 1 : 0)
+        }.task(id:revision) {
+            var transaction=Transaction();transaction.disablesAnimations=true
+            withTransaction(transaction) {arrived=false;visible=true}
+            await Task.yield()
+            withAnimation(reduced ? nil : .easeInOut(duration:0.65)) {arrived=true}
+            do {try await Task.sleep(nanoseconds:650_000_000)} catch {return}
+            withAnimation(.easeOut(duration:0.15)) {visible=false}
+        }.accessibilityHidden(true)
     }
 }

@@ -7,6 +7,7 @@ struct LivingFriend: View {
     var action: PlayAction = .jump
     var signal = 0
     var audible = true
+    var feedingFood: String? = "🍓"
     var onTouch:(()->Void)?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var blink = false
@@ -47,7 +48,7 @@ struct LivingFriend: View {
                     }
                 }
                 if sleeping { Text("z Z").font(.system(size: 26, weight: .bold, design: .rounded)).foregroundColor(GameStyle.purple).offset(x: 90, y: -90) }
-                if happy && currentAction == .feed { Text("🍓").font(.system(size: 42)).offset(y: 30) }
+                if happy && currentAction == .feed, let food = feedingFood { Text(food).font(.system(size: 42)).offset(y: 30) }
             }.aspectRatio(300.0 / 320, contentMode: .fit).contentShape(Rectangle())
         }
         .buttonStyle(.plain)

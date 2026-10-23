@@ -6,6 +6,9 @@ enum Words {
         return language == .da ? pair.0 : pair.1
     }
     static let entries: [String: (String, String)] = [
+        "pizzaPouring": ("Puuuf! Plask! Ned i skålen!", "Poof! Splash! Into the bowl!"),
+        "pizzaStirHint": ("Rør rundt i skålen med fingeren!", "Stir the bowl with your finger!"),
+        "pizzaChefMoment": ("Mmm! Din helt egen pizza!", "Mmm! Your very own pizza!"),
         "effectsVolume": ("Lydstyrke for legelyde", "Play sound volume"),
         "musicVolume": ("Lydstyrke for musik", "Music volume"),
         "previewSound": ("Hør en legelyd", "Try a play sound"),

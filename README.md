@@ -204,3 +204,9 @@ En markeret ting har store greb til størrelse og drejning. Hovedværktøjerne e
 ## Musik og legelyde
 
 Tre originale musiktemaer og varierede Kenney CC0-effekter ligger nu i appen. Musik skifter med miljøet, toner blødt ind og dæmpes under tale. Musik og legelyde har separat lydstyrke under Indstillinger. Musik slås til med den eksisterende musikkontakt. Alt virker offline. Kilder og licenser: [Documentation/Audio](Documentation/Audio/README.md).
+
+## Pizza: hæld, bag og smag
+
+Melposen, vandkanden og olieflasken kan trækkes over skålen og slippes for at hælde i. Større ingrediensfelter gør dem lettere at gribe. Hældningen viser melstøv, vandstråle eller gylden olie, og skålens indhold afspejler det, der er tilsat. Et tryk giver samme hældning som alternativ til træk.
+
+Under bagningen bliver barnets ost til smeltede felter med gyldne bobler; nærliggende ost flyder sammen. Ovnen har varm glød, små gløder og en færdig-fejring. Ved spisning flyver en skive fra den aktuelle pizza hen til vennen; jordbærikonet er fjernet i dette spil. Reduceret bevægelse respekteres. Ingen tests eller visuel kontrol kørt for denne ændring.

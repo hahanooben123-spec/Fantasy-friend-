@@ -17,6 +17,9 @@ struct KitchenGameView:View {
     @State private var eaten=0
     @State private var signal=0
     @State private var ovenDrag=CGSize.zero
+    @State private var pouringIngredient:Int?
+    @State private var pourRevision=0
+    @State private var biteRevision=0
     @State private var dragItem:PizzaDragItem?
     @State private var dragPoint=CGPoint.zero
     @State private var surfaceFrame=CGRect.zero
@@ -39,14 +42,30 @@ struct KitchenGameView:View {
                             }
                         } else {
                             stage.frame(maxWidth:.infinity,maxHeight:.infinity)
-                            controls.frame(height:step == 0 || (step == 3 && !inserted) ? 205 : step == 2 ? (herbs ? 255 : 320) : 175)
+                            controls.frame(height:step == 0 || (step == 3 && !inserted) ? 245 : step == 2 ? (herbs ? 255 : 320) : 175)
                         }
                     }.padding(.top,77).padding(.horizontal,12).padding(.bottom,12)
                     dragOverlay
+                    if let ingredient=pouringIngredient {
+                        PizzaPourEffect(kind:ingredient,reduced:reduced)
+                            .frame(width:surfaceFrame.width*0.85,height:surfaceFrame.height*0.55)
+                            .position(x:surfaceFrame.midX,y:surfaceFrame.minY+surfaceFrame.height*0.30)
+                            .id(pourRevision).allowsHitTesting(false)
+                    }
                 }.coordinateSpace(name:"pizzaWorkshop")
                     .onPreferenceChange(PizzaSurfaceFrameKey.self) {surfaceFrame=$0}
-                    .onChange(of:active) {if !$0 {dragItem=nil}}
-                    .onChange(of:step) {_ in dragItem=nil;landingID=nil}
+                    .onChange(of:active) {if !$0 {dragItem=nil;pouringIngredient=nil}}
+                    .onChange(of:step) {_ in dragItem=nil;landingID=nil;pouringIngredient=nil}
+                    .task(id:pourRevision) {
+                        guard let ingredient=pouringIngredient else {return}
+                        do {try await Task.sleep(nanoseconds:1_000_000_000)} catch {return}
+                        guard active,step == 0,pouringIngredient == ingredient else {return}
+                        change {$0.ingredients.insert(ingredient)}
+                        pouringIngredient=nil
+                        landingPoint=CGPoint(x:surfaceFrame.midX,y:surfaceFrame.minY+surfaceFrame.height*0.47)
+                        landingRevision+=1
+                        SoundService.shared.play(.reaction)
+                    }
                     .task(id:landingID) {
                         guard landingID != nil else {return}
                         do {try await Task.sleep(nanoseconds:520_000_000)} catch {return}
@@ -86,9 +105,20 @@ struct KitchenGameView:View {
                 ZStack(alignment:.bottomLeading) {
                     PizzaIllustration(recipe:recipe,baked:1,eaten:eaten)
                         .frame(maxWidth:.infinity,maxHeight:.infinity).contentShape(Rectangle()).onTapGesture(perform:eat)
-                    LivingFriend(friend:friend,action:.feed,signal:signal)
+                    LivingFriend(friend:friend,action:.feed,signal:signal,feedingFood:nil)
                         .frame(width:min(150,proxy.size.width*0.34),height:min(160,proxy.size.width*0.36))
                         .allowsHitTesting(false)
+                    if biteRevision>0 {
+                        PizzaBiteFlight(recipe:recipe,revision:biteRevision,reduced:reduced)
+                            .allowsHitTesting(false)
+                    }
+                    if eaten == 0 {
+                        VStack {Text(store.t("pizzaChefMoment"))
+                            .font(.system(size:24,weight:.heavy,design:.rounded))
+                            .foregroundColor(.white).shadow(color:.orange,radius:8)
+                            .padding(.top,10);Spacer()}
+                            .allowsHitTesting(false)
+                    }
                     PlayCelebration(revision:signal).allowsHitTesting(false)
                 }
             }
@@ -100,9 +130,23 @@ struct KitchenGameView:View {
             ZStack {
                 PizzaOvenArtwork(heat:reduced ? 0 : baked).frame(width:width,height:width*320/300)
                 if inserted {
+                    PizzaHeatEffects(progress:baked,reduced:reduced)
+                        .frame(width:width*0.85,height:width)
+                        .allowsHitTesting(false)
                     PizzaIllustration(recipe:recipe,baked:baked,board:false)
                         .frame(width:width*0.53,height:width*0.56).scaleEffect(x:1,y:0.48)
                         .offset(y:width*0.10)
+                    if baked>=1 {
+                        VStack {
+                            Text(store.t("pizzaReady"))
+                                .font(.system(size:22,weight:.heavy,design:.rounded))
+                                .foregroundColor(.white).padding(.horizontal,20).padding(.vertical,10)
+                                .background(Capsule().fill(Color.orange))
+                                .shadow(color:.yellow.opacity(0.5),radius:12)
+                            Spacer()
+                        }.frame(height:width*0.95).allowsHitTesting(false)
+                    }
+                    PlayCelebration(revision:baked>=1 ? 1 : 0).allowsHitTesting(false)
                 } else {
                     PizzaIllustration(recipe:recipe,board:true)
                         .frame(width:width*0.62,height:width*0.66).scaleEffect(x:1,y:0.66)
@@ -116,7 +160,7 @@ struct KitchenGameView:View {
         }
     }
     private var instruction:String {
-        if step == 0 {return recipe.readyToShape ? "pizzaShapeHint" : "pizzaMixHint"}
+        if step == 0 {return pouringIngredient != nil ? "pizzaPouring" : recipe.readyToShape ? "pizzaShapeHint" : recipe.ingredients.count == 3 ? "pizzaStirHint" : "pizzaMixHint"}
         if step == 1 {return "pizzaSauceHint"}
         if step == 2 {return herbs ? "pizzaHerbHint" : "pizzaToppingHint"}
         return served ? "pizzaEatHint" : inserted ? (baked>=1 ? "pizzaReady" : "pizzaBaking") : "pizzaOvenHint"
@@ -128,14 +172,14 @@ struct KitchenGameView:View {
             if step == 0 {
                 HStack(spacing:8) {
                     ForEach(0..<3) {index in
-                        Button {change {$0.ingredients.insert(index)}} label:{
-                            HStack(spacing:3) {
-                                PizzaIngredientArt(kind:index).frame(width:23,height:30)
+                        Button {startPour(index)} label:{
+                            VStack(spacing:3) {
+                                PizzaIngredientArt(kind:index).frame(width:42,height:48)
                                 Text(store.t("pizzaIngredient\(index)")).font(.system(size:12,weight:.heavy,design:.rounded)).lineLimit(1)
                                 if recipe.ingredients.contains(index) {Image(systemName:"checkmark").font(.system(size:9,weight:.heavy))}
-                            }.frame(maxWidth:.infinity,minHeight:44)
+                            }.frame(maxWidth:.infinity,minHeight:80)
                                 .background(CandySurface(color:recipe.ingredients.contains(index) ? GameStyle.palette[11] : .white,cornerRadius:15))
-                        }.buttonStyle(SquishStyle()).disabled(recipe.ingredients.contains(index))
+                        }.buttonStyle(SquishStyle()).disabled(recipe.ingredients.contains(index) || pouringIngredient != nil)
                             .highPriorityGesture(dragGesture(.ingredient(index)))
                     }
                 }
@@ -149,7 +193,7 @@ struct KitchenGameView:View {
                 HStack(spacing:8) {
                     RoundButton(icon:"arrow.uturn.backward",label:store.t("undo")) {
                         if let previous=history.popLast() {recipe=previous}
-                    }.disabled(history.isEmpty)
+                    }.disabled(history.isEmpty || pouringIngredient != nil)
                     RoundButton(icon:"chevron.left",label:store.t("back")) {step=max(0,step-1)}.disabled(step == 0)
                     RoundButton(icon:step == 0 ? "hand.draw.fill" : step == 1 ? "paintbrush.fill" : "sparkles",label:store.t("pizzaAssist"),action:assist)
                         .disabled(step == 0 && recipe.ingredients.count<3)
@@ -168,7 +212,7 @@ struct KitchenGameView:View {
                 }.buttonStyle(SquishStyle())
                 CandyButton(title:store.t("pizzaInsert"),icon:"arrow.up",color:.orange,action:insert)
             } else if baked>=1 {
-                CandyButton(title:store.t("pizzaTakeOut"),icon:"checkmark",color:.orange) {served=true;SoundService.shared.play(.complete)}
+                CandyButton(title:store.t("pizzaTakeOut"),icon:"checkmark",color:.orange) {withAnimation(reduced ? nil : .spring(response:0.5,dampingFraction:0.75)) {served=true};SoundService.shared.play(.complete)}
             }
         }.padding(14).frame(maxWidth:.infinity,maxHeight:.infinity)
             .background(CandySurface(color:WorkshopLook.cream,cornerRadius:26))
@@ -225,7 +269,7 @@ struct KitchenGameView:View {
     private var validDropHover:Bool {
         guard let item=dragItem,surfaceFrame.width>0,surfaceFrame.height>0,
               surfaceFrame.contains(dragPoint) else {return false}
-        if case .ingredient = item {return step == 0}
+        if case .ingredient = item {return step == 0 && pouringIngredient == nil && bowlContains(dragPoint)}
         let point=PizzaPoint(x:Double((dragPoint.x-surfaceFrame.minX)/surfaceFrame.width),
                              y:Double((dragPoint.y-surfaceFrame.minY)/surfaceFrame.height))
         return step == 2 && point.onDough
@@ -233,6 +277,7 @@ struct KitchenGameView:View {
     private func dragGesture(_ item:PizzaDragItem)->some Gesture {
         DragGesture(minimumDistance:6,coordinateSpace:.named("pizzaWorkshop"))
             .onChanged {value in
+                guard pouringIngredient == nil else {return}
                 if dragItem == nil {finish();SoundService.shared.play(.click)}
                 dragItem=item;dragPoint=value.location
             }.onEnded {value in
@@ -246,7 +291,8 @@ struct KitchenGameView:View {
         switch item {
         case .ingredient(let index):
             guard step == 0,!recipe.ingredients.contains(index) else {return}
-            change {$0.ingredients.insert(index)}
+            guard bowlContains(location) else {return}
+            startPour(index)
         case .topping(let kind):
             guard step == 2,point.onDough,recipe.toppings.count<120 else {return}
             topping=kind;change {$0.place(kind,at:point)}
@@ -269,6 +315,16 @@ struct KitchenGameView:View {
             PizzaLandingSpark(revision:landingRevision,reduced:reduced)
                 .frame(width:75,height:75).position(landingPoint).allowsHitTesting(false)
         }
+    }
+    private func bowlContains(_ point:CGPoint)->Bool {
+        let x=(point.x-surfaceFrame.minX)/max(1,surfaceFrame.width)
+        let y=(point.y-surfaceFrame.minY)/max(1,surfaceFrame.height)
+        return x>0.06 && x<0.94 && y>0.16 && y<0.79
+    }
+    private func startPour(_ index:Int) {
+        guard step == 0,pouringIngredient == nil,!recipe.ingredients.contains(index) else {return}
+        finish();pouringIngredient=index;pourRevision+=1
+        SoundService.shared.play(.reaction)
     }
     private func begin() {if before == nil {before=recipe}}
     private func finish() {
@@ -296,9 +352,9 @@ struct KitchenGameView:View {
         }
     }
     private func insert() {finish();inserted=true;ovenDrag = .zero;SoundService.shared.play(.click)}
-    private func eat() {guard eaten<8 else {return};eaten+=1;signal+=1}
+    private func eat() {guard eaten<8 else {return};eaten+=1;signal+=1;biteRevision+=1}
     private func reset() {
-        recipe=PizzaRecipe();step=0;herbs=false;topping = .cheese;spice=0;history=[];before=nil;inserted=false;baked=0;served=false;eaten=0;signal=0
+        pouringIngredient=nil;biteRevision=0;recipe=PizzaRecipe();step=0;herbs=false;topping = .cheese;spice=0;history=[];before=nil;inserted=false;baked=0;served=false;eaten=0;signal=0
     }
 }
 
