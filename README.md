@@ -140,3 +140,5 @@ Musik bruger originale lokalt syntetiserede tromme-, klokke- og stemmelyde. Båd
 ## Græskargløden
 
 Et selvstændigt, helårligt græskarværksted fra forsiden og minispilsmenuen. Vælg mellem seks former og farver, skrab kerner ud, brug seks stempler eller tegn lukkede udskæringer med fingeren. Flyt, drej, skalér, luk huller og fortryd. Syv lys, nat og lysstyrke giver en levende afsløring; et swipe puster lyset ud. Kladden og den redigerbare lanternehave gemmes separat fra vennerne. Haven viser seks flytbare lanterner per side uden en grænse på samlingens størrelse. Ingen figur kræves.
+
+Udskrabningen fylder en illustreret skål med animerede kerner og små lyde. Tryllestaven i lanternehaven spiller to korte runder med lanternernes egne lys og toner. Legen kan stoppes med samme knap eller ved at røre en lanterne. Lysmelodien ændrer ikke de gemte lysvalg og stopper, når haven forlades eller appen går i baggrunden. Animationerne respekterer Reducer bevægelse, og lydene følger appens lydindstilling.

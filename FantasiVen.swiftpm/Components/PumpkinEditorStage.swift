@@ -14,6 +14,9 @@ struct PumpkinEditorStage:View {
     @State private var stroke:[PumpkinPoint]=[]
     @State private var lastScoop:CGPoint?
     @State private var handleOrigin:PumpkinCut?
+    @State private var seedFlights:[PumpkinFlyingSeed]=[]
+    @State private var seenSeeds=0
+    @Environment(\.accessibilityReduceMotion) private var reduced
     var body:some View {
         GeometryReader {proxy in
             let width=max(1,min(proxy.size.width-10,proxy.size.height*300/320))
@@ -21,7 +24,9 @@ struct PumpkinEditorStage:View {
             stage(size)
                 .position(x:proxy.size.width/2,y:proxy.size.height/2)
         }
-        .onChange(of:step) {_ in stroke=[];origin=nil;moving=nil;lastScoop=nil}
+        .onAppear {seenSeeds=Int(lantern.scooped*12)}
+        .onChange(of:lantern.scooped) {value in scatterSeeds(value)}
+        .onChange(of:step) {_ in stroke=[];origin=nil;moving=nil;lastScoop=nil;seedFlights=[]}
         .onChange(of:tool) {_ in stroke=[];origin=nil;moving=nil}
     }
     private func stage(_ size:CGSize)->some View {
@@ -51,15 +56,33 @@ struct PumpkinEditorStage:View {
         }
     }
     @ViewBuilder private func scoopOverlay(_ size:CGSize)->some View {
-        if step == .scoop,let pointer=lastScoop {
-            Text("🥄").font(.system(size:43)).position(screen(pointer,size:size)).allowsHitTesting(false)
-            ForEach(0..<4) {i in
-                let offset=CGPoint(x:pointer.x+CGFloat(i*10-15),y:pointer.y+CGFloat(i%2*10+15))
-                Ellipse().fill(PumpkinLook.cream).frame(width:12,height:6)
-                    .rotationEffect(.degrees(Double(i)*30))
-                    .position(screen(offset,size:size)).allowsHitTesting(false)
+        if step == .scoop {
+            PumpkinSeedBowl(amount:lantern.scooped)
+                .frame(width:size.width*0.27,height:size.height*0.12)
+                .scaleEffect(lantern.scooped>=1 ? 1.08 : 1)
+                .animation(reduced ? nil : .spring(response:0.4,dampingFraction:0.5),value:lantern.scooped>=1)
+                .position(screen(CGPoint(x:249,y:297),size:size))
+                .allowsHitTesting(false)
+            ForEach(seedFlights) {seed in
+                PumpkinSeedFlight(seed:seed,size:size) {seedFlights.removeAll {$0.id == seed.id}}
+            }.allowsHitTesting(false)
+            if let pointer=lastScoop {
+                Text("🥄").font(.system(size:43)).position(screen(pointer,size:size)).allowsHitTesting(false)
             }
         }
+    }
+    private func scatterSeeds(_ amount:Double) {
+        let count=Int(amount*12),previous=seenSeeds
+        seenSeeds=count
+        guard step == .scoop,count>previous else {return}
+        SoundService.shared.play(count>=12 ? .complete : .click)
+        guard !reduced else {return}
+        let r=PumpkinGeometry.rect(lantern.form)
+        let start=lastScoop ?? CGPoint(x:r.midX,y:r.minY+20)
+        for i in 0..<min(4,count-previous) {
+            seedFlights.append(PumpkinFlyingSeed(start:start,variation:count+i))
+        }
+        if seedFlights.count>20 {seedFlights.removeFirst(seedFlights.count-20)}
     }
     @ViewBuilder private func selection(_ size:CGSize)->some View {
         if step == .carve,tool == .move,let id=selected,let cut=lantern.cuts.first(where:{$0.id == id}) {
@@ -94,11 +117,13 @@ struct PumpkinEditorStage:View {
             }
         }
         if step == .scoop {
-            if let last=lastScoop {
-                let distance=Double(hypot(point.x-last.x,point.y-last.y))
-                lantern.scooped=min(1,lantern.scooped+distance/480)
-            }
-            lastScoop=point
+            if r.insetBy(dx:-12,dy:-12).contains(point) {
+                if let last=lastScoop {
+                    let distance=Double(hypot(point.x-last.x,point.y-last.y))
+                    lantern.scooped=min(1,lantern.scooped+distance/480)
+                }
+                lastScoop=point
+            } else {lastScoop=nil}
         }
         if step == .carve && tool == .draw && r.contains(point) {
             if stroke.count>=240 {stroke=stroke.enumerated().filter {$0.offset.isMultiple(of:2)}.map(\.element)}
@@ -144,5 +169,62 @@ struct PumpkinEditorStage:View {
                     lantern.cuts[i].height=min(1,max(0.03,base.height*scale))
                 }
             }.onEnded {_ in handleOrigin=nil;onEnd() })
+    }
+}
+
+
+// Each short flight owns its animation task; leaving the workshop cancels it.
+private struct PumpkinFlyingSeed:Identifiable {
+    let id=UUID()
+    let start:CGPoint
+    let variation:Int
+}
+private struct PumpkinSeedFlight:View {
+    let seed:PumpkinFlyingSeed
+    let size:CGSize
+    let onFinish:()->Void
+    @State private var progress:CGFloat=0
+    private var position:CGPoint {
+        let end=CGPoint(x:239+CGFloat(seed.variation%5)*4,y:292)
+        let x=seed.start.x+(end.x-seed.start.x)*progress
+        let y=seed.start.y+(end.y-seed.start.y)*progress-sin(progress * .pi)*75
+        return CGPoint(x:x/300*size.width,y:y/320*size.height)
+    }
+    var body:some View {
+        Ellipse().fill(PumpkinLook.cream)
+            .overlay(Ellipse().stroke(Color.orange,lineWidth:1.5))
+            .frame(width:13,height:7)
+            .rotationEffect(.degrees(Double(progress)*420+Double(seed.variation)*27))
+            .position(position)
+            .task {
+                withAnimation(.linear(duration:0.65)) {progress=1}
+                do {try await Task.sleep(nanoseconds:700_000_000)} catch {return}
+                onFinish()
+            }
+    }
+}
+private struct PumpkinSeedBowl:View {
+    let amount:Double
+    var body:some View {
+        Canvas {context,size in
+            let w=size.width,h=size.height
+            var bowl=Path()
+            bowl.move(to:CGPoint(x:0,y:h*0.24))
+            bowl.addCurve(to:CGPoint(x:w,y:h*0.24),control1:CGPoint(x:w*0.1,y:h*1.25),control2:CGPoint(x:w*0.9,y:h*1.25))
+            bowl.closeSubpath()
+            context.fill(bowl,with:.linearGradient(Gradient(colors:[Color.cyan,Color(red:0.08,green:0.4,blue:0.56)]),
+                startPoint:.zero,endPoint:CGPoint(x:0,y:h)))
+            context.stroke(bowl,with:.color(PumpkinLook.ink),lineWidth:2)
+            let opening=CGRect(x:0,y:h*0.08,width:w,height:h*0.35)
+            context.fill(Path(ellipseIn:opening),with:.color(Color(red:0.11,green:0.42,blue:0.48)))
+            for i in 0..<Int(amount*18) {
+                let x=w*0.12+CGFloat((i*23)%67)/100*w
+                let y=h*0.16+CGFloat(i%3)*h*0.055
+                context.fill(Path(ellipseIn:CGRect(x:x,y:y,width:w*0.12,height:h*0.1)),with:.color(PumpkinLook.cream))
+            }
+            context.stroke(Path(ellipseIn:opening),with:.color(Color.cyan),lineWidth:3)
+            var shine=Path();shine.move(to:CGPoint(x:w*0.21,y:h*0.56));shine.addLine(to:CGPoint(x:w*0.33,y:h*0.72))
+            context.stroke(shine,with:.color(.white.opacity(0.65)),style:StrokeStyle(lineWidth:3,lineCap:.round))
+        }
     }
 }
