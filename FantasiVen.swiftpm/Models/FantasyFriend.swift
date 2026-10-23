@@ -54,13 +54,7 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
         placements = values.isEmpty ? nil : values
     }
 
-    static func studioStarter() -> FantasyFriend {
-        var friend = FantasyFriend()
-        friend.body = .round; friend.color = 6; friend.accent = 3
-        friend.eyes = 0; friend.mouth = 1; friend.arms = 5; friend.legs = 3
-        friend.accessories = [2]
-        return friend
-    }
+    static func studioStarter() -> FantasyFriend {FriendSeed.bimse.make()}
 
     static func random() -> FantasyFriend {
         var friend = FantasyFriend()
@@ -104,4 +98,38 @@ struct GameSettings: Codable {
     var challenge: Int?
     var speechEnabled: Bool { speech ?? true }
     var challengeLevel: Int { min(3, max(1, challenge ?? 1)) }
+}
+
+
+/// Art-directed starting points. Each selection creates a fresh, fully editable friend.
+enum FriendSeed:Int,CaseIterable {
+    case bimse,pjuske,lumi
+    var title:String {
+        switch self {case .bimse:return "Bimse";case .pjuske:return "Pjuske";case .lumi:return "Lumi"}
+    }
+    var hintKey:String {"starterHint\(rawValue)"}
+    func make()->FantasyFriend {
+        var f=FantasyFriend()
+        f.name=title
+        switch self {
+        case .bimse:
+            f.body = .round;f.color=6;f.accent=3;f.eyes=0;f.mouth=1
+            f.arms=5;f.legs=0;f.accessories=[0,14]
+            f.voice = .squeak;f.gait = .bounce
+            f.facePlacements=["eyes":PartPlacement(x:0,y:-0.015,rotation:0,scale:1.06)]
+        case .pjuske:
+            f.body = .cloud;f.color=9;f.accent=8;f.eyes=11;f.mouth=2
+            f.arms=1;f.legs=4;f.accessories=[1]
+            f.voice = .hum;f.gait = .waddle
+            f.facePlacements=["eyes":PartPlacement(x:0,y:0.015,rotation:0,scale:0.92),
+                              "mouth":PartPlacement(x:0,y:0.01,rotation:0,scale:0.9)]
+        case .lumi:
+            f.body = .drop;f.color=11;f.accent=3;f.eyes=9;f.mouth=6
+            f.arms=2;f.legs=2;f.accessories=[2,3]
+            f.bodyWidth=0.9;f.bodyHeight=1.08
+            f.voice = .bell;f.gait = .glide
+            f.facePlacements=["mouth":PartPlacement(x:0,y:0.005,rotation:-5,scale:0.9)]
+        }
+        return f
+    }
 }

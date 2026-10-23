@@ -17,6 +17,7 @@ struct BuilderView: View {
     @State private var brushWidth = 9.0
     @State private var secondary = false
     @State private var naming = false
+    @State private var starters = false
     @State private var personality = false
     @State private var celebration = false
     @State private var discard = false
@@ -49,6 +50,10 @@ struct BuilderView: View {
                 if celebration { celebrationView }
             }
         }.foregroundColor(WorkshopLook.sea)
+            .sheet(isPresented:$starters) {
+                StarterFriendsSheet(onChoose:chooseStarter,onClose:{starters=false}).environmentObject(store)
+            }
+            .task {if !existing {starters=true}}
             .sheet(isPresented:$naming) {
                 NamingView(friend:$friend) {
                     if store.save(friend) { naming=false;celebration=true;SoundService.shared.play(.complete) }
@@ -86,8 +91,12 @@ struct BuilderView: View {
             CreatorRoomArtwork()
             VStack(spacing:0) {
                 HStack {
-                    Text(store.t("creatorGreeting")).font(.system(size:15,weight:.bold,design:.rounded))
-                        .padding(.horizontal,16).padding(.vertical,10).background(Capsule().fill(.white.opacity(0.94)))
+                    Button {finishGesture();starters=true} label:{
+                        Label(store.t("starterButton"),systemImage:"sparkles")
+                            .font(.system(size:14,weight:.bold,design:.rounded))
+                            .padding(.horizontal,16).padding(.vertical,12)
+                            .background(CandySurface(color:WorkshopLook.cream,cornerRadius:22))
+                    }.buttonStyle(SquishStyle())
                     Spacer()
                     CreatorToolButton(mark:.shuffle,label:store.t("surprise"),tint:WorkshopLook.yellow) { surprise() }
                 }.padding(.horizontal,18).padding(.top,12)
@@ -371,6 +380,19 @@ struct BuilderView: View {
             case .body:break
             }
         };selection=nil
+    }
+    private func chooseStarter(_ seed:FriendSeed) {
+        change {value in
+            var replacement=seed.make()
+            replacement.id=value.id
+            let defaultName=FriendSeed.allCases.map(\.title).contains(value.name)
+            replacement.name=value.name.isEmpty || (!existing && defaultName) ? seed.title : value.name
+            replacement.world=value.world;replacement.room=value.room
+            replacement.song=value.song;replacement.track=value.track
+            value=replacement
+        }
+        selection = .body;incoming=nil;starters=false
+        SoundService.shared.react(voice:friend.voice?.rawValue ?? 0)
     }
     private func surprise() {
         change { value in

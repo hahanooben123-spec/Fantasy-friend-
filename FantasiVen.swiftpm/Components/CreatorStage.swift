@@ -20,6 +20,8 @@ struct CreatorStage: View {
     @State private var blink = false
     @State private var gaze = CGPoint.zero
     @State private var lean = 0.0
+    @State private var breathing=false
+    @State private var delighted=false
     private let zoom: CGFloat = 1.1
 
     var body: some View {
@@ -30,7 +32,9 @@ struct CreatorStage: View {
             ZStack {
                 Ellipse().fill(WorkshopLook.sea.opacity(0.18)).frame(width:width*0.57,height:height*0.055)
                     .position(x:width/2,y:height*0.94)
-                CharacterView(friend: displayed,blink:blink,gaze:gaze,zoom:zoom)
+                CharacterView(friend:displayed,blink:blink,happy:delighted,gaze:gaze,zoom:zoom)
+                    .scaleEffect(x:breathing && origin == nil && !reduced ? 1.006 : 1,
+                                 y:breathing && origin == nil && !reduced ? 1.015 : 1,anchor:.bottom)
                     .rotationEffect(.degrees(reduced ? 0 : lean),anchor:.bottom)
                     .animation(reduced ? nil : .spring(response:0.32,dampingFraction:0.65),value:lean)
                     .allowsHitTesting(false)
@@ -74,6 +78,17 @@ struct CreatorStage: View {
                 .position(x:geometry.size.width/2,y:geometry.size.height/2)
         }
         .onChange(of:part) { _ in draft=nil;origin=nil;handleOrigin=nil;lean=0 }
+        .task(id:"\(phase)-\(reduced)") {
+            breathing=false
+            guard phase == .active,!reduced else {return}
+            withAnimation(.easeInOut(duration:2.2).repeatForever(autoreverses:true)) {breathing=true}
+        }
+        .task(id:revision) {
+            guard revision>0 else {return}
+            delighted=true
+            do {try await Task.sleep(nanoseconds:480_000_000)} catch {delighted=false;return}
+            delighted=false
+        }
         .task(id:phase) {
             guard phase == .active else { return }
             do {

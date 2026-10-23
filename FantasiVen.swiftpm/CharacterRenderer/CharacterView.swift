@@ -219,53 +219,117 @@ private struct CreaturePainter {
         }
     }
 
-    func drawArm(side: Int) {
-        let sign: CGFloat = side == 0 ? -1 : 1
-        let shoulder = CreatureShape(kind: friend.body).shoulder
-        let start = CGPoint(x: side == 0 ? shoulder + 6 : 294 - shoulder, y: 179)
-        let reach = CGFloat(20 + friend.arms * 3)
-        let hand = CGPoint(x: start.x + sign * reach, y: 208 - CGFloat(friend.arms % 4) * 16)
-        curve(start, hand, CGPoint(x: hand.x, y: start.y - CGFloat(friend.arms % 3) * 15), primary, CGFloat(15 + friend.arms % 3 * 3))
-        ellipse(hand.x - 11, hand.y - 10, 22, 22, primary)
-        if friend.arms >= 4 {
-            for finger in 0..<3 {
-                let x = hand.x + CGFloat(finger - 1) * 7
-                line([CGPoint(x: x, y: hand.y), CGPoint(x: x + sign * 3, y: hand.y - 14)], primary, 6)
-            }
+    func drawArm(side:Int) {
+        let sign:CGFloat=side == 0 ? -1 : 1
+        let shoulder=CreatureShape(kind:friend.body).shoulder
+        let start=CGPoint(x:side == 0 ? shoulder+6 : 294-shoulder,y:179)
+        let reach=CGFloat(20+friend.arms*3)
+        let hand=CGPoint(x:start.x+sign*reach,y:208-CGFloat(friend.arms%4)*16)
+        let bend=CGPoint(x:hand.x,y:start.y-CGFloat(friend.arms%3)*15)
+        let thickness=CGFloat(15+friend.arms%3*3)
+        var arm=Path();arm.move(to:CGPoint(x:start.x,y:start.y-thickness/2))
+        arm.addQuadCurve(to:CGPoint(x:hand.x,y:hand.y-8),control:CGPoint(x:bend.x,y:bend.y-thickness/2))
+        arm.addQuadCurve(to:CGPoint(x:hand.x,y:hand.y+8),control:CGPoint(x:hand.x+sign*9,y:hand.y))
+        arm.addQuadCurve(to:CGPoint(x:start.x,y:start.y+thickness/2),control:CGPoint(x:bend.x,y:bend.y+thickness/2))
+        arm.closeSubpath()
+        ToyFinish.paint(context,path:arm,color:primary,edge:1.7)
+        var palm=context
+        palm.translateBy(x:hand.x,y:hand.y);palm.scaleBy(x:sign,y:1)
+        var mitten=Path()
+        mitten.move(to:CGPoint(x:-8,y:6))
+        if friend.arms == 6 {
+            mitten.addCurve(to:CGPoint(x:13,y:-13),control1:CGPoint(x:-8,y:-17),control2:CGPoint(x:3,y:-23))
+            mitten.addQuadCurve(to:CGPoint(x:15,y:9),control:CGPoint(x:28,y:-1))
+        } else if friend.arms >= 4 {
+            mitten.addCurve(to:CGPoint(x:-2,y:-11),control1:CGPoint(x:-17,y:-2),control2:CGPoint(x:-9,y:-22))
+            mitten.addCurve(to:CGPoint(x:7,y:-13),control1:CGPoint(x:-2,y:-23),control2:CGPoint(x:8,y:-25))
+            mitten.addCurve(to:CGPoint(x:14,y:-6),control1:CGPoint(x:15,y:-22),control2:CGPoint(x:20,y:-15))
+            mitten.addCurve(to:CGPoint(x:15,y:9),control1:CGPoint(x:26,y:-10),control2:CGPoint(x:28,y:8))
+        } else {
+            mitten.addCurve(to:CGPoint(x:8,y:-11),control1:CGPoint(x:-17,y:-8),control2:CGPoint(x:-3,y:-17))
+            mitten.addCurve(to:CGPoint(x:15,y:9),control1:CGPoint(x:23,y:-11),control2:CGPoint(x:25,y:9))
+        }
+        mitten.addQuadCurve(to:CGPoint(x:-8,y:6),control:CGPoint(x:3,y:18));mitten.closeSubpath()
+        ToyFinish.paint(palm,path:mitten,color:primary,edge:1.7)
+        if friend.arms == 1 || friend.arms == 5 {
+            palm.fill(Path(ellipseIn:CGRect(x:-1,y:-2,width:11,height:9)),with:.color(accent.opacity(0.55)))
         }
     }
 
-    func drawLeg(side: Int) {
-        let sign: CGFloat = side == 0 ? -1 : 1
-        let footX: CGFloat = side == 0 ? 110 : 180
-        let footY = CGFloat(265 + friend.legs % 4 * 4)
-        curve(CGPoint(x: footX, y: 237), CGPoint(x: footX + sign * CGFloat(friend.legs * 2), y: footY), CGPoint(x: footX + sign * 10, y: 257), primary, CGFloat(16 - friend.legs % 3 * 2))
-        ellipse(footX - 19 + sign * CGFloat(friend.legs * 2), footY - 5, CGFloat(32 + friend.legs % 3 * 5), 17, friend.legs >= 4 ? accent : primary)
+    func drawLeg(side:Int) {
+        let sign:CGFloat=side == 0 ? -1 : 1
+        let footX:CGFloat=side == 0 ? 110 : 180
+        let footY=CGFloat(265+friend.legs%4*4)
+        curve(CGPoint(x:footX,y:237),CGPoint(x:footX+sign*CGFloat(friend.legs*2),y:footY),
+              CGPoint(x:footX+sign*10,y:257),primary,CGFloat(16-friend.legs%3*2))
+        let x=footX-19+sign*CGFloat(friend.legs*2)
+        let width=CGFloat(32+friend.legs%3*5)
+        var foot=Path();foot.move(to:CGPoint(x:x,y:footY+7))
+        foot.addCurve(to:CGPoint(x:x+width*0.5,y:footY-7),control1:CGPoint(x:x-3,y:footY-5),control2:CGPoint(x:x+width*0.25,y:footY-13))
+        foot.addCurve(to:CGPoint(x:x+width,y:footY+5),control1:CGPoint(x:x+width*0.78,y:footY-12),control2:CGPoint(x:x+width+5,y:footY-4))
+        foot.addQuadCurve(to:CGPoint(x:x,y:footY+7),control:CGPoint(x:x+width*0.55,y:footY+18));foot.closeSubpath()
+        ToyFinish.paint(context,path:foot,color:friend.legs>=4 ? accent : primary,edge:1.7)
+        if friend.legs == 0 || friend.legs == 3 || friend.legs == 6 {
+            for i in 0..<2 {
+                let toe=x+width*(0.3+CGFloat(i)*0.27)
+                curve(CGPoint(x:toe,y:footY-3),CGPoint(x:toe+1,y:footY+2),CGPoint(x:toe-2,y:footY),ink.opacity(0.3),1.3)
+            }
+        } else if friend.legs>=4 {
+            curve(CGPoint(x:x+4,y:footY+8),CGPoint(x:x+width-3,y:footY+7),
+                  CGPoint(x:x+width*0.5,y:footY+13),GameStyle.mixed(accent,with:ink,amount:0.3),2.5)
+        }
     }
 
     func drawExtra(_ index: Int) {
         switch index {
         case 0:
-            for x in [98, 184] as [CGFloat] {
-                polygon([CGPoint(x: x, y: 93), CGPoint(x: x - 7, y: 42), CGPoint(x: x + 26, y: 88)], accent)
-                line([CGPoint(x: x + 1, y: 65), CGPoint(x: x + 11, y: 73)], .white.opacity(0.6), 3)
+            for (i,x) in [CGFloat(98),CGFloat(184)].enumerated() {
+                let lean:CGFloat=i == 0 ? -1 : 1
+                var horn=Path();horn.move(to:CGPoint(x:x-3,y:93))
+                horn.addCurve(to:CGPoint(x:x+lean*4,y:43),control1:CGPoint(x:x-6,y:68),control2:CGPoint(x:x+lean*17,y:40))
+                horn.addCurve(to:CGPoint(x:x+25,y:89),control1:CGPoint(x:x+13,y:51),control2:CGPoint(x:x+15,y:71))
+                horn.addQuadCurve(to:CGPoint(x:x-3,y:93),control:CGPoint(x:x+12,y:101));horn.closeSubpath()
+                ToyFinish.paint(context,path:horn,color:accent,edge:1.8)
+                curve(CGPoint(x:x+1,y:76),CGPoint(x:x+17,y:78),CGPoint(x:x+9,y:83),primary.opacity(0.3),2.5)
             }
 
         case 1:
-            for x in [101, 171] as [CGFloat] {
-                ellipse(x, 11, 29, 91, primary); ellipse(x + 7, 23, 14, 62, accent)
+            for (i,x) in [CGFloat(101),CGFloat(171)].enumerated() {
+                let lean:CGFloat=i == 0 ? -12 : 10
+                var ear=Path();ear.move(to:CGPoint(x:x+2,y:99))
+                ear.addCurve(to:CGPoint(x:x+12+lean,y:13),control1:CGPoint(x:x-11,y:66),control2:CGPoint(x:x-9+lean,y:10))
+                ear.addCurve(to:CGPoint(x:x+29,y:96),control1:CGPoint(x:x+39+lean,y:8),control2:CGPoint(x:x+38,y:70))
+                ear.addQuadCurve(to:CGPoint(x:x+2,y:99),control:CGPoint(x:x+16,y:109));ear.closeSubpath()
+                ToyFinish.paint(context,path:ear,color:primary,edge:2)
+                var inner=Path();inner.move(to:CGPoint(x:x+11,y:85))
+                inner.addQuadCurve(to:CGPoint(x:x+14+lean*0.7,y:29),control:CGPoint(x:x+lean,y:44))
+                inner.addQuadCurve(to:CGPoint(x:x+20,y:85),control:CGPoint(x:x+28+lean,y:39));inner.closeSubpath()
+                ToyFinish.paint(context,path:inner,color:accent,edge:0.8)
             }
 
         case 2:
-            for x in [115, 185] as [CGFloat] {
-                curve(CGPoint(x: x, y: 87), CGPoint(x: x - 8, y: 38), CGPoint(x: x + 18, y: 44), primary, 7)
-                ellipse(x - 20, 23, 25, 25, accent)
+            for x in [115,185] as [CGFloat] {
+                curve(CGPoint(x:x,y:87),CGPoint(x:x-8,y:38),CGPoint(x:x+18,y:44),primary,7)
+                let bulb=Path(ellipseIn:CGRect(x:x-20,y:23,width:25,height:25))
+                context.fill(Path(ellipseIn:CGRect(x:x-26,y:17,width:37,height:37)),with:.radialGradient(
+                    Gradient(colors:[accent.opacity(0.3),.clear]),center:CGPoint(x:x-7,y:35),startRadius:0,endRadius:19))
+                ToyFinish.paint(context,path:bulb,color:accent,edge:1.2)
+                ellipse(x-15,27,7,5,.white.opacity(0.75))
             }
 
         case 3:
-            for x in [21, 206] as [CGFloat] {
-                ellipse(x, 132, 73, 49, accent.opacity(0.9)); ellipse(x + 9, 168, 55, 44, accent.opacity(0.75))
-                curve(CGPoint(x: x + 17, y: 153), CGPoint(x: x + 57, y: 166), CGPoint(x: x + 38, y: 149), .white.opacity(0.5), 3)
+            for side in 0..<2 {
+                var c=context;c.translateBy(x:side == 0 ? 24 : 276,y:130);c.scaleBy(x:side == 0 ? 1 : -1,y:1)
+                var wing=Path();wing.move(to:CGPoint(x:58,y:49))
+                wing.addCurve(to:CGPoint(x:2,y:1),control1:CGPoint(x:34,y:-9),control2:CGPoint(x:-11,y:-15))
+                wing.addCurve(to:CGPoint(x:15,y:65),control1:CGPoint(x:-9,y:24),control2:CGPoint(x:-7,y:55))
+                wing.addCurve(to:CGPoint(x:58,y:49),control1:CGPoint(x:4,y:102),control2:CGPoint(x:52,y:92));wing.closeSubpath()
+                ToyFinish.paint(c,path:wing,color:accent,edge:1.8)
+                for i in 0..<3 {
+                    var vein=Path();vein.move(to:CGPoint(x:54,y:50))
+                    vein.addQuadCurve(to:CGPoint(x:8+CGFloat(i)*8,y:13+CGFloat(i)*25),control:CGPoint(x:25,y:35+CGFloat(i)*15))
+                    c.stroke(vein,with:.color(.white.opacity(0.36)),style:StrokeStyle(lineWidth:2,lineCap:.round))
+                }
             }
 
         case 4:
@@ -273,9 +337,17 @@ private struct CreaturePainter {
             ellipse(257, 173, 24, 29, accent)
 
         case 5:
-            polygon([CGPoint(x: 105, y: 87), CGPoint(x: 118, y: 40), CGPoint(x: 177, y: 40), CGPoint(x: 191, y: 87)], accent)
-            line([CGPoint(x: 94, y: 88), CGPoint(x: 204, y: 88)], accent, 13)
-            line([CGPoint(x: 113, y: 73), CGPoint(x: 184, y: 73)], primary, 9)
+            var hat=Path();hat.move(to:CGPoint(x:106,y:83))
+            hat.addCurve(to:CGPoint(x:120,y:40),control1:CGPoint(x:111,y:68),control2:CGPoint(x:108,y:43))
+            hat.addQuadCurve(to:CGPoint(x:177,y:40),control:CGPoint(x:150,y:49))
+            hat.addCurve(to:CGPoint(x:191,y:83),control1:CGPoint(x:190,y:39),control2:CGPoint(x:181,y:66))
+            hat.closeSubpath()
+            ToyFinish.paint(context,path:hat,color:accent,edge:2)
+            var ribbon=Path();ribbon.move(to:CGPoint(x:112,y:71))
+            ribbon.addQuadCurve(to:CGPoint(x:185,y:71),control:CGPoint(x:149,y:80))
+            context.stroke(ribbon,with:.color(primary),style:StrokeStyle(lineWidth:9,lineCap:.round))
+            let brim=Path(ellipseIn:CGRect(x:92,y:79,width:114,height:18))
+            ToyFinish.paint(context,path:brim,color:accent,edge:2)
 
         case 6:
             polygon([CGPoint(x: 150, y: 98), CGPoint(x: 108, y: 80), CGPoint(x: 106, y: 115)], accent)
@@ -283,10 +355,15 @@ private struct CreaturePainter {
             ellipse(141, 88, 19, 21, .white.opacity(0.65))
 
         case 7:
-            for x in [101, 166] as [CGFloat] {
-                context.stroke(Path(roundedRect: CGRect(x: x, y: 142, width: 40, height: 35), cornerRadius: 12), with: .color(ink), lineWidth: 4)
+            for x in [101,166] as [CGFloat] {
+                let lens=Path(roundedRect:CGRect(x:x,y:142,width:40,height:35),cornerRadius:13)
+                context.fill(lens,with:.linearGradient(Gradient(colors:[Color.cyan.opacity(0.15),.white.opacity(0.04)]),
+                    startPoint:CGPoint(x:x,y:142),endPoint:CGPoint(x:x+40,y:177)))
+                context.stroke(lens,with:.color(GameStyle.mixed(accent,with:ink,amount:0.45)),lineWidth:5)
+                context.stroke(lens.applying(CGAffineTransform(translationX:0,y:-1)),with:.color(accent),lineWidth:2.5)
+                line([CGPoint(x:x+8,y:149),CGPoint(x:x+15,y:146)],.white.opacity(0.7),2.5)
             }
-            curve(CGPoint(x: 141, y: 155), CGPoint(x: 166, y: 155), CGPoint(x: 153, y: 147), ink, 4)
+            curve(CGPoint(x:141,y:155),CGPoint(x:166,y:155),CGPoint(x:153,y:147),accent,4)
 
         case 8:
             polygon([CGPoint(x: 110, y: 86), CGPoint(x: 102, y: 48), CGPoint(x: 130, y: 63), CGPoint(x: 151, y: 33), CGPoint(x: 172, y: 63), CGPoint(x: 198, y: 48), CGPoint(x: 190, y: 86)], Color(red: 1, green: 0.80, blue: 0.25))
@@ -335,6 +412,17 @@ private struct CreaturePainter {
         canvas.translateBy(x: -center.x, y: -center.y)
         return canvas
     }
+    private func eyeOrb(x:CGFloat,y:CGFloat,radius:CGFloat) {
+        let rect=CGRect(x:x-radius,y:y-radius,width:radius*2,height:radius*2.16)
+        let shape=Path(ellipseIn:rect)
+        context.fill(shape.applying(CGAffineTransform(translationX:0,y:2)),
+            with:.color(GameStyle.mixed(primary,with:ink,amount:0.5)))
+        context.fill(shape,with:.radialGradient(Gradient(stops:[
+            .init(color:.white,location:0),.init(color:Color(red:0.99,green:0.99,blue:1),location:0.63),
+            .init(color:Color(red:0.76,green:0.82,blue:0.92),location:1)]),
+            center:CGPoint(x:x-radius*0.3,y:y-radius*0.35),startRadius:0,endRadius:radius*1.6))
+        context.stroke(shape,with:.color(GameStyle.mixed(primary,with:ink,amount:0.56)),lineWidth:1.7)
+    }
     func drawEyes(closed: Bool, happy: Bool) {
         CreaturePainter(context: facialContext("eyes", center: CGPoint(x: 150, y: 157)), friend: friend, gaze: gaze, singleEye: singleEye).drawEyesArtwork(closed: closed, happy: happy)
     }
@@ -349,7 +437,11 @@ private struct CreaturePainter {
                 curve(CGPoint(x: x - radius * 0.65, y: y), CGPoint(x: x + radius * 0.65, y: y), CGPoint(x: x, y: y + (closed ? 9 : -13)), ink, 5)
                 continue
             }
-            ellipse(x - radius, y - radius, radius * 2, radius * 2.16, .white)
+            eyeOrb(x:x,y:y,radius:radius)
+            if radius>=24 {
+                curve(CGPoint(x:x-radius*0.55,y:y-radius-7),CGPoint(x:x+radius*0.4,y:y-radius-10),
+                    CGPoint(x:x-radius*0.1,y:y-radius-15),GameStyle.mixed(primary,with:ink,amount:0.4),3)
+            }
             if kind == 4 { star(x, y, radius * 0.64, ink) }
             else if kind == 10 {
                 ellipse(x - 10, y - 7, 11, 12, ink); ellipse(x, y - 7, 11, 12, ink)
@@ -364,7 +456,8 @@ private struct CreaturePainter {
                 let pupilWidth: CGFloat = kind == 8 ? 7 : radius * 0.9
                 ellipse(x - pupilWidth / 2 + (kind == 7 ? 5 : 0) + gaze.x * 5, y - radius * 0.35 + gaze.y * 4, pupilWidth, radius * 1.15, ink)
             }
-            ellipse(x - 5, y - 8, 6, 7, .white)
+            ellipse(x-5+gaze.x*5,y-8+gaze.y*4,7,8,.white)
+            ellipse(x+5+gaze.x*5,y+5+gaze.y*4,3,3,.white.opacity(0.8))
             if kind == 2 {
                 var lid = context
                 lid.clip(to: Path(ellipseIn: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2.16)))
@@ -394,7 +487,9 @@ private struct CreaturePainter {
             mouth.addCurve(to: CGPoint(x: 118, y: 195), control1: CGPoint(x: 186, y: 246), control2: CGPoint(x: 115, y: 246))
             context.fill(mouth, with: .color(ink))
             var clipped = context; clipped.clip(to: mouth)
-            clipped.fill(Path(ellipseIn: CGRect(x: 133, y: kind == 4 ? 207 : 219, width: 40, height: 24)), with: .color(Color(red: 1, green: 0.5, blue: 0.62)))
+            clipped.fill(Path(ellipseIn:CGRect(x:133,y:kind == 4 ? 207 : 219,width:40,height:24)),with:.linearGradient(
+                Gradient(colors:[Color(red:1,green:0.63,blue:0.68),Color(red:0.94,green:0.25,blue:0.45)]),
+                startPoint:CGPoint(x:0,y:213),endPoint:CGPoint(x:0,y:243)))
             if kind == 1 {
                 clipped.fill(Path(roundedRect: CGRect(x: 128, y: 193, width: 47, height: 12), cornerRadius: 5), with: .color(.white))
             }

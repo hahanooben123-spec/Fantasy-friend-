@@ -168,3 +168,61 @@ struct CreatorCategoryIcon: View {
         return f
     }
 }
+
+
+struct StarterFriendsSheet:View {
+    @EnvironmentObject private var store:FriendStore
+    let onChoose:(FriendSeed)->Void
+    let onClose:()->Void
+    var body:some View {
+        GeometryReader {proxy in
+            let wide=proxy.size.width>=620
+            ZStack {
+                WorldBackdrop(world:.clouds,animated:false)
+                ScrollView {
+                    VStack(spacing:18) {
+                        HStack {
+                            Text(store.t("starterTitle")).font(.system(size:28,weight:.heavy,design:.rounded))
+                            Spacer(minLength:0)
+                            RoundButton(icon:"xmark",label:store.t("close"),action:onClose)
+                        }
+                        Text(store.t("starterFreedom")).font(.system(.subheadline,design:.rounded)).multilineTextAlignment(.center)
+                        if wide {
+                            HStack(alignment:.top,spacing:18) {
+                                ForEach(FriendSeed.allCases,id:\.rawValue) {seed in card(seed,wide:true)}
+                            }
+                        } else {
+                            VStack(spacing:18) {
+                                ForEach(FriendSeed.allCases,id:\.rawValue) {seed in card(seed,wide:false)}
+                            }
+                        }
+                    }.padding(22).frame(maxWidth:1000).frame(maxWidth:.infinity)
+                }
+            }.foregroundColor(GameStyle.ink)
+        }
+    }
+    private func card(_ seed:FriendSeed,wide:Bool)->some View {
+        Button {onChoose(seed)} label:{
+            Group {
+                if wide {
+                    VStack(spacing:8) {
+                        LivingFriend(friend:seed.make()).frame(height:230).allowsHitTesting(false).accessibilityHidden(true)
+                        caption(seed)
+                    }.padding(18).frame(maxWidth:.infinity,minHeight:340)
+                } else {
+                    HStack(spacing:12) {
+                        LivingFriend(friend:seed.make()).frame(width:125,height:140).allowsHitTesting(false).accessibilityHidden(true)
+                        caption(seed).frame(maxWidth:.infinity,alignment:.leading)
+                        Image(systemName:"arrow.right.circle.fill").font(.system(size:26)).foregroundColor(GameStyle.purple)
+                    }.padding(14)
+                }
+            }.background(CandySurface(color:GameStyle.mixed(GameStyle.palette[seed.make().color],with:.white,amount:0.75),cornerRadius:30))
+        }.buttonStyle(SquishStyle()).accessibilityLabel(seed.title+". "+store.t(seed.hintKey))
+    }
+    private func caption(_ seed:FriendSeed)->some View {
+        VStack(alignment:.leading,spacing:7) {
+            Text(seed.title).font(.system(size:25,weight:.heavy,design:.rounded))
+            Text(store.t(seed.hintKey)).font(.system(size:14,weight:.semibold,design:.rounded)).fixedSize(horizontal:false,vertical:true)
+        }
+    }
+}

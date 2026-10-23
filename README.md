@@ -152,3 +152,13 @@ Figurer, løse kropsdele og pynt deler nu et modelleret legetøjsmateriale med v
 De seks fælles miljøer har lagdelte landskaber, formgivne træer, snoede stier, detaljerede eventyrhuse, vindueslys, skyer og blomster. Figurværkstedet har træbord, farvekrukker og et stort vindue ind i samme univers. Menuer, værktøjer og spil deler mere taktile knapper; æbler, bobler og legetøjsillustrationer følger materialestilen.
 
 Denne grafikrunde er implementeret uden en test- eller kontrolrunde efter brugerens ønske. Native kompilering og det faktiske udseende på iPad er ikke verificeret for denne ændring.
+
+## Tre startvenner
+
+Bimse er en blå, rund hoppeven med små horn, store poter og et åbent grin. Pjuske er en lyserød skyven med lange ører, rolige øjne og små sko. Lumi er en mintfarvet, dråbeformet svæveven med antenner og vinger. De har forskellige stemmer og gangarter og vises i en ny valgskærm, når en ny ven skabes. Startvenner-knappen åbner valget igen.
+
+Valg af startven er ét fortryd-trin. Ved redigering bevares vennens ID, navn, miljø, værelse, sang og bane. Alle dele er fortsat frit redigerbare. Startvennerne bruger de eksisterende datafelter; gemte samlinger behøver ingen ny filversion.
+
+Rund, sky og dråbe har gentegnede silhuetter. Poter, arme, horn, ører, antenner, vinger, hat og briller har nye illustrationer; øjne og mund har mere detaljeret belysning. Skaberen har rolig vejrtrækning og korte glade ansigtsreaktioner efter ændringer. Vejet bevægelse slås fra ved Reducer bevægelse og når appen er inaktiv.
+
+Implementeret uden ny kompilering, tests eller visuel kontrol efter brugerens ønske.
