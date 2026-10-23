@@ -12,29 +12,7 @@ enum StudioStyle {
 }
 
 struct StudioBackdrop: View {
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                LinearGradient(colors: [Color(red: 1, green: 0.87, blue: 0.36), Color(red: 1, green: 0.69, blue: 0.33)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                Canvas { context, size in
-                    let shapes: [(CGRect, Color)] = [
-                        (CGRect(x: -85, y: -110, width: 330, height: 300), StudioStyle.colors[0]),
-                        (CGRect(x: size.width - 155, y: 50, width: 240, height: 260), StudioStyle.colors[2]),
-                        (CGRect(x: -80, y: size.height - 180, width: 290, height: 300), StudioStyle.colors[3])
-                    ]
-                    for (rect, color) in shapes { context.fill(Path(ellipseIn: rect), with: .color(color.opacity(0.5))) }
-                    for index in 0..<26 {
-                        let x = CGFloat((index * 73 + 19) % 307) / 307 * size.width
-                        let y = CGFloat((index * 97 + 31) % 503) / 503 * size.height
-                        var dash = Path()
-                        dash.move(to: CGPoint(x: x, y: y))
-                        dash.addQuadCurve(to: CGPoint(x: x + 12, y: y - 6), control: CGPoint(x: x + 3, y: y - 12))
-                        context.stroke(dash, with: .color(StudioStyle.colors[index % 9].opacity(0.65)), style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                    }
-                }.frame(width: geometry.size.width, height: geometry.size.height)
-            }
-        }.ignoresSafeArea().accessibilityHidden(true)
-    }
+    var body:some View {CreatorRoomArtwork().ignoresSafeArea()}
 }
 
 struct StudioCategoryTile: View {

@@ -72,7 +72,7 @@ struct CreatorToolButton: View {
     var body: some View {
         Button(action: action) {
             CreatorLineIcon(mark: mark).frame(width: 32, height: 32).frame(width: 48, height: 48)
-                .background(RoundedRectangle(cornerRadius: 17).fill(tint))
+                .background(CandySurface(color:tint,cornerRadius:17))
                 .overlay(RoundedRectangle(cornerRadius: 17).stroke(WorkshopLook.sea.opacity(0.2), lineWidth: 1.5))
                 .shadow(color: WorkshopLook.sea.opacity(0.25), radius: 0, y: 3).contentShape(Rectangle())
         }.buttonStyle(SquishStyle()).accessibilityLabel(label)
@@ -80,30 +80,58 @@ struct CreatorToolButton: View {
 }
 
 struct CreatorRoomArtwork: View {
-    var body: some View {
-        Canvas { context, size in
-            let w = size.width, h = size.height
-            context.fill(Path(CGRect(origin:.zero,size:size)),with:.color(WorkshopLook.cream))
-            let window = Path(roundedRect:CGRect(x:w*0.1,y:h*0.08,width:w*0.8,height:h*0.77),cornerRadius:min(w*0.4,170))
-            context.fill(window,with:.linearGradient(Gradient(colors:[Color(red:0.29,green:0.82,blue:0.87),Color(red:0.78,green:0.96,blue:0.82)]),startPoint:CGPoint(x:0,y:0),endPoint:CGPoint(x:0,y:h)))
-            context.stroke(window,with:.color(WorkshopLook.sea.opacity(0.18)),lineWidth:5)
-            for i in 0..<5 {
-                let x = w * (0.15 + CGFloat(i) * 0.18)
-                context.fill(Path(ellipseIn:CGRect(x:x,y:h*0.23+CGFloat(i%2)*17,width:7,height:7)),with:.color(.white.opacity(0.6)))
-            }
-            var floor = Path(); floor.move(to:CGPoint(x:0,y:h*0.84)); floor.addQuadCurve(to:CGPoint(x:w,y:h*0.84),control:CGPoint(x:w/2,y:h*0.77)); floor.addLine(to:CGPoint(x:w,y:h));floor.addLine(to:CGPoint(x:0,y:h));floor.closeSubpath()
-            context.fill(floor,with:.color(Color(red:0.91,green:0.69,blue:0.39)))
-            context.stroke(floor,with:.color(Color(red:0.7,green:0.45,blue:0.23).opacity(0.35)),lineWidth:3)
-            for side in 0..<2 {
-                let x = side == 0 ? w*0.03 : w*0.87
-                let y = h*0.72
-                let pot = Path(roundedRect:CGRect(x:x,y:y,width:w*0.09,height:h*0.1),cornerRadius:8)
-                context.fill(pot,with:.color(side == 0 ? StudioStyle.colors[1] : StudioStyle.colors[5]))
-                context.stroke(pot,with:.color(WorkshopLook.sea.opacity(0.7)),lineWidth:2)
-                var brush = Path();brush.move(to:CGPoint(x:x+w*0.045,y:y+10));brush.addLine(to:CGPoint(x:x+w*0.065,y:y-h*0.09))
-                context.stroke(brush,with:.color(WorkshopLook.yellow),style:StrokeStyle(lineWidth:8,lineCap:.round))
+    var body:some View {
+        GeometryReader {proxy in
+            let w=proxy.size.width,h=proxy.size.height
+            ZStack {
+                LinearGradient(colors:[Color(red:1,green:0.90,blue:0.68),Color(red:0.97,green:0.69,blue:0.44)],
+                    startPoint:.topLeading,endPoint:.bottomTrailing)
+                WorldBackdrop(world:.forest,immersive:false,animated:false)
+                    .frame(width:w*0.84,height:h*0.78)
+                    .clipShape(RoundedRectangle(cornerRadius:min(w*0.35,160)))
+                    .overlay(RoundedRectangle(cornerRadius:min(w*0.35,160)).strokeBorder(Color(red:0.48,green:0.25,blue:0.28),lineWidth:9))
+                    .overlay(RoundedRectangle(cornerRadius:min(w*0.35,160)).strokeBorder(Color(red:1,green:0.89,blue:0.63),lineWidth:3).padding(9))
+                    .shadow(color:WorkshopLook.sea.opacity(0.22),radius:12,x:0,y:6)
+                    .position(x:w/2,y:h*0.43)
+                Canvas {c,size in furnishings(c,size:size)}
             }
         }.allowsHitTesting(false).accessibilityHidden(true)
+    }
+    private func furnishings(_ c:GraphicsContext,size:CGSize) {
+        let w=size.width,h=size.height
+        let floorY=h*0.84
+        let top=Path(roundedRect:CGRect(x:-12,y:floorY,width:w+24,height:h*0.19),cornerRadius:18)
+        c.fill(top,with:.linearGradient(Gradient(colors:[
+            Color(red:0.91,green:0.65,blue:0.37),Color(red:0.63,green:0.34,blue:0.23)]),
+            startPoint:CGPoint(x:0,y:floorY),endPoint:CGPoint(x:0,y:h)))
+        c.stroke(top,with:.color(Color(red:1,green:0.85,blue:0.55)),lineWidth:5)
+        for i in 0..<8 {
+            let x=CGFloat(i)*w/7
+            var seam=Path();seam.move(to:CGPoint(x:w/2+(x-w/2)*0.8,y:floorY+3));seam.addLine(to:CGPoint(x:x,y:h))
+            c.stroke(seam,with:.color(Color(red:0.35,green:0.19,blue:0.22).opacity(0.2)),lineWidth:2)
+        }
+        for side in 0..<2 {
+            let x=side == 0 ? w*0.03 : w*0.88,y=h*0.76
+            let width=max(18,w*0.09),height=max(28,h*0.12)
+            for pencil in 0..<3 {
+                let px=x+width*(0.2+CGFloat(pencil)*0.25)
+                var brush=Path();brush.move(to:CGPoint(x:px,y:y+12))
+                brush.addLine(to:CGPoint(x:px+CGFloat(pencil-1)*6,y:y-height*0.62-CGFloat(pencil%2)*10))
+                c.stroke(brush,with:.color(GameStyle.palette[(pencil+side*4+2)%16]),style:StrokeStyle(lineWidth:6,lineCap:.round))
+            }
+            let pot=Path(roundedRect:CGRect(x:x,y:y,width:width,height:height),cornerRadius:width*0.22)
+            ToyFinish.paint(c,path:pot,color:side == 0 ? GameStyle.palette[1] : GameStyle.palette[6],edge:2)
+            let label=Path(ellipseIn:CGRect(x:x+width*0.25,y:y+height*0.28,width:width*0.5,height:height*0.4))
+            c.fill(label,with:.color(.white.opacity(0.65)))
+        }
+        var cord=Path();cord.move(to:CGPoint(x:0,y:h*0.02));cord.addQuadCurve(to:CGPoint(x:w,y:h*0.02),control:CGPoint(x:w/2,y:h*0.13))
+        c.stroke(cord,with:.color(WorkshopLook.sea.opacity(0.45)),lineWidth:2)
+        for i in 0..<7 {
+            let t=CGFloat(i+1)/8,x=w*t,y=h*0.02+4*t*(1-t)*h*0.055
+            var flag=Path();flag.move(to:CGPoint(x:x-9,y:y));flag.addLine(to:CGPoint(x:x+9,y:y))
+            flag.addQuadCurve(to:CGPoint(x:x,y:y+22),control:CGPoint(x:x+8,y:y+15));flag.closeSubpath()
+            ToyFinish.paint(c,path:flag,color:GameStyle.palette[(i*2+1)%16],edge:1)
+        }
     }
 }
 

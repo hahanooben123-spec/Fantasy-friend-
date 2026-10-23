@@ -8,7 +8,7 @@ struct ToyGlyph: View {
     var body: some View {
         Canvas { context, size in
             context.scaleBy(x: size.width / 100, y: size.height / 100)
-            func oval(_ rect: CGRect, _ color: Color) { context.fill(Path(ellipseIn: rect), with: .color(color)) }
+            func oval(_ rect:CGRect,_ color:Color) {ToyFinish.paint(context,path:Path(ellipseIn:rect),color:color,edge:1)}
             func line(_ points: [CGPoint], _ color: Color, _ width: CGFloat) {
                 var path = Path(); if let first = points.first { path.move(to: first) }
                 for point in points.dropFirst() { path.addLine(to: point) }
@@ -19,7 +19,7 @@ struct ToyGlyph: View {
                 line([CGPoint(x: 41, y: 58), CGPoint(x: 77, y: 20)], Color(red: 1, green: 0.68, blue: 0.27), 18)
                 line([CGPoint(x: 39, y: 60), CGPoint(x: 50, y: 49)], GameStyle.purple, 21)
                 var tip = Path(); tip.move(to: CGPoint(x: 36, y: 55)); tip.addCurve(to: CGPoint(x: 16, y: 87), control1: CGPoint(x: 8, y: 61), control2: CGPoint(x: 38, y: 78)); tip.addCurve(to: CGPoint(x: 49, y: 67), control1: CGPoint(x: 45, y: 93), control2: CGPoint(x: 63, y: 77)); tip.closeSubpath()
-                context.fill(tip, with: .color(StudioStyle.colors[1]))
+                ToyFinish.paint(context,path:tip,color:StudioStyle.colors[1],edge:1.8)
                 line([CGPoint(x: 61, y: 33), CGPoint(x: 74, y: 20)], .white.opacity(0.6), 4)
             case .berry:
                 var berry = Path(); berry.move(to: CGPoint(x: 50, y: 86)); berry.addCurve(to: CGPoint(x: 16, y: 41), control1: CGPoint(x: 27, y: 76), control2: CGPoint(x: 13, y: 56)); berry.addCurve(to: CGPoint(x: 84, y: 41), control1: CGPoint(x: 11, y: 12), control2: CGPoint(x: 88, y: 12)); berry.addCurve(to: CGPoint(x: 50, y: 86), control1: CGPoint(x: 87, y: 56), control2: CGPoint(x: 73, y: 76))
@@ -51,7 +51,7 @@ struct ToyGlyph: View {
                 line([CGPoint(x: 28, y: 52), CGPoint(x: 34, y: 55), CGPoint(x: 41, y: 52)], GameStyle.ink, 3)
             case .heart:
                 var heart = Path(); heart.move(to: CGPoint(x: 50, y: 84)); heart.addCurve(to: CGPoint(x: 14, y: 35), control1: CGPoint(x: 25, y: 67), control2: CGPoint(x: 7, y: 51)); heart.addCurve(to: CGPoint(x: 50, y: 29), control1: CGPoint(x: 15, y: 7), control2: CGPoint(x: 41, y: 7)); heart.addCurve(to: CGPoint(x: 86, y: 35), control1: CGPoint(x: 59, y: 7), control2: CGPoint(x: 85, y: 7)); heart.addCurve(to: CGPoint(x: 50, y: 84), control1: CGPoint(x: 93, y: 51), control2: CGPoint(x: 75, y: 67))
-                context.fill(heart, with: .color(StudioStyle.colors[1]))
+                ToyFinish.paint(context,path:heart,color:StudioStyle.colors[1],edge:1.8)
                 line([CGPoint(x: 24, y: 34), CGPoint(x: 29, y: 27)], .white.opacity(0.65), 5)
             }
         }.aspectRatio(1, contentMode: .fit).accessibilityHidden(true)
@@ -139,7 +139,7 @@ struct AdventureHeading: View {
             }
             Spacer(minLength: 0)
         }.foregroundColor(GameStyle.ink).padding(.horizontal, 12).padding(.vertical, 9)
-            .background(RoundedRectangle(cornerRadius: 28).fill(.white.opacity(0.78)))
+            .background(CandySurface(color:Color(red:1,green:0.96,blue:0.83),cornerRadius:28))
             .padding(.horizontal, 12).padding(.top, 8)
             .overlay(alignment: .trailing) {
                 if leaving {
@@ -170,7 +170,7 @@ struct FriendHomeCard: View {
                 .lineLimit(2).multilineTextAlignment(.center).frame(maxWidth: .infinity, minHeight: 45)
                 .background(Capsule().fill(Color.white.opacity(0.94))).padding(.horizontal, 10).padding(.top, -10)
         }.padding(8).padding(.bottom, 6)
-        .background(RoundedRectangle(cornerRadius: 38).fill(.white.opacity(0.9)))
+        .background(CandySurface(color:Color(red:1,green:0.97,blue:0.88),cornerRadius:38))
         .overlay(RoundedRectangle(cornerRadius: 38).stroke(.white.opacity(0.9), lineWidth: 3))
     }
 }

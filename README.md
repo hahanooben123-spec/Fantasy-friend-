@@ -144,3 +144,11 @@ Et selvstændigt, helårligt græskarværksted fra forsiden og minispilsmenuen. 
 Udskrabningen fylder en illustreret skål med animerede kerner og små lyde. Tryllestaven i lanternehaven spiller to korte runder med lanternernes egne lys og toner. Legen kan stoppes med samme knap eller ved at røre en lanterne. Lysmelodien ændrer ikke de gemte lysvalg og stopper, når haven forlades eller appen går i baggrunden. Animationerne respekterer Reducer bevægelse, og lydene følger appens lydindstilling.
 
 Græskargrafikken bruger lagdelte, skyggefulde ribber, diskret overfladetekstur og udskæringer med varme snitkanter, lyskerne og lysspild. Miljøerne har illustrerede bakker, små huse, lyskæder, havehegn, træårer og slyngplanter. Kun ildfluelaget animeres i baggrunden, ved 12 billeder per sekund i mørke; det pauses ved reduceret bevægelse og i baggrunden. Grafikrunden er ikke manuelt afprøvet på iPad.
+
+## Fælles eventyrstil
+
+Figurer, løse kropsdele og pynt deler nu et modelleret legetøjsmateriale med varm hovedbelysning, farvede skygger og blødere kanter. Figurerne har farvede iris og formede highlights. De eksisterende former, farveindeks og placeringer bruges fortsat.
+
+De seks fælles miljøer har lagdelte landskaber, formgivne træer, snoede stier, detaljerede eventyrhuse, vindueslys, skyer og blomster. Figurværkstedet har træbord, farvekrukker og et stort vindue ind i samme univers. Menuer, værktøjer og spil deler mere taktile knapper; æbler, bobler og legetøjsillustrationer følger materialestilen.
+
+Denne grafikrunde er implementeret uden en test- eller kontrolrunde efter brugerens ønske. Native kompilering og det faktiske udseende på iPad er ikke verificeret for denne ændring.

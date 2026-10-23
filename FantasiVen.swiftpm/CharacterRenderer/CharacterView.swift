@@ -50,33 +50,33 @@ private struct CreaturePainter {
 
     func ellipse(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, _ color: Color) {
         let shape = Path(ellipseIn: CGRect(x: x, y: y, width: w, height: h))
-        context.fill(shape, with: .color(color))
         if w >= 20 && h >= 20 {
-            context.stroke(shape, with: .color(ink.opacity(0.7)), lineWidth: 2.2)
-        }
+            ToyFinish.paint(context,path:shape,color:color,edge:1.6)
+        } else {context.fill(shape,with:.color(color))}
     }
     func line(_ points: [CGPoint], _ color: Color, _ width: CGFloat = 5) {
         guard let first = points.first else { return }
         var path = Path(); path.move(to: first)
         for point in points.dropFirst() { path.addLine(to: point) }
         if width >= 6 {
-            context.stroke(path, with: .color(ink.opacity(0.85)), style: StrokeStyle(lineWidth: width + 3, lineCap: .round, lineJoin: .round))
+            context.stroke(path, with: .color(GameStyle.mixed(color,with:ink,amount:0.58)), style: StrokeStyle(lineWidth: width + 2, lineCap: .round, lineJoin: .round))
         }
-        context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
+        context.stroke(path, with: .linearGradient(Gradient(colors:[GameStyle.mixed(color,with:.white,amount:0.24),color,GameStyle.mixed(color,with:ink,amount:0.22)]),
+            startPoint:CGPoint(x:70,y:90),endPoint:CGPoint(x:210,y:270)),style:StrokeStyle(lineWidth:width,lineCap:.round,lineJoin:.round))
     }
     func curve(_ start: CGPoint, _ end: CGPoint, _ control: CGPoint, _ color: Color, _ width: CGFloat = 5) {
         var path = Path(); path.move(to: start); path.addQuadCurve(to: end, control: control)
         if width >= 7 {
-            context.stroke(path, with: .color(ink.opacity(0.85)), style: StrokeStyle(lineWidth: width + 3, lineCap: .round))
+            context.stroke(path, with: .color(GameStyle.mixed(color,with:ink,amount:0.58)), style: StrokeStyle(lineWidth: width + 2, lineCap: .round))
         }
-        context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round))
+        context.stroke(path, with: .linearGradient(Gradient(colors:[GameStyle.mixed(color,with:.white,amount:0.25),color,GameStyle.mixed(color,with:ink,amount:0.24)]),
+            startPoint:start,endPoint:end),style:StrokeStyle(lineWidth:width,lineCap:.round))
     }
     func polygon(_ points: [CGPoint], _ color: Color) {
         guard let first = points.first else { return }
         var path = Path(); path.move(to: first)
         for p in points.dropFirst() { path.addLine(to: p) }; path.closeSubpath()
-        context.fill(path, with: .color(color))
-        context.stroke(path, with: .color(ink.opacity(0.8)), style: StrokeStyle(lineWidth: 2, lineJoin: .round))
+        ToyFinish.paint(context,path:path,color:color,edge:1.8)
     }
     func star(_ x: CGFloat, _ y: CGFloat, _ radius: CGFloat, _ color: Color) {
         polygon((0..<10).map { i in
@@ -155,10 +155,15 @@ private struct CreaturePainter {
 
     func drawBaseBody(blink: Bool, happy: Bool, asleep: Bool) {
         let silhouette = CreatureShape(kind: friend.body).path(in: CGRect(x: 0, y: 0, width: 300, height: 320))
-        context.fill(silhouette, with: .linearGradient(Gradient(colors: [GameStyle.mixed(primary, with: .white, amount: 0.25), primary, GameStyle.mixed(primary, with: ink, amount: 0.26)]), startPoint: CGPoint(x: 85, y: 76), endPoint: CGPoint(x: 207, y: 260)))
-        context.stroke(silhouette, with: .color(GameStyle.mixed(primary, with: ink, amount: 0.72)), lineWidth: 3.5)
+        ToyFinish.paint(context,path:silhouette,color:primary,edge:2.6)
         var clipped = context; clipped.clip(to: silhouette)
-        clipped.fill(Path(ellipseIn: CGRect(x: 105, y: 196, width: 96, height: 72)), with: .color(.white.opacity(0.12)))
+        let tummy=Path(ellipseIn:CGRect(x:103,y:183,width:98,height:85))
+        clipped.fill(tummy,with:.radialGradient(Gradient(colors:[
+            GameStyle.mixed(primary,with:Color(red:1,green:0.91,blue:0.68),amount:0.35).opacity(0.55),.clear]),
+            center:CGPoint(x:149,y:213),startRadius:0,endRadius:52))
+        var rim=Path();rim.move(to:CGPoint(x:218,y:118))
+        rim.addQuadCurve(to:CGPoint(x:224,y:229),control:CGPoint(x:254,y:167))
+        clipped.stroke(rim,with:.color(accent.opacity(0.16)),style:StrokeStyle(lineWidth:9,lineCap:.round))
         if friend.accessories.contains(9) {
             let attachment = Attachment.extra(9)
             let paintingContext = friend.placement(for: attachment) == PartPlacement() ? clipped : context
@@ -171,8 +176,10 @@ private struct CreaturePainter {
         }
         drawDoodles(in: clipped)
         // Highlights stay clipped to every body shape, including narrow beans and drops.
-        clipped.fill(Path(ellipseIn: CGRect(x: 84, y: 90, width: 24, height: 45)), with: .color(.white.opacity(0.36)))
-        clipped.fill(Path(ellipseIn: CGRect(x: 110, y: 84, width: 10, height: 13)), with: .color(.white.opacity(0.62)))
+        var sheen=Path();sheen.move(to:CGPoint(x:94,y:116))
+        sheen.addQuadCurve(to:CGPoint(x:119,y:94),control:CGPoint(x:98,y:94))
+        clipped.stroke(sheen,with:.color(.white.opacity(0.34)),style:StrokeStyle(lineWidth:7,lineCap:.round))
+        clipped.fill(Path(ellipseIn:CGRect(x:124,y:91,width:8,height:5)),with:.color(.white.opacity(0.65)))
         ellipse(87, 180, 27, 15, Color(red: 1, green: 0.23, blue: 0.42).opacity(0.48)); ellipse(190, 180, 27, 15, Color(red: 1, green: 0.23, blue: 0.42).opacity(0.48))
         if !friend.isHidden("eyes") { drawEyes(closed: blink || asleep, happy: happy) }
         if !friend.isHidden("mouth") { drawMouth(happy: happy, asleep: asleep) }
@@ -350,6 +357,10 @@ private struct CreaturePainter {
             } else if kind == 9 {
                 ellipse(x - 12, y - 8, 24, 22, accent); ellipse(x - 5, y - 8, 10, 22, ink)
             } else {
+                let irisX=x+gaze.x*5+(kind == 7 ? 5 : 0)
+                let irisY=y+gaze.y*4
+                ellipse(irisX-radius*0.61,irisY-radius*0.52,radius*1.22,radius*1.42,
+                    GameStyle.mixed(accent,with:ink,amount:0.18))
                 let pupilWidth: CGFloat = kind == 8 ? 7 : radius * 0.9
                 ellipse(x - pupilWidth / 2 + (kind == 7 ? 5 : 0) + gaze.x * 5, y - radius * 0.35 + gaze.y * 4, pupilWidth, radius * 1.15, ink)
             }

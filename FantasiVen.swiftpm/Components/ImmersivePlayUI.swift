@@ -41,7 +41,7 @@ struct PlayPauseOverlay:View {
             VStack(spacing:20) {
                 Text("☁️").font(.system(size:80))
                 CandyButton(title:store.t("resumeGame"),icon:"play.fill",action:resume)
-            }.padding(28).frame(maxWidth:340).background(RoundedRectangle(cornerRadius:36).fill(.white))
+            }.padding(28).frame(maxWidth:340).background(CandySurface(color:Color(red:1,green:0.96,blue:0.82),cornerRadius:36))
         }
     }
 }
@@ -50,7 +50,7 @@ struct PlayDock<Content:View>:View {
     @ViewBuilder var content:()->Content
     var body:some View {
         HStack(spacing:spacing,content:content).padding(12)
-            .background(RoundedRectangle(cornerRadius:28).fill(.white.opacity(0.93)))
+            .background(CandySurface(color:Color(red:1,green:0.96,blue:0.82),cornerRadius:28))
             .shadow(color:GameStyle.ink.opacity(0.15),radius:12,y:5)
             .padding(.horizontal,12).padding(.bottom,12)
     }

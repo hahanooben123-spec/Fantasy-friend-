@@ -25,7 +25,7 @@ struct HomeView: View {
                                 NavigationLink(destination: SettingsView()) {
                                     Image(systemName: "gearshape.fill").font(.system(size: 23, weight: .bold))
                                         .foregroundColor(GameStyle.ink).frame(width: 50, height: 50)
-                                        .background(Circle().fill(Color.white.opacity(0.88)))
+                                        .background(CandySurface(color:Color(red:1,green:0.92,blue:0.62),cornerRadius:25))
                                         .shadow(color: GameStyle.purple.opacity(0.12), radius: 0, y: 4)
                                 }.accessibilityLabel(store.t("settings"))
                             }
@@ -59,7 +59,12 @@ struct HomeView: View {
     private var welcomeStage: some View {
         GeometryReader { geometry in
             ZStack {
-                Ellipse().fill(Color.white.opacity(0.35)).frame(width: geometry.size.width * 0.87, height: 35).offset(y: geometry.size.height * 0.38)
+                Ellipse().fill(LinearGradient(colors:[Color(red:0.85,green:0.95,blue:0.57),Color(red:0.30,green:0.65,blue:0.39)],
+                    startPoint:.top,endPoint:.bottom))
+                    .overlay(Ellipse().stroke(Color(red:1,green:0.98,blue:0.74).opacity(0.6),lineWidth:2))
+                    .frame(width:geometry.size.width*0.87,height:35)
+                    .shadow(color:GameStyle.ink.opacity(0.2),radius:10,x:0,y:8)
+                    .offset(y:geometry.size.height*0.38)
                 CharacterView(friend: sample(color: 5, body: .cloud, extra: 8))
                     .frame(height: geometry.size.height * 0.62).rotationEffect(.degrees(-10))
                     .offset(x: -min(geometry.size.width * 0.3, 200), y: geometry.size.height * 0.16)
@@ -94,7 +99,7 @@ struct MenuTile: View {
             Spacer(minLength: 0)
             Image(systemName: "chevron.right").font(.system(size: 14, weight: .heavy))
         }.foregroundColor(.white).padding(.horizontal, 21).frame(minHeight: 58)
-            .background(RoundedRectangle(cornerRadius: 24).fill(color))
+            .background(CandySurface(color:color,cornerRadius:24))
             .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.35), lineWidth: 2))
             .shadow(color: color.opacity(0.25), radius: 0, y: 5)
     }

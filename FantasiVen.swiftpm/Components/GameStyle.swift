@@ -32,15 +32,24 @@ struct CandySurface: View {
     var color: Color
     var cornerRadius: CGFloat = 27
     var body: some View {
-        RoundedRectangle(cornerRadius: cornerRadius)
-            .fill(LinearGradient(colors: [GameStyle.mixed(color, with: .white, amount: 0.28), color, GameStyle.mixed(color, with: GameStyle.ink, amount: 0.12)], startPoint: .top, endPoint: .bottom))
-            .overlay(alignment: .top) {
-                RoundedRectangle(cornerRadius: max(8, cornerRadius - 7))
-                    .fill(LinearGradient(colors: [.white.opacity(0.5), .white.opacity(0.03)], startPoint: .top, endPoint: .bottom))
-                    .frame(height: 22).padding(7)
+        RoundedRectangle(cornerRadius:cornerRadius)
+            .fill(LinearGradient(stops:[
+                .init(color:GameStyle.mixed(color,with:.white,amount:0.43),location:0),
+                .init(color:GameStyle.mixed(color,with:.white,amount:0.1),location:0.28),
+                .init(color:color,location:0.62),
+                .init(color:GameStyle.mixed(color,with:GameStyle.ink,amount:0.28),location:1)],
+                startPoint:.topLeading,endPoint:.bottomTrailing))
+            .overlay(RoundedRectangle(cornerRadius:cornerRadius).strokeBorder(
+                GameStyle.mixed(color,with:GameStyle.ink,amount:0.6),lineWidth:1.5))
+            .overlay(RoundedRectangle(cornerRadius:max(4,cornerRadius-3)).strokeBorder(
+                LinearGradient(colors:[.white.opacity(0.72),.white.opacity(0.04)],startPoint:.top,endPoint:.bottom),
+                lineWidth:1.5).padding(3))
+            .overlay(alignment:.top) {
+                Capsule().fill(LinearGradient(colors:[.white.opacity(0.35),.clear],startPoint:.top,endPoint:.bottom))
+                    .frame(height:14).padding(.horizontal,cornerRadius*0.65).padding(.top,6)
             }
-            .overlay(RoundedRectangle(cornerRadius: cornerRadius).strokeBorder(GameStyle.ink.opacity(0.65), lineWidth: 2))
-            .shadow(color: GameStyle.mixed(color, with: GameStyle.ink, amount: 0.45), radius: 0, y: 5)
+            .shadow(color:GameStyle.mixed(color,with:GameStyle.ink,amount:0.5),radius:0,y:4)
+            .shadow(color:GameStyle.ink.opacity(0.2),radius:6,x:0,y:7)
             .allowsHitTesting(false)
     }
 }
@@ -69,7 +78,8 @@ struct CandyButton: View {
 struct SquishStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var reducedMotion
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label.scaleEffect(configuration.isPressed && !reducedMotion ? 0.94 : 1)
+        configuration.label.scaleEffect(configuration.isPressed && !reducedMotion ? 0.95 : 1)
+            .offset(y:configuration.isPressed && !reducedMotion ? 2 : 0)
             .animation(reducedMotion ? nil : .easeOut(duration: 0.16), value: configuration.isPressed)
     }
 }
@@ -85,5 +95,23 @@ struct RoundButton: View {
                 .background(CandySurface(color: Color(red: 1, green: 0.91, blue: 0.48), cornerRadius: 25))
                 .contentShape(Circle())
         }.buttonStyle(SquishStyle()).accessibilityLabel(label)
+    }
+}
+
+/// Shared soft vinyl material for characters, accessories and game props.
+enum ToyFinish {
+    static func paint(_ context:GraphicsContext,path:Path,color:Color,edge:CGFloat=2) {
+        let r=path.boundingRect
+        guard r.width>0,r.height>0 else {return}
+        let key=CGPoint(x:r.minX+r.width*0.29,y:r.minY+r.height*0.22)
+        let light=GameStyle.mixed(color,with:Color(red:1,green:0.96,blue:0.83),amount:0.35)
+        let shade=GameStyle.mixed(color,with:Color(red:0.14,green:0.10,blue:0.28),amount:0.46)
+        context.fill(path,with:.radialGradient(Gradient(stops:[
+            .init(color:light,location:0),.init(color:color,location:0.48),
+            .init(color:shade,location:1)]),center:key,startRadius:0,endRadius:max(r.width,r.height)*0.88))
+        var clipped=context;clipped.clip(to:path)
+        clipped.stroke(path.applying(CGAffineTransform(translationX:2,y:3)),
+            with:.color(.white.opacity(0.22)),lineWidth:3)
+        context.stroke(path,with:.color(GameStyle.mixed(color,with:GameStyle.ink,amount:0.66)),lineWidth:edge)
     }
 }

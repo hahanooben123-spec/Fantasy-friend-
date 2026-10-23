@@ -42,11 +42,13 @@ struct AppleToy: View {
             body.addCurve(to: CGPoint(x: 50, y: 91), control1: CGPoint(x: 16, y: 85), control2: CGPoint(x: 32, y: 98))
             body.addCurve(to: CGPoint(x: 88, y: 53), control1: CGPoint(x: 70, y: 100), control2: CGPoint(x: 86, y: 81))
             body.addCurve(to: CGPoint(x: 50, y: 27), control1: CGPoint(x: 97, y: 24), control2: CGPoint(x: 72, y: 12))
-            context.fill(body, with: .linearGradient(Gradient(colors: [Color(red: 1, green: 0.43, blue: 0.47), Color(red: 0.88, green: 0.19, blue: 0.32)]), startPoint: CGPoint(x: 25, y: 25), endPoint: CGPoint(x: 75, y: 90)))
+            ToyFinish.paint(context,path:body,color:Color(red:0.97,green:0.18,blue:0.29),edge:2)
             var stem = Path(); stem.move(to: CGPoint(x: 49, y: 29)); stem.addQuadCurve(to: CGPoint(x: 56, y: 7), control: CGPoint(x: 46, y: 15))
             context.stroke(stem, with: .color(Color(red: 0.45, green: 0.28, blue: 0.22)), style: StrokeStyle(lineWidth: 6, lineCap: .round))
             context.fill(Path(ellipseIn: CGRect(x: 57, y: 9, width: 25, height: 12)), with: .color(Color(red: 0.36, green: 0.75, blue: 0.08)))
-            context.stroke(body, with: .color(GameStyle.ink.opacity(0.85)), lineWidth: 3)
+            var blush=context;blush.clip(to:body)
+            blush.fill(Path(ellipseIn:CGRect(x:50,y:61,width:39,height:34)),with:.radialGradient(
+                Gradient(colors:[Color.orange.opacity(0.45),.clear]),center:CGPoint(x:65,y:75),startRadius:0,endRadius:27))
             context.fill(Path(ellipseIn: CGRect(x: 24, y: 34, width: 11, height: 22)), with: .color(.white.opacity(0.55)))
         }
     }
@@ -56,7 +58,9 @@ struct BubbleToy: View {
     var color: Color
     var body: some View {
         Circle().fill(RadialGradient(colors: [.white.opacity(0.45), color.opacity(0.22), color.opacity(0.7)], center: .init(x: 0.35, y: 0.28), startRadius: 0, endRadius: 65))
-            .overlay(Circle().stroke(.white.opacity(0.95), lineWidth: 3))
+            .overlay(Circle().stroke(AngularGradient(colors:[.white,.cyan.opacity(0.8),.pink.opacity(0.7),.yellow.opacity(0.7),.white],center:.center),lineWidth:3))
+            .overlay(Circle().trim(from:0.05,to:0.31).stroke(color.opacity(0.65),style:StrokeStyle(lineWidth:5,lineCap:.round)).padding(4))
+            .overlay(alignment:.topTrailing) {Circle().fill(.white.opacity(0.85)).frame(width:7,height:7).padding(12)}
             .overlay(Circle().trim(from: 0.55, to: 0.78).stroke(.white.opacity(0.9), style: StrokeStyle(lineWidth: 5, lineCap: .round)).padding(10))
             .shadow(color: color.opacity(0.23), radius: 8, y: 5)
     }
