@@ -1,61 +1,13 @@
 import SwiftUI
 
 struct PizzaKitchenBackdrop:View {
-    var body:some View {
-        Canvas {c,s in
-            c.fill(Path(CGRect(origin:.zero,size:s)),with:.linearGradient(Gradient(colors:[
-                Color(red:0.17,green:0.56,blue:0.6),Color(red:0.67,green:0.85,blue:0.76)]),startPoint:.zero,endPoint:CGPoint(x:0,y:s.height)))
-            let counter=s.height*0.5
-            for row in 0..<6 {
-                for col in 0..<12 {
-                    let rect=CGRect(x:CGFloat(col)*70-CGFloat(row%2)*35,y:CGFloat(row)*44+60,width:67,height:41)
-                    c.fill(Path(roundedRect:rect,cornerRadius:5),with:.color(Color(red:1,green:0.91,blue:0.72).opacity(0.25)))
-                }
-            }
-            for i in 0..<14 {
-                let x=CGFloat(i)*s.width/13
-                let r=CGRect(x:x,y:0,width:s.width/13+1,height:53)
-                c.fill(Path(roundedRect:r,cornerRadius:12),with:.color(i%2 == 0 ? Color(red:0.88,green:0.23,blue:0.23) : Color(red:1,green:0.94,blue:0.8)))
-            }
-            for side in 0..<2 {
-                let x=side == 0 ? s.width*0.08 : s.width*0.9
-                let pan=Path(ellipseIn:CGRect(x:x-20,y:s.height*0.24,width:40,height:43))
-                ToyFinish.paint(c,path:pan,color:Color(red:0.72,green:0.37,blue:0.2),edge:1.5)
-                var handle=Path();handle.move(to:CGPoint(x:x,y:s.height*0.24))
-                handle.addLine(to:CGPoint(x:x,y:s.height*0.24-30))
-                c.stroke(handle,with:.color(GameStyle.ink),style:StrokeStyle(lineWidth:6,lineCap:.round))
-            }
-            c.fill(Path(CGRect(x:0,y:counter,width:s.width,height:s.height-counter)),with:.linearGradient(Gradient(colors:[
-                Color(red:0.86,green:0.59,blue:0.33),Color(red:0.52,green:0.29,blue:0.22)]),
-                startPoint:CGPoint(x:0,y:counter),endPoint:CGPoint(x:0,y:s.height)))
-            for i in 0..<15 {
-                let y=counter+CGFloat(i)*46
-                var plank=Path();plank.move(to:CGPoint(x:0,y:y));plank.addLine(to:CGPoint(x:s.width,y:y))
-                c.stroke(plank,with:.color(GameStyle.ink.opacity(0.15)),lineWidth:2)
-                for j in 0..<3 {
-                    let x=CGFloat((i*59+j*91)%293)/293*s.width
-                    var grain=Path();grain.move(to:CGPoint(x:x,y:y+19));grain.addQuadCurve(to:CGPoint(x:x+62,y:y+23),control:CGPoint(x:x+25,y:y+12))
-                    c.stroke(grain,with:.color(.white.opacity(0.09)),lineWidth:1)
-                }
-            }
-            c.fill(Path(CGRect(x:0,y:counter,width:s.width,height:8)),with:.color(Color(red:1,green:0.84,blue:0.54)))
-            let key=CGPoint(x:s.width*0.7,y:s.height*0.22)
-            c.fill(Path(CGRect(origin:.zero,size:s)),with:.radialGradient(Gradient(colors:[
-                Color(red:1,green:0.88,blue:0.56).opacity(0.18),.clear,GameStyle.ink.opacity(0.12)]),
-                center:key,startRadius:0,endRadius:max(s.width,s.height)))
-            for i in 0..<8 {
-                let x=CGFloat(i+1)*s.width/9,y=s.height*0.10+sin(Double(i)*0.5)*14
-                c.fill(Path(ellipseIn:CGRect(x:x-15,y:y-15,width:30,height:30)),with:.radialGradient(
-                    Gradient(colors:[Color.yellow.opacity(0.3),.clear]),center:CGPoint(x:x,y:y),startRadius:0,endRadius:15))
-                c.fill(Path(ellipseIn:CGRect(x:x-3,y:y-3,width:6,height:8)),with:.color(Color(red:1,green:0.91,blue:0.54)))
-            }
-        }.storybookScene().ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
-    }
+    var body:some View {PaintedPizzaKitchen()}
 }
 struct PizzaIllustration:View {
     let recipe:PizzaRecipe
     var baked=0.0
     var board=true
+    var serving=false
     var eaten=0
     var landingID:UUID?
     var sliceIndex:Int?
@@ -64,7 +16,9 @@ struct PizzaIllustration:View {
     var body:some View {
         Canvas(rendersAsynchronously:true) {c,size in
             c.scaleBy(x:size.width/300,y:size.height/320)
-            if board {
+            if serving {
+                c.draw(VillageArtwork.image("PizzaPlatePainted"),in:CGRect(x:0,y:10,width:300,height:300))
+            } else if board {
                 let wood=Path(roundedRect:CGRect(x:8,y:15,width:284,height:289),cornerRadius:38)
                 var shadow=c;shadow.addFilter(.blur(radius:7))
                 shadow.fill(wood.applying(CGAffineTransform(translationX:0,y:6)),with:.color(GameStyle.ink.opacity(0.24)))
@@ -122,7 +76,7 @@ struct PizzaIllustration:View {
                 pizza.clip(to:remaining)
             }
             draw(pizza)
-            if baked>=1 && eaten<8 && sliceIndex == nil && fragment == nil && (recipe.bites?.isEmpty ?? true) {
+            if !serving && baked>=1 && eaten<8 && sliceIndex == nil && fragment == nil && (recipe.bites?.isEmpty ?? true) {
                 for i in 0..<4 {
                     let x=CGFloat(i)*33+95
                     var steam=Path();steam.move(to:CGPoint(x:x,y:54))
@@ -146,7 +100,8 @@ struct PizzaIllustration:View {
         let crust=GameStyle.mixed(Color(red:1,green:0.88,blue:0.6),with:Color(red:0.8,green:0.39,blue:0.12),amount:baked*0.7)
         var cast=c;cast.addFilter(.blur(radius:4))
         cast.fill(dough.applying(CGAffineTransform(translationX:1,y:5)),with:.color(Color(red:0.33,green:0.15,blue:0.08).opacity(0.3)))
-        ToyFinish.paint(c,path:dough,color:crust,edge:1.8)
+        PizzaMaterialPainter.base(c,path:dough,color:crust,baked:baked)
+        PizzaMaterialPainter.dough(c,recipe:recipe,baked:baked)
         let inside=PizzaGeometry.outline(recipe,inset:0.89)
         c.stroke(inside,with:.color(Color(red:0.76,green:0.42,blue:0.15).opacity(0.23)),lineWidth:2)
         var topping=c;topping.clip(to:PizzaGeometry.outline(recipe,inset:0.97))
@@ -155,12 +110,7 @@ struct PizzaIllustration:View {
             var path=Path();path.move(to:CGPoint(x:first.x*300,y:first.y*320))
             for point in stroke.points.dropFirst() {path.addLine(to:CGPoint(x:point.x*300,y:point.y*320))}
             if stroke.points.count == 1 {path.addLine(to:CGPoint(x:first.x*300+0.1,y:first.y*320))}
-            topping.stroke(path,with:.linearGradient(Gradient(colors:[
-                Color(red:0.97,green:0.24,blue:0.12),Color(red:0.65,green:0.08,blue:0.06)]),
-                startPoint:CGPoint(x:70,y:80),endPoint:CGPoint(x:230,y:250)),
-                style:StrokeStyle(lineWidth:32,lineCap:.round,lineJoin:.round))
-            topping.stroke(path,with:.color(Color(red:1,green:0.62,blue:0.25).opacity(0.1)),
-                style:StrokeStyle(lineWidth:1.2,lineCap:.round,lineJoin:.round))
+            PizzaMaterialPainter.sauce(topping,path:path)
         }
         // A small spatial neighbourhood keeps cheese connections linear as toppings grow.
         if baked>0 {
@@ -228,11 +178,9 @@ struct PizzaMixingBowl:View {
     var body:some View {
         Canvas {c,s in
             c.scaleBy(x:s.width/300,y:s.height/320)
-            ToyFinish.paint(c,path:Path(roundedRect:CGRect(x:30,y:137,width:240,height:136),cornerRadius:70),
-                color:Color(red:0.14,green:0.65,blue:0.72),edge:2.5)
-            let opening=Path(ellipseIn:CGRect(x:30,y:103,width:240,height:80))
-            c.fill(opening,with:.linearGradient(Gradient(colors:[Color(red:0.08,green:0.33,blue:0.4),Color(red:0.4,green:0.77,blue:0.78)]),
-                startPoint:CGPoint(x:0,y:100),endPoint:CGPoint(x:0,y:184)))
+            let bowlRect=CGRect(x:0,y:10,width:300,height:300)
+            c.draw(VillageArtwork.image("PizzaBowlPainted"),in:bowlRect)
+            let opening=Path(ellipseIn:CGRect(x:27,y:89,width:246,height:85))
             var fill=c;fill.clip(to:opening)
             if !recipe.ingredients.isEmpty {
                 let contents=Path(ellipseIn:CGRect(x:47,y:131,width:208,height:57))
@@ -269,46 +217,25 @@ struct PizzaMixingBowl:View {
                     }
                 }
             }
-            c.stroke(opening,with:.color(Color(red:0.62,green:0.93,blue:0.88)),lineWidth:5)
-            var spoon=c;spoon.translateBy(x:155,y:145);spoon.rotate(by:.degrees(-25+sin(turn*0.02)*24))
-            var handle=Path();handle.move(to:CGPoint(x:0,y:0));handle.addLine(to:CGPoint(x:42,y:-100))
-            spoon.stroke(handle,with:.color(Color(red:0.61,green:0.36,blue:0.21)),style:StrokeStyle(lineWidth:12,lineCap:.round))
-            ToyFinish.paint(spoon,path:Path(ellipseIn:CGRect(x:-14,y:-7,width:30,height:40)),color:Color(red:0.82,green:0.56,blue:0.29))
+            var spoon=c
+            spoon.translateBy(x:155+sin(turn*0.017)*9,y:145)
+            spoon.rotate(by:.degrees(-25+sin(turn*0.02)*24))
+            spoon.draw(VillageArtwork.image("PizzaSpoonPainted"),in:CGRect(x:-55,y:-125,width:110,height:145))
+            // Front lip occludes the moving spoon head and the lower contents.
+            var front=c
+            var mask=Path();mask.move(to:CGPoint(x:0,y:112))
+            mask.addQuadCurve(to:CGPoint(x:300,y:112),control:CGPoint(x:150,y:210))
+            mask.addLine(to:CGPoint(x:300,y:320));mask.addLine(to:CGPoint(x:0,y:320));mask.closeSubpath()
+            front.clip(to:mask)
+            front.draw(VillageArtwork.image("PizzaBowlPainted"),in:bowlRect)
         }.aspectRatio(300.0/320,contentMode:.fit).accessibilityHidden(true)
     }
 }
 struct PizzaOvenArtwork:View {
     var heat=0.0
-    var body:some View {
-        Canvas {c,s in
-            c.scaleBy(x:s.width/300,y:s.height/320)
-            let shell=Path(roundedRect:CGRect(x:27,y:24,width:246,height:262),cornerRadius:36)
-            ToyFinish.paint(c,path:shell,color:Color(red:0.88,green:0.34,blue:0.22),edge:3)
-            for row in 0..<6 {
-                for col in 0..<5 {
-                    let x=CGFloat(col)*48+30-CGFloat(row%2)*24,y=CGFloat(row)*35+38
-                    c.stroke(Path(roundedRect:CGRect(x:x,y:y,width:44,height:31),cornerRadius:6),with:.color(Color.white.opacity(0.12)),lineWidth:2)
-                }
-            }
-            let opening=Path(roundedRect:CGRect(x:57,y:87,width:186,height:149),cornerRadius:58)
-            c.fill(opening,with:.radialGradient(Gradient(colors:[Color(red:0.71,green:0.26,blue:0.06),Color(red:0.13,green:0.07,blue:0.06)]),
-                center:CGPoint(x:150,y:209),startRadius:0,endRadius:130))
-            c.stroke(opening,with:.color(Color(red:1,green:0.76,blue:0.4)),lineWidth:10)
-            for i in 0..<5 {
-                let x=CGFloat(i)*27+92
-                var flame=Path();flame.move(to:CGPoint(x:x-9,y:209))
-                flame.addQuadCurve(to:CGPoint(x:x+2,y:170-CGFloat(sin(heat*18+Double(i))*7)),control:CGPoint(x:x-18,y:186))
-                flame.addQuadCurve(to:CGPoint(x:x+12,y:209),control:CGPoint(x:x+18,y:190));flame.closeSubpath()
-                c.fill(flame,with:.linearGradient(Gradient(colors:[.yellow,Color.orange,.red.opacity(0.4)]),startPoint:CGPoint(x:0,y:175),endPoint:CGPoint(x:0,y:215)))
-            }
-            ToyFinish.paint(c,path:Path(roundedRect:CGRect(x:40,y:234,width:220,height:22),cornerRadius:8),color:Color(red:0.47,green:0.3,blue:0.27))
-            for x in [CGFloat(81),CGFloat(219)] {
-                ToyFinish.paint(c,path:Path(ellipseIn:CGRect(x:x-10,y:49,width:20,height:20)),color:Color(red:1,green:0.82,blue:0.42))
-            }
-        }.aspectRatio(300.0/320,contentMode:.fit).accessibilityHidden(true)
-    }
+    var active=true
+    var body:some View {PaintedPizzaOven(heat:heat,active:active)}
 }
-
 
 struct PizzaIngredientArt:View {
     let kind:Int
@@ -326,31 +253,23 @@ struct PizzaIngredientArt:View {
                     c.fill(Path(ellipseIn:CGRect(x:19+CGFloat((i*13)%22),y:31+CGFloat((i*11)%19),width:kind == 3 ? 8 : 3,height:3)),
                         with:.color(colors[kind]))
                 }
-            } else if kind == 0 {
-                var bag=Path();bag.move(to:CGPoint(x:13,y:11));bag.addLine(to:CGPoint(x:47,y:11))
-                bag.addCurve(to:CGPoint(x:48,y:61),control1:CGPoint(x:42,y:26),control2:CGPoint(x:55,y:50))
-                bag.addQuadCurve(to:CGPoint(x:12,y:61),control:CGPoint(x:30,y:67))
-                bag.addCurve(to:CGPoint(x:13,y:11),control1:CGPoint(x:3,y:45),control2:CGPoint(x:18,y:25));bag.closeSubpath()
-                ToyFinish.paint(c,path:bag,color:Color(red:1,green:0.88,blue:0.6),edge:1.5)
-                c.fill(Path(ellipseIn:CGRect(x:19,y:29,width:22,height:24)),with:.color(.white.opacity(0.8)))
-                var wheat=Path();wheat.move(to:CGPoint(x:30,y:47));wheat.addLine(to:CGPoint(x:30,y:34))
-                c.stroke(wheat,with:.color(.orange),lineWidth:2)
-                for i in 0..<3 {c.fill(Path(ellipseIn:CGRect(x:25+CGFloat(i%2)*5,y:34+CGFloat(i)*4,width:6,height:3)),with:.color(.orange))}
-            } else if kind == 1 {
-                let body=Path(roundedRect:CGRect(x:8,y:20,width:34,height:40),cornerRadius:9)
-                ToyFinish.paint(c,path:body,color:Color(red:0.49,green:0.84,blue:0.95),edge:1.5)
-                c.stroke(Path(ellipseIn:CGRect(x:34,y:27,width:19,height:23)),with:.color(Color.cyan),lineWidth:5)
-                c.fill(Path(ellipseIn:CGRect(x:9,y:17,width:32,height:10)),with:.color(Color(red:0.16,green:0.59,blue:0.78)))
-                let level=min(1,max(0,fillLevel))
-                c.fill(Path(roundedRect:CGRect(x:14,y:58-level*20,width:20,height:max(0.1,level*20)),cornerRadius:4),
-                    with:.color(Color.cyan.opacity(0.72)))
-                var meniscus=Path();meniscus.move(to:CGPoint(x:14,y:58-level*20))
-                meniscus.addQuadCurve(to:CGPoint(x:34,y:58-level*20),control:CGPoint(x:24,y:55-level*20))
-                c.stroke(meniscus,with:.color(.white.opacity(level*0.75)),lineWidth:1.5)
             } else {
-                ToyFinish.paint(c,path:Path(roundedRect:CGRect(x:15,y:24,width:30,height:39),cornerRadius:10),color:Color(red:0.48,green:0.67,blue:0.22),edge:1.5)
-                ToyFinish.paint(c,path:Path(roundedRect:CGRect(x:23,y:9,width:14,height:23),cornerRadius:4),color:Color(red:0.35,green:0.53,blue:0.2),edge:1)
-                c.fill(Path(roundedRect:CGRect(x:20,y:38,width:20,height:14),cornerRadius:4),with:.color(Color(red:1,green:0.88,blue:0.42)))
+                let level=min(1,max(0,fillLevel))
+                if kind == 1 {
+                    var water=c
+                    var interior=Path();interior.move(to:CGPoint(x:20,y:21))
+                    interior.addQuadCurve(to:CGPoint(x:12,y:42),control:CGPoint(x:24,y:31))
+                    interior.addCurve(to:CGPoint(x:44,y:56),control1:CGPoint(x:4,y:63),control2:CGPoint(x:43,y:65))
+                    interior.addQuadCurve(to:CGPoint(x:38,y:21),control:CGPoint(x:53,y:41))
+                    interior.closeSubpath();water.clip(to:interior)
+                    water.fill(Path(CGRect(x:8,y:59-level*37,width:43,height:max(0.1,level*37))),
+                        with:.linearGradient(Gradient(colors:[Color.cyan.opacity(0.55),Color(red:0.06,green:0.51,blue:0.75).opacity(0.8)]),
+                            startPoint:CGPoint(x:20,y:22),endPoint:CGPoint(x:30,y:60)))
+                    water.stroke(Path(ellipseIn:CGRect(x:9,y:56-level*34,width:39,height:5)),
+                        with:.color(.white.opacity(level*0.75)),lineWidth:1)
+                }
+                let name=kind == 0 ? "PizzaFlourPainted" : kind == 1 ? "PizzaWaterPainted" : "PizzaOilPainted"
+                c.draw(VillageArtwork.image(name),in:CGRect(x:0,y:5,width:60,height:60))
             }
         }.accessibilityHidden(true)
     }

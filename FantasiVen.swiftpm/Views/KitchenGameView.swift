@@ -195,7 +195,7 @@ struct KitchenGameView:View {
                 .accessibilityAction {assist()}
         } else if served {
             ZStack(alignment:.bottomLeading) {
-                PizzaEatingSurface(recipe:recipe,onBite:bite)
+                PizzaEatingSurface(recipe:recipe,active:animationActive,onBite:bite)
                 LivingFriend(friend:friend,action:.feed,signal:signal,feedingFood:nil,active:animationActive)
                     .frame(width:135,height:145).allowsHitTesting(false)
                 if let fragment=mouthful {
@@ -208,10 +208,10 @@ struct KitchenGameView:View {
             GeometryReader {proxy in
                 let width=min(430,min(proxy.size.width,proxy.size.height*0.94))
                 ZStack {
-                    PizzaOvenArtwork(heat:reduced ? 0 : baked).frame(width:width,height:width*320/300)
+                    PizzaOvenArtwork(heat:reduced ? 0 : baked,active:animationActive).frame(width:width,height:width*320/300)
                     PizzaHeatEffects(progress:baked,reduced:reduced).frame(width:width*0.9,height:width)
                     PizzaIllustration(recipe:recipe,baked:baked,board:false)
-                        .frame(width:width*0.55,height:width*0.58).scaleEffect(x:1,y:0.48).offset(y:width*0.10)
+                        .frame(width:width*0.55,height:width*0.58).scaleEffect(x:1,y:0.48).offset(y:width*0.07)
                 }.frame(maxWidth:.infinity,maxHeight:.infinity)
             }
         }
@@ -559,15 +559,18 @@ private struct PizzaWorkSurface:View {
 
 private struct PizzaEatingSurface:View {
     let recipe:PizzaRecipe
+    var active=true
     let onBite:(PizzaPoint)->Void
     @EnvironmentObject private var store:FriendStore
+    @Environment(\.scenePhase) private var phase
     @State private var last:CGPoint?
     var body:some View {
         GeometryReader {proxy in
             let width=max(1,min(proxy.size.width,proxy.size.height*300/320))
             let height=width*320/300
-            PizzaIllustration(recipe:recipe,baked:1)
+            PizzaIllustration(recipe:recipe,baked:1,serving:true)
                 .frame(width:width,height:height).contentShape(Rectangle())
+                .overlay(PizzaServingSteam(active:active && phase == .active,visible:recipe.hasFood))
                 .overlay(GestureLesson(activity:(recipe.bites?.count ?? 0)+(recipe.legacySlices ?? 0),
                     from:UnitPoint(x:0.55,y:0.43),to:UnitPoint(x:0.67,y:0.56)))
                 .gesture(DragGesture(minimumDistance:0).onChanged {value in

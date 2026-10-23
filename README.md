@@ -2,6 +2,16 @@
 
 Et originalt, lokalt iPhone-spil til børn på 3–8 år. Swift 6, SwiftUI og iOS 15+. Ingen tredjepartspakker, login, netværkskald eller køb.
 
+## Malet pizzabageri fra blanding til servering
+
+Pizzaspillet bruger nu otte nye originale illustrationer: køkken, melpose, vandkande, olieflaske, keramikskål, træske, stenovn og tallerken. Ingredienserne bruger samme grafik i bakke, under træk og under hældning. Vandstanden tegnes separat i kanden. Skålen har levende indhold mellem den malede bagkant og forkant, og skeen følger omrøringen.
+
+Ovnen har en illustreret sten-/teglskal med levende ild i kammeret og den faktiske pizza som separat lag. Ved servering ligger pizzaen på en malet tallerken med bevægelig damp. Fingerbid fjerner fortsat kun mad. Dejens brødmateriale har varme skygger og porer, og sovsen har mere dybde og glans; fyld, smeltet ost, krydderier og bidder er stadig dynamiske.
+
+Illustrationerne er lavet med det indbyggede image_gen-værktøj og bundtet lokalt i asset-kataloget. Alle filplaceringer, endelige prompts og integrationsbeskrivelse findes i [Documentation/Art/Pizza-Art.md](Documentation/Art/Pizza-Art.md). Der er ingen nye API-kald eller netværkskrav i appen.
+
+Projektgeneratoren er kørt for den nye Swift-fil. Ingen build, tests, skærmbilleder eller afprøvning af den kørende app på iPad er kørt.
+
 ## Malede miljøer og fem unikke bygninger
 
 Torvets tidligere gentagne husform er erstattet af fem separate originale bygningsillustrationer: malerværksted med pensel og snoet tag, ovnformet pizzabageri, musikalsk spillehus, træhus og organisk græskarværksted. De har tydeligt forskellige silhuetter, malede træ-, sten-, tegl- og stofmaterialer og samme varme lysretning.
