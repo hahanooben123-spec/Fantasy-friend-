@@ -174,3 +174,11 @@ Leg: seng → søvn, sofa/pude → kram, mad/bord → spisning, musikspiller →
 Alle møbler, farver, størrelser, vinkler, spejling, lag, lysvalg, tapet, gulv og vennens placering gemmes lokalt med vennen. Flytninger gemmes ved afsluttet træk; mislykket filskrivning ændrer ikke den gemte indretning. Nye egenskaber er valgfrie Codable-felter, så ældre venner stadig kan læses.
 
 Denne udvidelse er ikke kompileret, testet eller visuelt kontrolleret efter brugerens ønske.
+
+## Pizzaværkstedet
+
+Pizzaværkstedet erstatter Fantasikøkkenet i minispilsmenuen. Forløbet består af fire trin: tilsæt mel, vand og olie, rør og form dejen; mal tomatsovs med fingeren; drys oregano, basilikum, salt og eventuelt ost; skub pizzaen ind i stenovnen. Hvert trin har en stor berøringsflade og en hjælpeknap til børn, som foretrækker tryk. Sovs og krydderier følger præcis den samme pizza gennem bagningen.
+
+Original Canvas-grafik viser skål, dej, træbræt, ingredienser, krydderiglas og en varm stenovn. Skorpen bliver gylden under en kort bagning. Bagningen pauses sammen med spillet og i baggrunden; pizzaen brænder aldrig på. Efter bagning kan barnet tage pizzaen ud, dele op til otte stykker med vennen og begynde på en ny. Fortryd gemmer op til 30 ændringer under tilberedningen. Pizzaen er en legesession og gemmes ikke som en del af vennens samling.
+
+Implementeret uden kompilering, tests eller visuel kontrol efter brugerens ønske.

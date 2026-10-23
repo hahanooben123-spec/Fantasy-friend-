@@ -17,7 +17,7 @@ struct MiniGameArt: View {
                 }
             case .slide: TrackArtwork(track: SlideTrack()).padding(6)
             case .trampoline: ToyGlyph(kind: .jump).padding(10)
-            case .kitchen: ToyGlyph(kind: .berry).padding(7)
+            case .kitchen: PizzaIllustration(recipe:.sample,baked:1,board:false).padding(3)
             case .orchestra: ToyGlyph(kind: .music).padding(7)
             case .path: DestinationArt(kind: .village)
             case .hide:
