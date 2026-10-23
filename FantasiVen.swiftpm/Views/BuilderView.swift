@@ -387,7 +387,7 @@ struct BuilderView: View {
             replacement.id=value.id
             let defaultName=FriendSeed.allCases.map(\.title).contains(value.name)
             replacement.name=value.name.isEmpty || (!existing && defaultName) ? seed.title : value.name
-            replacement.world=value.world;replacement.room=value.room
+            replacement.world=value.world;replacement.room=value.room;replacement.roomDesign=value.roomDesign
             replacement.song=value.song;replacement.track=value.track
             value=replacement
         }
@@ -397,7 +397,7 @@ struct BuilderView: View {
     private func surprise() {
         change { value in
             var random=FantasyFriend.random();random.id=value.id;random.name=value.name;random.world=value.world
-            random.room=value.room;random.song=value.song;random.track=value.track
+            random.room=value.room;random.roomDesign=value.roomDesign;random.song=value.song;random.track=value.track
             value=random
         };selection = .body
     }

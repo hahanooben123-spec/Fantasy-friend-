@@ -32,12 +32,71 @@ struct CreativePiece: Identifiable, Codable, Equatable {
 enum VoiceKind: Int, CaseIterable, Codable { case bell, squeak, hum }
 enum GaitKind: Int, CaseIterable, Codable { case bounce, waddle, glide }
 
-struct RoomObject: Identifiable, Codable, Equatable {
-    var id = UUID()
-    var kind: Int
-    var x: Double
-    var y: Double
-    var isValid: Bool { (0..<6).contains(kind) && x.isFinite && y.isFinite && (0.1...0.9).contains(x) && (0.2...0.9).contains(y) }
+struct RoomObject:Identifiable,Codable,Equatable {
+    var id=UUID()
+    var kind:Int
+    var x:Double
+    var y:Double
+    var color:Int?
+    var scale:Double?
+    var rotation:Double?
+    var mirrored:Bool?
+    var on:Bool?
+    var layer:Int?
+    var sizeFactor:Double {scale ?? 1}
+    var angle:Double {rotation ?? 0}
+    var isOn:Bool {on ?? true}
+    var level:Int {layer ?? (kind == 4 ? -1 : RoomItem(rawValue:kind)?.isWall == true ? 0 : 1)}
+    var isValid:Bool {
+        (0..<18).contains(kind) && x.isFinite && y.isFinite &&
+        (0.1...0.9).contains(x) && (0.2...0.9).contains(y) &&
+        (color.map {(0..<16).contains($0)} ?? true) &&
+        sizeFactor.isFinite && (0.6...1.6).contains(sizeFactor) &&
+        angle.isFinite && abs(angle)<=180 && (-1...2).contains(level)
+    }
+    mutating func move(x:Double,y:Double) {
+        guard x.isFinite,y.isFinite else {return}
+        self.x=min(0.9,max(0.1,x));self.y=min(0.9,max(0.2,y))
+    }
+}
+enum RoomItem:Int,CaseIterable {
+    case bed,plant,lamp,shelf,rug,window,sofa,table,cushion,picture,bunting,mobile,toybox,ball,snack,music,stool,rainbow
+    var key:String {"furniture_\(rawValue)"}
+    var isWall:Bool {[5,9,10,11,17].contains(rawValue)}
+    var category:Int {
+        if [0,6,7,8,16].contains(rawValue) {return 0}
+        return [3,12,13,14,15].contains(rawValue) ? 2 : 1
+    }
+    var widthFactor:Double {[0,4,6,10,17].contains(rawValue) ? 1.35 : [8,13,14,16].contains(rawValue) ? 0.78 : 1}
+}
+struct RoomDesign:Codable,Equatable {
+    var wallpaper=0
+    var floor=0
+    var night=false
+    var friendX=0.52
+    var friendY=0.72
+    var isValid:Bool {
+        (0..<6).contains(wallpaper) && (0..<4).contains(floor) &&
+        friendX.isFinite && friendY.isFinite && (0.1...0.9).contains(friendX) && (0.2...0.9).contains(friendY)
+    }
+}
+struct RoomLayout:Equatable {
+    var objects:[RoomObject]=[]
+    var design=RoomDesign()
+    static func starter(_ style:Int)->RoomLayout {
+        var value=RoomLayout()
+        value.design.wallpaper=[0,2,4][min(2,max(0,style))]
+        value.design.floor=style == 1 ? 1 : 0
+        let beds=[0,6,8],toys=[3,15,1]
+        value.objects=[
+            RoomObject(kind:5,x:0.5,y:0.28),
+            RoomObject(kind:4,x:0.5,y:0.79,color:style == 0 ? 9 : 11,scale:1.3),
+            RoomObject(kind:beds[min(2,max(0,style))],x:0.25,y:0.70),
+            RoomObject(kind:2,x:0.78,y:0.60),
+            RoomObject(kind:toys[min(2,max(0,style))],x:0.83,y:0.76),
+            RoomObject(kind:9,x:0.22,y:0.33,color:style*3+1)]
+        return value
+    }
 }
 
 struct KitchenRecipe {

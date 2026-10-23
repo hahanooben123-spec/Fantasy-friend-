@@ -162,3 +162,15 @@ Valg af startven er ét fortryd-trin. Ved redigering bevares vennens ID, navn, m
 Rund, sky og dråbe har gentegnede silhuetter. Poter, arme, horn, ører, antenner, vinger, hat og briller har nye illustrationer; øjne og mund har mere detaljeret belysning. Skaberen har rolig vejrtrækning og korte glade ansigtsreaktioner efter ændringer. Vejet bevægelse slås fra ved Reducer bevægelse og når appen er inaktiv.
 
 Implementeret uden ny kompilering, tests eller visuel kontrol efter brugerens ønske.
+
+## Værelsesværkstedet
+
+Værelset fylder arbejdsområdet; på iPad står møbelbakken ved siden af, og på iPhone ligger den under. Indretning og leg har hver sin tilstand. Der er 18 originale møbler og dekorationer fordelt på tre kategorier. Tryk for at tilføje eller træk en miniature ind i rummet. Flyt med én finger; knapper ændrer størrelse, drejning, spejling, farve og lag. Kopiering, fjernelse og 50 trin fortryd/gendan er inkluderet. Størrelse kan også ændres med to fingre.
+
+Seks tapeter, fire gulve, dag/aften og tre startindretninger kan vælges. En startindretning erstatter først rummet efter en tydelig bekræftelse og kan fortrydes. Eksisterende indretninger indlæses; kun en ven uden et tidligere rum får den første startindretning automatisk. Der er plads til 32 ting med en synlig besked ved grænsen.
+
+Leg: seng → søvn, sofa/pude → kram, mad/bord → spisning, musikspiller → dans og toner, bold/skammel → hop, plante → kilden, bogreol → kort oplæst historie. Lamper og legetøjskister kan åbnes/tændes og lukkes/slukkes. Lamper giver varmt lys i aftenrummet. Korte møbelreaktioner følger Reducer bevægelse. Tale stoppes, når værelset forlades.
+
+Alle møbler, farver, størrelser, vinkler, spejling, lag, lysvalg, tapet, gulv og vennens placering gemmes lokalt med vennen. Flytninger gemmes ved afsluttet træk; mislykket filskrivning ændrer ikke den gemte indretning. Nye egenskaber er valgfrie Codable-felter, så ældre venner stadig kan læses.
+
+Denne udvidelse er ikke kompileret, testet eller visuelt kontrolleret efter brugerens ønske.

@@ -34,6 +34,7 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
     var voice: VoiceKind?
     var gait: GaitKind?
     var room: [RoomObject]?
+    var roomDesign:RoomDesign?
     var track: SlideTrack?
     var song: OrchestraPattern?
 
@@ -84,6 +85,8 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
         Set((pieces ?? []).map(\.id)).count == (pieces ?? []).count &&
         widthFactor.isFinite && heightFactor.isFinite &&
         (0.75...1.2).contains(widthFactor) && (0.75...1.2).contains(heightFactor) &&
+        (roomDesign?.isValid ?? true) &&
+        Set((room ?? []).map(\.id)).count == (room ?? []).count &&
         (room ?? []).count <= 32 && (room ?? []).allSatisfy(\.isValid) &&
         (track?.isValid ?? true) && (song?.isValid ?? true)
     }
