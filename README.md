@@ -118,3 +118,11 @@ currencies, unlock requirements or online services.
 Native build/model tests are automated. Real iPad interaction, installed Danish voice
 availability and sessions with children in the 3–4, 5–6 and 7–8 age groups still require
 hands-on validation; automated tests do not establish that children enjoy the design.
+
+## Fuldskærmsleg og direkte minispil
+
+Legepladsen, fællesgården og alle otte minispil bruger nu hele vinduet som spilleverden. Små flydende værktøjer erstatter scrollsider og indrammede spillebokse. Ragdoll-verdenen tilpasses skærmens proportioner, og dens berøringskoordinater følger samme størrelse.
+
+Frugtfangst har fangstserier, gyldne frugter og frivillig picnic. Bobler driver gennem verdenen og kan sprænges med et fingerstrøg. Gemmeleg viser forskellige venner. Rutsjebane og trampolin har stjerner at samle; trampolin fortsætter uden en tvungen slutning. Køkkenet understøtter træk af ingredienser til skålen og omrøring med fingeren. Musikscenen har store instrumenter, rytmeforslag, live optagelse og en særskilt nodeeditor. Stispillet giver feedback på hver korrekt del og lader vennen gå automatisk, når stien passer. Fællesgården kan få legetøj placeret med et tryk i verdenen.
+
+Stjerner og fangstserier er midlertidige legeeffekter. Ingen indholdslåse, valuta, straf eller daglige krav er tilføjet. Pause og baggrundstilstand stopper simulering og lyd. En samlet native bygning og modeltests bruges til validering; screenshottrinnet har en fast tidsgrænse og må ikke skjule fejl i kompilering eller tests.

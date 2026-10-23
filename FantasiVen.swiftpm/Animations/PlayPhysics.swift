@@ -45,6 +45,7 @@ final class PlayPhysics: ObservableObject {
     private var mode = Mode.yard
     private let trampoline = SKNode()
     private var bounceCooldown = 0.0
+    var isDragging: Bool {held != nil}
     var toyCount: Int { objects.count }
     var friendCount: Int { actors.count }
 
@@ -56,7 +57,7 @@ final class PlayPhysics: ObservableObject {
         self.mode = mode; reduced = reducedMotion
         scene.physicsWorld.gravity = reduced ? .zero : CGVector(dx: 0, dy: -5)
         let edge = SKNode()
-        edge.physicsBody = SKPhysicsBody(edgeLoopFrom: CGRect(x: 5, y: 5, width: 790, height: 490))
+        edge.physicsBody = SKPhysicsBody(edgeLoopFrom: CGRect(x:5,y:65,width:790,height:390))
         edge.physicsBody?.categoryBitMask = 2; edge.physicsBody?.collisionBitMask = 7
         scene.addChild(edge)
         switch mode {
@@ -116,10 +117,11 @@ final class PlayPhysics: ObservableObject {
         actors.append(Actor(original: value, node: body, limbs: limbs))
     }
 
-    func addToy(_ kind: Int) {
+    func addToy(_ kind:Int,at point:CGPoint? = nil) {
         guard objects.count < 12, (0..<3).contains(kind) else { return }
         let node = SKNode()
-        node.position = CGPoint(x: CGFloat.random(in: 110...690), y: 370)
+        let spawn=point ?? CGPoint(x:CGFloat.random(in:110...690),y:370)
+        node.position=CGPoint(x:min(740,max(60,spawn.x)),y:min(420,max(100,spawn.y)))
         node.physicsBody = kind == 1 ? SKPhysicsBody(rectangleOf: CGSize(width: 54, height: 54)) : SKPhysicsBody(circleOfRadius: 28)
         prepare(node.physicsBody, category: 2, mass: kind == 2 ? 0.1 : 0.5)
         node.physicsBody?.restitution = kind == 0 ? 0.85 : 0.3
@@ -153,7 +155,7 @@ final class PlayPhysics: ObservableObject {
         }
     }
     func moveDrag(_ point: CGPoint) {
-        let bounded = CGPoint(x: min(740, max(60, point.x)), y: min(440, max(60, point.y)))
+        let bounded = CGPoint(x: min(740, max(60, point.x)), y: min(420,max(100,point.y)))
         if reduced, let node = held {
             let delta = CGPoint(x: bounded.x - node.position.x, y: bounded.y - node.position.y)
             node.position = bounded
@@ -176,7 +178,7 @@ final class PlayPhysics: ObservableObject {
         let delta = CGPoint(x: x - actor.node.position.x, y: y - actor.node.position.y)
         actor.node.position = CGPoint(x: x, y: y)
         for node in actor.limbs.values { node.position.x += delta.x; node.position.y += delta.y }
-        arrived = progress >= 1
+        if case .slide = mode {arrived=progress>=1}
         refresh()
     }
     func jump() {
@@ -195,13 +197,13 @@ final class PlayPhysics: ObservableObject {
                     let now = Date.timeIntervalSinceReferenceDate
                     if abs(body.position.x - trampoline.position.x) < 88 && body.position.y < 150 &&
                         body.physicsBody!.velocity.dy < 0 && now > bounceCooldown {
-                        body.physicsBody?.velocity = CGVector(dx: (body.position.x - trampoline.position.x) * 3 + 80, dy: 360)
+                        body.physicsBody?.velocity = CGVector(dx: (body.position.x - trampoline.position.x) * 3, dy: 360)
                         bounceCooldown = now + 0.5; SoundService.shared.play(.reaction)
                     }
                 case .yard: break
                 }
             }
-            if case .yard = mode {} else if body.position.x > 680 && body.position.y < 160 { arrived = true }
+            if case .slide = mode,body.position.x>680 && body.position.y<160 {arrived=true}
         }
         for node in actors.map(\.node) + actors.flatMap({ Array($0.limbs.values) }) + objects.map(\.node) {
             guard let physics = node.physicsBody else { continue }

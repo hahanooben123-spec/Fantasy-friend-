@@ -1,83 +1,125 @@
 import SwiftUI
 
-struct OrchestraGameView: View {
-    @EnvironmentObject private var store: FriendStore
-    let friend: FantasyFriend
-    @State private var pattern = OrchestraPattern()
-    @State private var playing = false
+struct OrchestraGameView:View {
+    @EnvironmentObject private var store:FriendStore
+    let friend:FantasyFriend
+    @State private var pattern=OrchestraPattern()
+    @State private var playing=false
+    @State private var recording=false
+    @State private var editing=false
     @State private var beat = -1
-    @State private var saved = false
-    @State private var signals = [0, 0, 0]
-    private func performer(_ row: Int) -> FantasyFriend {
-        let others = store.friends.filter { $0.id != friend.id }
-        return row == 0 ? friend : (others.indices.contains(row - 1) ? others[row - 1] : friend)
+    @State private var saved=false
+    @State private var signals=[0,0,0]
+    @State private var celebration=0
+    @State private var preset=0
+    private func performer(_ row:Int)->FantasyFriend {
+        let others=store.friends.filter {$0.id != friend.id}
+        return row == 0 ? friend : (others.indices.contains(row-1) ? others[row-1] : friend)
     }
-    var body: some View {
-        AdventureGameShell(kind: .orchestra) { active in
-            VStack(spacing: 22) {
-                GeometryReader { geometry in
-                HStack(spacing: 4) {
-                    ForEach(0..<3) { row in
-                        VStack(spacing: 5) {
-                            LivingFriend(friend: performer(row), action: .dance, signal: signals[row], audible: false)
-                                .frame(width: max(1, (geometry.size.width - 8) / 3), height: 130)
-                            Button {
-                                SoundService.shared.instrument(row, beat: max(0, beat)); signals[row] += 1
-                            } label: {
-                                VStack {
-                                    Text(["🥁", "🎹", "🎤"][row]).font(.system(size: 35))
-                                    Text(store.t("instrument_\(row)")).font(.system(.caption, design: .rounded).weight(.heavy))
-                                }.frame(maxWidth: .infinity, minHeight: 80)
-                                    .background(CandySurface(color: StudioStyle.colors[row], cornerRadius: 22)).contentShape(Rectangle())
-                            }.buttonStyle(SquishStyle())
-                        }.frame(width: max(1, (geometry.size.width - 8) / 3))
+    var body:some View {
+        AdventureGameShell(kind:.orchestra) {active in
+            GeometryReader {proxy in
+                ZStack {
+                    Ellipse().fill(Color.purple.opacity(0.6)).frame(width:proxy.size.width*1.2,height:proxy.size.height*0.3)
+                        .position(x:proxy.size.width/2,y:proxy.size.height*0.65).allowsHitTesting(false)
+                    HStack(alignment:.bottom,spacing:6) {
+                        ForEach(0..<3) {row in
+                            VStack(spacing:8) {
+                                LivingFriend(friend:performer(row),action:.dance,signal:signals[row],audible:false)
+                                    .frame(height:proxy.size.height*0.37)
+                                Button {strike(row)} label:{
+                                    Text(["🥁","🎹","🎤"][row]).font(.system(size:proxy.size.width>600 ? 65 : 42))
+                                        .frame(maxWidth:.infinity,minHeight:90)
+                                        .background(RoundedRectangle(cornerRadius:28).fill(StudioStyle.colors[row]))
+                                        .overlay(RoundedRectangle(cornerRadius:28).stroke(.white,lineWidth:3))
+                                }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("instrument_\(row)"))
+                            }.frame(width:max(1,(proxy.size.width-32)/3))
+                        }
+                    }.padding(.horizontal,10).position(x:proxy.size.width/2,y:proxy.size.height*0.46)
+                    if playing {
+                        HStack(spacing:10) {
+                            ForEach(0..<8) {column in
+                                Circle().fill(column == beat ? Color.yellow : .white.opacity(0.35))
+                                    .frame(width:column == beat ? 20 : 12,height:column == beat ? 20 : 12)
+                            }
+                        }.position(x:proxy.size.width/2,y:proxy.size.height*0.77).allowsHitTesting(false)
+                    }
+                    PlayCelebration(revision:celebration)
+                    VStack {
+                        Spacer()
+                        if saved {Text(store.t("saved")).padding(10).background(Capsule().fill(.white))}
+                        PlayDock {
+                            PlayToken(symbol:playing ? "⏸️" : "▶️",label:store.t(playing ? "stopSong" : "playSong")) {playing.toggle()}
+                            Spacer(minLength:0)
+                            PlayToken(symbol:"🔴",label:store.t("recordMusic"),selected:recording) {
+                                recording.toggle();if recording {playing=true}
+                            }
+                            PlayToken(symbol:"🎲",label:store.t("newBeat")) {preset+=1;seed();playing=true}
+                            PlayToken(symbol:"🎼",label:store.t("editBeat")) {editing=true}
+                            RoundButton(icon:"heart.fill",label:store.t("saveCreation"),action:save)
+                        }
                     }
                 }
-                }.frame(height: 225)
-                Text(store.t("songHint")).font(.system(.subheadline, design: .rounded).weight(.bold))
-                    .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true).padding(12).background(Capsule().fill(.white.opacity(0.9)))
-                ScrollView(.horizontal, showsIndicators: true) {
-                    VStack(spacing: 12) {
-                        ForEach(0..<3) { row in
-                            HStack(spacing: 8) {
-                                ForEach(0..<8) { column in
-                                    Button {
-                                        pattern.toggle(row: row, beat: column); saved = false
-                                        if pattern.rows[row][column] { SoundService.shared.instrument(row, beat: column) }
-                                    } label: {
-                                        ZStack {
-                                            RoundedRectangle(cornerRadius: 14).fill(pattern.rows[row][column] ? StudioStyle.colors[row] : .white.opacity(0.85))
-                                            if pattern.rows[row][column] { Text("♪").font(.title2).foregroundColor(GameStyle.ink) }
-                                        }.frame(width: 46, height: 50)
-                                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(playing && column == beat ? Color.yellow : .white.opacity(0.5), lineWidth: playing && column == beat ? 4 : 1))
+            }
+            .task(id:"\(active)-\(playing)-\(editing)") {
+                SoundService.shared.setPerformance(active && playing && !editing)
+                guard active && playing && !editing else {return}
+                while !Task.isCancelled {
+                    beat=(beat+1)%8
+                    for row in 0..<3 where pattern.rows[row][beat] {
+                        SoundService.shared.instrument(row,beat:beat);signals[row]+=1
+                    }
+                    do {try await Task.sleep(nanoseconds:UInt64([0.55,0.42,0.32][store.settings.challengeLevel-1]*1_000_000_000))}
+                    catch {return}
+                }
+            }
+        }.onAppear {if let song=friend.song {pattern=song} else {seed()}}
+            .onDisappear {SoundService.shared.setPerformance(false)}
+            .sheet(isPresented:$editing) {editor}
+    }
+    private func strike(_ row:Int) {
+        SoundService.shared.instrument(row,beat:max(0,beat));signals[row]+=1;celebration+=1
+        if recording {
+            let column=max(0,beat)
+            if !pattern.rows[row][column] {pattern.toggle(row:row,beat:column);saved=false}
+        }
+    }
+    private func seed() {
+        pattern=OrchestraPattern();saved=false
+        for column in 0..<8 {
+            if (column+preset)%2 == 0 {pattern.toggle(row:0,beat:column)}
+            if (column+preset)%4 == 1 {pattern.toggle(row:1,beat:column)}
+            if (column+preset)%4 == 3 {pattern.toggle(row:2,beat:column)}
+        }
+    }
+    private func save() {
+        guard var current=store.friends.first(where:{$0.id == friend.id}) else {return}
+        current.song=pattern;saved=store.save(current)
+    }
+    private var editor:some View {
+        ZStack {
+            WorldBackdrop(world:.stars,animated:false)
+            VStack(spacing:20) {
+                Text(store.t("songHint")).font(.system(.title3,design:.rounded).weight(.bold)).foregroundColor(.white)
+                ScrollView(.horizontal) {
+                    VStack(spacing:12) {
+                        ForEach(0..<3) {row in
+                            HStack(spacing:8) {
+                                ForEach(0..<8) {column in
+                                    Button {pattern.toggle(row:row,beat:column);saved=false} label:{
+                                        Text(pattern.rows[row][column] ? "♪" : "·")
+                                            .font(.title2).frame(width:48,height:54)
+                                            .background(RoundedRectangle(cornerRadius:14).fill(pattern.rows[row][column] ? StudioStyle.colors[row] : .white))
                                     }.buttonStyle(SquishStyle())
-                                        .accessibilityLabel(store.t("instrument_\(row)") + ", " + store.t("beat") + " \(column + 1)")
+                                        .accessibilityLabel(store.t("instrument_\(row)")+", "+store.t("beat")+" \(column+1)")
                                         .accessibilityAddTraits(pattern.rows[row][column] ? .isSelected : [])
                                 }
                             }
                         }
-                    }.padding(6)
+                    }.padding(8)
                 }
-                CandyButton(title: store.t(playing ? "stopSong" : "playSong"), icon: playing ? "pause.fill" : "play.fill") { playing.toggle() }
-                CandyButton(title: store.t("saveCreation"), icon: "heart.fill", color: Color(red: 0.1, green: 0.49, blue: 0.37)) {
-                    guard var current = store.friends.first(where: { $0.id == friend.id }) else { return }
-                    current.song = pattern; saved = store.save(current)
-                }
-                if saved { Text(store.t("saved")).padding(10).background(Capsule().fill(.white)) }
-            }
-            .task(id: "\(active)-\(playing)") {
-                SoundService.shared.setPerformance(active && playing)
-                guard active && playing else { return }
-                while !Task.isCancelled {
-                    beat = (beat + 1) % 8
-                    for row in 0..<3 where pattern.rows[row][beat] {
-                        SoundService.shared.instrument(row, beat: beat); signals[row] += 1
-                    }
-                    do { try await Task.sleep(nanoseconds: UInt64([0.55, 0.42, 0.32][store.settings.challengeLevel - 1] * 1_000_000_000)) }
-                    catch { return }
-                }
-            }
-        }.onAppear { pattern = friend.song ?? OrchestraPattern() }
-            .onDisappear { SoundService.shared.setPerformance(false) }
+                CandyButton(title:store.t("continue"),icon:"checkmark") {editing=false}
+            }.padding(24).frame(maxWidth:600)
+        }
     }
 }

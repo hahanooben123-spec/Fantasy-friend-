@@ -13,12 +13,15 @@ struct AppleDrop: Identifiable {
     var x: Double
     var y: Double
     var fruit = 0
+    var golden = false
 }
 
 struct AppleRain {
     private(set) var drops: [AppleDrop] = []
     private(set) var flowers: [Double] = []
     private(set) var caught = 0
+    private(set) var streak = 0
+    private(set) var goldenCaught = 0
     private(set) var fruitBasket: [Int] = []
     private var spawnSequence = 0
     private(set) var playerX = 0.5
@@ -37,7 +40,7 @@ struct AppleRain {
         spawnClock += dt
         if spawnClock >= (level == 1 ? 1.8 : level == 2 ? 1.6 : 1.3) && drops.count < 5 {
             spawnClock = 0
-            drops.append(AppleDrop(x: min(0.83, max(0.17, spawnX)), y: -0.06, fruit: spawnSequence % 3))
+            drops.append(AppleDrop(x: min(0.83, max(0.17, spawnX)), y: -0.06, fruit: spawnSequence % 3,golden:spawnSequence % 7 == 6))
             spawnSequence += 1
         }
         var collected = false
@@ -45,13 +48,15 @@ struct AppleRain {
         var remaining: [AppleDrop] = []
         for apple in drops {
             if apple.y >= 0.70 && apple.y <= 0.79 && abs(apple.x - playerX) <= catchRadius {
-                caught += 1
+                caught += 1; streak += 1
+                if apple.golden {goldenCaught += 1}
                 fruitBasket.append(apple.fruit)
                 if fruitBasket.count > 12 { fruitBasket.removeFirst() }
                 collected = true
                 continue
             }
             if apple.y > 0.94 {
+                streak = 0
                 flowers.append(apple.x)
                 if flowers.count > 8 { flowers.removeFirst() }
                 continue

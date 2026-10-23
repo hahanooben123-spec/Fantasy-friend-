@@ -4,6 +4,7 @@ import SpriteKit
 struct PhysicsPlayfield: View {
     @ObservedObject var physics: PlayPhysics
     var trampoline = false
+    var onEmptyTap:((CGPoint)->Void)?
     @State private var dragging = false
     var body: some View {
         GeometryReader { proxy in
@@ -11,14 +12,14 @@ struct PhysicsPlayfield: View {
             ZStack {
                 SpriteView(scene: physics.scene, options: [.allowsTransparency]).allowsHitTesting(false).accessibilityHidden(true)
                 ForEach(physics.toys) { toy in
-                    toyView(toy.kind).frame(width: 56 * size.width / 800, height: 60 * size.height / 500)
+                    toyView(toy.kind).frame(width:64,height:68)
                         .rotationEffect(.degrees(toy.angle))
                         .position(x: toy.x / 800 * size.width, y: (500 - toy.y) / 500 * size.height)
                         .allowsHitTesting(false)
                 }
                 ForEach(physics.friends) { actor in
                     CharacterView(friend: actor.friend, happy: dragging)
-                        .frame(width: 120 * size.width / 800, height: 128 * size.height / 500)
+                        .frame(width:max(120,min(210,size.width*0.22)),height:max(128,min(224,size.width*0.235)))
                         .rotationEffect(.degrees(actor.angle))
                         .position(x: actor.x / 800 * size.width, y: (500 - actor.y) / 500 * size.height)
                         .allowsHitTesting(false)
@@ -35,7 +36,11 @@ struct PhysicsPlayfield: View {
                 .gesture(DragGesture(minimumDistance: 0).onChanged { value in
                     if !dragging { physics.beginDrag(point(value.startLocation, size: size)); dragging = true }
                     physics.moveDrag(point(value.location, size: size))
-                }.onEnded { _ in physics.endDrag(); dragging = false })
+                }.onEnded {value in
+                    let held=physics.isDragging
+                    physics.endDrag();dragging=false
+                    if !held && hypot(value.translation.width,value.translation.height)<8 {onEmptyTap?(point(value.location,size:size))}
+                })
         }
     }
     private func point(_ p: CGPoint, size: CGSize) -> CGPoint { CGPoint(x: p.x / size.width * 800, y: 500 - p.y / size.height * 500) }

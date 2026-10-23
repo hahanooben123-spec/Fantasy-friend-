@@ -24,6 +24,7 @@ struct DebugPlayPreview: View {
                 if route == "free" { BuilderView(original: friend, existing: false) }
                 else if route == "ride" { PhysicsAdventureView(kind: .slide, friend: friend, previewRide: true) }
                 else if route == "bounce" { PhysicsAdventureView(kind: .trampoline, friend: friend, previewRide: true) }
+                else if route == "playground" {PlaygroundView(initialID:friend.id,onCreate:{})}
                 else if route == "yard" { SharedToyYardView(initialFriend: friend) }
                 else if route == "room" { FriendRoomView(friendID: friend.id) }
                 else if route == "hub" { MiniGamesView(onCreate: {}) }

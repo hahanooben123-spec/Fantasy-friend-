@@ -6,6 +6,10 @@ enum Words {
         return language == .da ? pair.0 : pair.1
     }
     static let entries: [String: (String, String)] = [
+        "bubbleSwipe": ("Stryg gennem boblerne!", "Swipe through the bubbles!"),
+        "recordMusic": ("Optag", "Record"),
+        "newBeat": ("Ny rytme", "New beat"),
+        "editBeat": ("Noder", "Beats"),
         "creatorTitle": ("Fantasi-værkstedet", "Imagination workshop"),
         "creatorTagline": ("Din ven. Dine skøre idéer.", "Your friend. Your wild ideas."),
         "creatorGreeting": ("Hvem skal vi skabe i dag?", "Who shall we make today?"),

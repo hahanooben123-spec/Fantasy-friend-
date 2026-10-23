@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// The world occupies the entire viewport. Only the small HUD floats above it.
 struct AdventureGameShell<Content: View>: View {
     @EnvironmentObject private var store: FriendStore
     @Environment(\.scenePhase) private var phase
@@ -7,52 +8,34 @@ struct AdventureGameShell<Content: View>: View {
     @ViewBuilder var content: (Bool) -> Content
     @State private var paused = false
     var body: some View {
-        GeometryReader { geometry in
         ZStack {
             WorldBackdrop(world: kind == .orchestra ? .stars : kind == .kitchen ? .castle : .clouds, animated: !paused)
-            VStack(spacing: 12) {
-                AdventureHeading(title: store.t(kind.titleKey), subtitle: store.t(kind.hintKey))
-                HStack {
-                    if kind != .kitchen { FlowerDifficulty() }
-                    Spacer()
-                    RoundButton(icon: "speaker.wave.2.fill", label: store.t("help")) { SoundService.shared.speak(store.t(kind.hintKey), language: store.settings.language) }
-                    RoundButton(icon: paused ? "play.fill" : "pause.fill", label: store.t(paused ? "resumeGame" : "pauseGame")) { paused.toggle() }
-                }.padding(.horizontal, 18)
-                ScrollView(showsIndicators: false) {
-                    content(!paused && phase == .active)
-                        .disabled(paused || phase != .active)
-                        .padding(18).frame(width: min(950, geometry.size.width)).frame(maxWidth: .infinity)
-                }
+            content(!paused && phase == .active)
+                .frame(maxWidth:.infinity,maxHeight:.infinity)
+                .disabled(paused || phase != .active)
+            VStack {
+                PlayHUD(title:store.t(kind.titleKey),hint:store.t(kind.hintKey),paused:$paused)
+                Spacer().allowsHitTesting(false)
             }
-            if paused {
-                Color.indigo.opacity(0.35).ignoresSafeArea()
-                VStack(spacing: 16) {
-                    Text("☁️").font(.system(size: 80))
-                    Text(store.t("roundDone")).font(.system(.title2, design: .rounded).weight(.heavy)).multilineTextAlignment(.center)
-                    CandyButton(title: store.t("resumeGame"), icon: "play.fill") { paused = false }
-                }.padding(28).frame(maxWidth: 350).background(RoundedRectangle(cornerRadius: 36).fill(.white))
-            }
-        }
-        }.foregroundColor(GameStyle.ink).navigationBarHidden(true)
-            .onAppear { SoundService.shared.setWorld(kind == .orchestra ? .stars : kind == .kitchen ? .castle : .clouds) }
+            if paused { PlayPauseOverlay(resume:{paused=false}) }
+        }.foregroundColor(GameStyle.ink).navigationBarHidden(true).statusBar(hidden:true)
             .onDisappear { SoundService.shared.stopSpeech() }
-            .alert(store.t("error"), isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
-                Button("OK") { store.error = nil }
-            } message: { Text(store.error ?? "") }
+            .alert(store.t("error"),isPresented:Binding(get:{store.error != nil},set:{if !$0 {store.error=nil}})) {
+                Button("OK") {store.error=nil}
+            } message:{Text(store.error ?? "")}
     }
 }
 
 struct FlowerDifficulty: View {
     @EnvironmentObject private var store: FriendStore
     var body: some View {
-        HStack(spacing: 5) {
-            ForEach(1...3, id: \.self) { level in
-                Button { store.updateSettings { $0.challenge = level } } label: {
-                    Text(String(repeating: "✿", count: level))
-                        .font(.system(size: 14, weight: .heavy, design: .rounded))
-                        .frame(minWidth: 40, minHeight: 44)
-                        .background(CandySurface(color: store.settings.challengeLevel == level ? StudioStyle.colors[0] : .white, cornerRadius: 16)).contentShape(Rectangle())
-                }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("challenge") + " \(level)")
+        HStack(spacing:8) {
+            ForEach(1...3,id:\.self) { level in
+                Button {store.updateSettings {$0.challenge=level}} label:{
+                    Text(String(repeating:"✿",count:level)).font(.system(size:18,weight:.heavy,design:.rounded))
+                        .frame(minWidth:64,minHeight:52)
+                        .background(Capsule().fill(store.settings.challengeLevel == level ? StudioStyle.colors[0] : .white))
+                }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("challenge")+" \(level)")
                     .accessibilityAddTraits(store.settings.challengeLevel == level ? .isSelected : [])
             }
         }
@@ -64,11 +47,11 @@ struct GameDestinationView: View {
     let friend: FantasyFriend
     var body: some View {
         switch kind {
-        case .apples, .bubbles, .hide: MiniGameSessionView(kind: kind, friend: friend)
-        case .slide, .trampoline: PhysicsAdventureView(kind: kind, friend: friend)
-        case .kitchen: KitchenGameView(friend: friend)
-        case .orchestra: OrchestraGameView(friend: friend)
-        case .path: PathGameView(friend: friend)
+        case .apples,.bubbles,.hide:MiniGameSessionView(kind:kind,friend:friend)
+        case .slide,.trampoline:PhysicsAdventureView(kind:kind,friend:friend)
+        case .kitchen:KitchenGameView(friend:friend)
+        case .orchestra:OrchestraGameView(friend:friend)
+        case .path:PathGameView(friend:friend)
         }
     }
 }

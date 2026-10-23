@@ -345,7 +345,7 @@ extension FantasiVenTests {
         XCTAssertEqual(original.placement(for: .leftArm).rotation, 30)
         simulation.configure(friends: [original], mode: .trampoline, reducedMotion: true)
         simulation.accessibleRide(progress: 1, track: nil)
-        XCTAssertTrue(simulation.arrived)
+        XCTAssertFalse(simulation.arrived, "Trampoline play continues after a jump")
         XCTAssertEqual(simulation.toyCount, 0)
         simulation.setActive(false)
         XCTAssertTrue(simulation.scene.isPaused)
@@ -403,5 +403,66 @@ extension FantasiVenTests {
         XCTAssertFalse(friend.isValid)
         friend.hiddenParts = nil; friend.facePlacements = ["tail": PartPlacement()]
         XCTAssertFalse(friend.isValid)
+    }
+}
+
+extension FantasiVenTests {
+    func testGoldenFruitAndStreakArePlayOnlyAndBounded() {
+        var game=AppleRain()
+        for _ in 0..<1800 {game.step(1.0/30,spawnX:0.5)}
+        XCTAssertGreaterThan(game.goldenCaught,0)
+        XCTAssertEqual(game.streak,game.caught)
+        XCTAssertLessThanOrEqual(game.fruitBasket.count,12)
+        game.move(to:0.86)
+        for _ in 0..<600 {game.step(1.0/30,spawnX:0.17)}
+        XCTAssertEqual(game.streak,0)
+        XCTAssertLessThanOrEqual(game.drops.count,5)
+    }
+    func testStarTrailCannotCollectSameStarTwiceAndCanContinue() {
+        var trail=StarTrail()
+        let first=trail.stars[0]
+        XCTAssertTrue(trail.collect(x:first.x,y:first.y,radius:0.01))
+        XCTAssertFalse(trail.collect(x:first.x,y:first.y,radius:0.01))
+        XCTAssertEqual(trail.collected,1)
+        XCTAssertFalse(trail.collect(x:.nan,y:0))
+        let oldIDs=Set(trail.stars.map(\.id))
+        trail.reseed()
+        XCTAssertTrue(oldIDs.isDisjoint(with:Set(trail.stars.map(\.id))))
+        XCTAssertEqual(trail.stars.count,5)
+        XCTAssertEqual(trail.collected,1)
+        let track=SlideTrack()
+        trail.follow(track)
+        XCTAssertEqual(trail.stars[2].y,0.2+track.heights[2]*0.6-0.09,accuracy:0.00001)
+    }
+    @MainActor
+    func testRagdollWorldMatchesTallViewportAndKeepsItsFigure() {
+        let friend=FantasyFriend.studioStarter()
+        let simulation=RagdollSimulation()
+        simulation.resize(to:CGSize(width:400,height:900))
+        simulation.configure(friend,reducedMotion:true)
+        XCTAssertEqual(simulation.scene.size.width,400)
+        XCTAssertEqual(simulation.scene.size.height,900)
+        XCTAssertEqual(simulation.frame.canvasSize,simulation.scene.size)
+        let start=simulation.frame.position
+        simulation.beginDrag(at:start)
+        simulation.moveDrag(to:CGPoint(x:210,y:700))
+        simulation.refresh()
+        XCTAssertEqual(simulation.frame.position.y,700,accuracy:0.001)
+        XCTAssertEqual(simulation.frame.friend.id,friend.id)
+        simulation.endDrag()
+        simulation.setActive(false)
+        XCTAssertTrue(simulation.scene.isPaused)
+        XCTAssertEqual(simulation.scene.children.count,6)
+    }
+    @MainActor
+    func testToyCanBePlacedAtTouchAndStillRespectsSceneLimit() {
+        let simulation=PlayPhysics()
+        simulation.configure(friends:[FantasyFriend()],mode:.yard,reducedMotion:true)
+        simulation.addToy(0,at:CGPoint(x:250,y:300))
+        XCTAssertEqual(simulation.toys.first?.x,250)
+        XCTAssertEqual(simulation.toys.first?.y,300)
+        for _ in 0..<20 {simulation.addToy(1,at:CGPoint(x:100,y:100))}
+        XCTAssertEqual(simulation.toyCount,12)
+        simulation.setActive(false)
     }
 }

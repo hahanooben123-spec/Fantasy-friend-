@@ -9,6 +9,7 @@ struct RagdollFrame {
     var asleep = false
     var blink = false
     var reaction: PlayAction?
+    var canvasSize = CGSize(width:600,height:440)
 }
 
 @MainActor
@@ -32,9 +33,15 @@ final class RagdollSimulation: ObservableObject {
     var isDragging: Bool { heldBody != nil }
 
     init() {
-        scene.scaleMode = .aspectFit
+        scene.scaleMode = .fill
         scene.backgroundColor = .clear
         scene.isPaused = true
+    }
+
+    func resize(to size: CGSize) {
+        guard size.width>0,size.height>0 else { return }
+        let width = min(600,max(360,size.width))
+        scene.size = CGSize(width:width,height:max(440,width*size.height/size.width))
     }
 
     func configure(_ friend: FantasyFriend, reducedMotion: Bool) {
@@ -47,14 +54,14 @@ final class RagdollSimulation: ObservableObject {
         asleep = false; reaction = nil; reactionUntil = 0
         scene.physicsWorld.gravity = reducedMotion ? .zero : CGVector(dx: 0, dy: -5)
         let floor = SKNode()
-        floor.physicsBody = SKPhysicsBody(edgeLoopFrom: CGRect(origin: .zero, size: Self.stageSize).insetBy(dx: 8, dy: 8))
+        floor.physicsBody = SKPhysicsBody(edgeLoopFrom: CGRect(x:8,y:90,width:scene.size.width-16,height:scene.size.height-165))
         floor.physicsBody?.categoryBitMask = 4
         floor.physicsBody?.collisionBitMask = 3
         floor.physicsBody?.friction = 0.7
         floor.physicsBody?.restitution = 0.18
         scene.addChild(floor)
 
-        body.position = CGPoint(x: 300, y: 235)
+        body.position = CGPoint(x:scene.size.width/2,y:scene.size.height/2+15)
         body.zRotation = 0
         body.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: 142 * Self.characterScale, height: 160 * Self.characterScale))
         prepare(body.physicsBody, mass: 1.8, category: 1)
@@ -117,7 +124,7 @@ final class RagdollSimulation: ObservableObject {
     }
 
     private func bounded(_ point: CGPoint) -> CGPoint {
-        CGPoint(x: min(580, max(20, point.x)), y: min(420, max(20, point.y)))
+        CGPoint(x: min(scene.size.width-20,max(20,point.x)),y:min(scene.size.height-80,max(100,point.y)))
     }
 
     func beginDrag(at point: CGPoint) {
@@ -165,7 +172,7 @@ final class RagdollSimulation: ObservableObject {
         let point = bounded(point)
         if reducedMotion {
             let proposed = CGPoint(x: point.x - gripOffset.dx, y: point.y - gripOffset.dy)
-            let target = CGPoint(x: min(480, max(120, proposed.x)), y: min(320, max(120, proposed.y)))
+            let target = CGPoint(x: min(scene.size.width-100,max(100,proposed.x)),y:min(scene.size.height-120,max(180,proposed.y)))
             let dx = target.x - body.position.x, dy = target.y - body.position.y
             body.position = target
             for node in limbs.values { node.position.x += dx; node.position.y += dy }
@@ -233,6 +240,6 @@ final class RagdollSimulation: ObservableObject {
         frame = RagdollFrame(friend: posed, position: body.position, angle: Double(body.zRotation),
             happy: !asleep && now < reactionUntil, asleep: asleep,
             blink: now.truncatingRemainder(dividingBy: 4) < 0.14,
-            reaction: now < reactionUntil ? reaction : nil)
+            reaction: now < reactionUntil ? reaction : nil, canvasSize: scene.size)
     }
 }

@@ -400,8 +400,8 @@ struct RagdollCharacterView: View {
 
     var body: some View {
         Canvas { context, size in
-            context.scaleBy(x: size.width / RagdollSimulation.stageSize.width, y: size.height / RagdollSimulation.stageSize.height)
-            let position = CGPoint(x: frame.position.x, y: 440 - frame.position.y)
+            context.scaleBy(x: size.width / frame.canvasSize.width, y: size.height / frame.canvasSize.height)
+            let position = CGPoint(x: frame.position.x, y: frame.canvasSize.height - frame.position.y)
             var character = context
             character.translateBy(x: position.x, y: position.y)
             character.rotate(by: .radians(-frame.angle))

@@ -12,6 +12,7 @@ struct PlaygroundView: View {
     @State private var selectedID: UUID?
     @State private var action: PlayAction = .jump
     @State private var signal = 0
+    @State private var paused = false
     @State private var picker: PlayPicker?
     private let toys: [ToyKind] = [.feather, .berry, .jump, .music, .moon, .heart]
     private var friend: FantasyFriend? {
@@ -19,79 +20,47 @@ struct PlaygroundView: View {
     }
 
     var body: some View {
-        GeometryReader { geometry in
-            let wide = geometry.size.width >= 700
-            ZStack {
-                WorldBackdrop(world: friend?.world ?? .forest)
-                VStack(spacing: 8) {
-                    AdventureHeading(title: store.t("playRoom"), subtitle: store.t("ragdollHint"))
-                    if let friend = friend {
-                        ScrollView(showsIndicators: false) {
-                            VStack(spacing: 18) {
-                                if wide {
-                                    HStack(spacing: 20) {
-                                        RagdollPlayground(friend: friend, action: action, signal: signal)
-                                            .id(friend.id).frame(height: min(geometry.size.height * 0.68, 610))
-                                        actionGrid.frame(width: 245)
-                                    }
-                                } else {
-                                    RagdollPlayground(friend: friend, action: action, signal: signal)
-                                        .id(friend.id).frame(height: min(geometry.size.height * 0.46, 405))
-                                    actionGrid
-                                }
-                                NavigationLink(destination: SharedToyYardView(initialFriend: friend)) {
-                                    MenuTile(title: store.t("sharedYard"), icon: "person.3.fill", color: GameStyle.purple)
-                                }.buttonStyle(SquishStyle())
-                                HStack(spacing: 12) {
-                                    Button { picker = .friends } label: {
-                                        HStack(spacing: 6) {
-                                            CharacterView(friend: friend).frame(width: 49, height: 54)
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text(store.t("chooseFriend")).font(.system(size: 10, weight: .bold, design: .rounded))
-                                                Text(friend.name).font(.system(.subheadline, design: .rounded).weight(.heavy)).lineLimit(1)
-                                            }
-                                            Spacer(minLength: 0)
-                                            Image(systemName: "chevron.down").font(.system(size: 12, weight: .heavy))
-                                        }.padding(.horizontal, 10).frame(maxWidth: .infinity).frame(height: 66)
-                                            .background(RoundedRectangle(cornerRadius: 24).fill(.white.opacity(0.85)))
-                                    }
-                                    Button { picker = .worlds } label: {
-                                        HStack(spacing: 8) {
-                                            WorldBackdrop(world: friend.world, immersive: false, animated: false).frame(width: 48, height: 44).clipShape(RoundedRectangle(cornerRadius: 13))
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text(store.t("chooseWorld")).font(.system(size: 10, weight: .bold, design: .rounded))
-                                                Text(store.t(Words.worldKeys[friend.world.rawValue])).font(.system(.subheadline, design: .rounded).weight(.heavy)).lineLimit(1).minimumScaleFactor(0.7)
-                                            }
-                                            Spacer(minLength: 0)
-                                            Image(systemName: "chevron.down").font(.system(size: 12, weight: .heavy))
-                                        }.padding(.horizontal, 10).frame(maxWidth: .infinity).frame(height: 66)
-                                            .background(RoundedRectangle(cornerRadius: 24).fill(.white.opacity(0.85)))
-                                    }
-                                }.buttonStyle(SquishStyle())
-                            }.padding(.horizontal, 18).padding(.bottom, 24).frame(maxWidth: 1120).frame(maxWidth: .infinity)
+        ZStack {
+            WorldBackdrop(world:friend?.world ?? .forest,animated:!paused)
+            if let friend=friend {
+                RagdollPlayground(friend:friend,action:action,signal:signal,active:!paused).id(friend.id)
+                VStack {
+                    PlayHUD(title:store.t("playRoom"),hint:store.t("ragdollHint"),paused:$paused)
+                    Spacer().allowsHitTesting(false)
+                    HStack(spacing:8) {
+                        Button {picker = .friends} label:{
+                            CharacterView(friend:friend).frame(width:48,height:50)
+                                .background(Circle().fill(.white))
+                        }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("chooseFriend"))
+                        Button {picker = .worlds} label:{
+                            WorldBackdrop(world:friend.world,immersive:false,animated:false)
+                                .frame(width:48,height:48).clipShape(Circle()).overlay(Circle().stroke(.white,lineWidth:3))
+                        }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("chooseWorld"))
+                        NavigationLink(destination:SharedToyYardView(initialFriend:friend)) {
+                            Image(systemName:"person.3.fill").font(.title2).frame(width:48,height:48).background(Circle().fill(.white))
+                        }.accessibilityLabel(store.t("sharedYard"))
+                        Spacer()
+                    }.padding(.horizontal,16)
+                    PlayDock {
+                        ForEach(Array(PlayAction.allCases.enumerated()),id:\.element.rawValue) { index,item in
+                            Button {action=item;signal+=1} label:{
+                                ToyGlyph(kind:toys[index]).frame(width:36,height:36)
+                                    .frame(maxWidth:.infinity,minHeight:52)
+                                    .background(RoundedRectangle(cornerRadius:16).fill(StudioStyle.colors[index]))
+                            }.buttonStyle(SquishStyle()).accessibilityLabel(store.t(item.rawValue))
                         }
-                    } else { EmptyCollectionView(create: onCreate) }
+                    }.disabled(paused)
+                }
+            } else {
+                VStack {
+                    AdventureHeading(title:store.t("playRoom"),subtitle:store.t("ragdollHint"))
+                    EmptyCollectionView(create:onCreate)
                 }
             }
-        }.foregroundColor(GameStyle.ink).navigationBarHidden(true)
-        .sheet(item: $picker) { choice in pickerContent(choice) }
-    }
-
-    private var actionGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 13) {
-            ForEach(Array(PlayAction.allCases.enumerated()), id: \.element.rawValue) { index, item in
-                Button { action = item; signal += 1 } label: {
-                    VStack(spacing: 3) {
-                        ToyGlyph(kind: toys[index]).frame(width: 53, height: 53)
-                        Text(store.t(item.rawValue)).font(.system(.subheadline, design: .rounded).weight(.heavy))
-                    }.foregroundColor(GameStyle.ink).frame(maxWidth: .infinity).frame(height: 96)
-                        .background(RoundedRectangle(cornerRadius: 28).fill(StudioStyle.colors[index]))
-                        .overlay(RoundedRectangle(cornerRadius: 28).stroke(.white.opacity(0.85), lineWidth: 2))
-                        .shadow(color: StudioStyle.colors[index].opacity(0.4), radius: 0, y: 5)
-                        .rotationEffect(.degrees(index.isMultiple(of: 2) ? -2 : 2))
-                }.buttonStyle(SquishStyle())
-            }
-        }
+            if paused {PlayPauseOverlay(resume:{paused=false})}
+        }.foregroundColor(GameStyle.ink).navigationBarHidden(true).statusBar(hidden:true)
+            .sheet(item:$picker) {choice in pickerContent(choice)}
+            .onChange(of:picker != nil) {value in paused=value}
     }
 
     private func pickerContent(_ choice: PlayPicker) -> some View {
