@@ -2,6 +2,16 @@
 
 Et originalt, lokalt iPhone-spil til børn på 3–8 år. Swift 6, SwiftUI og iOS 15+. Ingen tredjepartspakker, login, netværkskald eller køb.
 
+## Fælles eventyrstil fra græskarværkstedet
+
+Appen bruger nu et fælles visuelt lag i `Components/StorybookStyle.swift`: cremefarvet emalje med gyldne kanter, varmt træ, blommefarvede konturer og skygger, sidebelysning og originale lyskæder. Græskarværkstedet og de øvrige værksteder deler selve lampetegningen. De farverige verdener beholder deres egne farver; figurernes gemte farveindekser er uændrede.
+
+Forsiden har små belyste huse, blade i forgrunden og et træpodium under vennen. Samlingens venner står på samme type podier i deres valgte miljø. Figurværksted og værelser har fælles værktøjsbakker og formede valgknapper. Spillets overskrifter, statusmærker, pausepaneler, indstillinger og navigationskort følger samme materialesprog. Køkkenet, koncertscenen, verdenerne og afsløringen har samme varme lys og dybde, med deres egne scenefarver.
+
+Dekorationerne tegnes med Canvas under interaktive objekter og kontroller og modtager ingen berøringer. Det fælles lyslag er statisk og introducerer ingen nye animationstimere. Knapper deler en kort fjederreaktion og respekterer Reducer bevægelse. Legeplads og minispil forbliver i fuld skærm.
+
+Projektgeneratoren registrerer den nye Swift-fil i Xcode-projektet. Ingen build, tests eller afprøvning på iPad er kørt for denne ændring.
+
 ## Pizza: friere leg og færre knapper
 
 Bland ingredienserne, og rør kort med fingeren: dejen kommer automatisk på bordet. Form dejen frit med træk, fingertryk og knib, eller vælg rund, hjerte, stjerne, sky, oval og firkant. Dejen, skorpen, sovsen og fyldet følger samme form. Den første vejledning skifter til sovs og derefter fyld efter en kort pause, når barnet har prøvet handlingen; alle værktøjer er stadig frit tilgængelige.

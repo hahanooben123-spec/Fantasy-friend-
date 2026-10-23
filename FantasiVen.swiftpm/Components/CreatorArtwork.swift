@@ -1,9 +1,9 @@
 import SwiftUI
 
 enum WorkshopLook {
-    static let sea = Color(red: 0.06, green: 0.29, blue: 0.37)
+    static let sea = StorybookStyle.teal
     static let blue = Color(red: 0.02, green: 0.55, blue: 0.72)
-    static let cream = Color(red: 1, green: 0.96, blue: 0.84)
+    static let cream = StorybookStyle.cream
     static let yellow = Color(red: 1, green: 0.77, blue: 0.12)
 }
 
@@ -95,7 +95,7 @@ struct CreatorRoomArtwork: View {
                     .position(x:w/2,y:h*0.43)
                 Canvas {c,size in furnishings(c,size:size)}
             }
-        }.allowsHitTesting(false).accessibilityHidden(true)
+        }.storybookScene(lamps:true).allowsHitTesting(false).accessibilityHidden(true)
     }
     private func furnishings(_ c:GraphicsContext,size:CGSize) {
         let w=size.width,h=size.height

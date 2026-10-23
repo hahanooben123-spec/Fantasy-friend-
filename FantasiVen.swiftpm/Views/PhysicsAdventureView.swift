@@ -72,7 +72,7 @@ struct PhysicsAdventureView:View {
                     VStack {
                         HStack {
                             HStack {StarArtwork().frame(width:30,height:30);Text("\(trail.collected)").font(.system(size:24,weight:.heavy,design:.rounded))}
-                                .padding(12).background(Capsule().fill(.white.opacity(0.92)))
+                                .padding(12).background(StorybookPanel(cornerRadius:24))
                             Spacer()
                             if saved {Text(store.t("saved")).padding(10).background(Capsule().fill(.white))}
                         }.padding(.horizontal,18).padding(.top,78)

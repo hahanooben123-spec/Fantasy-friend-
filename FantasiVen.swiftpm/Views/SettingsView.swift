@@ -37,7 +37,7 @@ struct SettingsView: View {
                             }
                             volumeControl("musicVolume", value: Binding(get: { store.settings.musicLevel }, set: { value in store.updateSettings { $0.musicVolume = value } }), enabled: store.settings.music)
                             Text(store.t("musicAtmosphere")).font(.system(.caption, design: .rounded)).foregroundColor(GameStyle.ink.opacity(0.65))
-                        }.toggleStyle(SwitchToggleStyle(tint: GameStyle.purple)).padding(22).background(RoundedRectangle(cornerRadius: 32).fill(.white.opacity(0.9)))
+                        }.toggleStyle(SwitchToggleStyle(tint: GameStyle.purple)).padding(22).background(StorybookPanel(cornerRadius: 32))
                         VStack(spacing: 14) {
                             Toggle(store.t("speech"), isOn: Binding(get: { store.settings.speechEnabled }, set: { value in store.updateSettings { $0.speech = value } }))
                             Text(store.t("challenge")).font(.headline)
@@ -49,7 +49,7 @@ struct SettingsView: View {
                                     }.accessibilityLabel(store.t("challenge") + " \(level)")
                                 }
                             }
-                        }.padding(20).background(RoundedRectangle(cornerRadius: 28).fill(.white.opacity(0.9)))
+                        }.padding(20).background(StorybookPanel(cornerRadius: 28))
                         VStack(alignment: .leading, spacing: 12) {
                             Text(store.t("language")).font(.system(.headline, design: .rounded))
                             HStack(spacing: 14) {
@@ -60,7 +60,7 @@ struct SettingsView: View {
                         HStack(spacing: 12) {
                             ToyGlyph(kind: .heart).frame(width: 38, height: 38)
                             Text(store.t("privacy")).font(.system(.footnote, design: .rounded))
-                        }.padding(18).background(RoundedRectangle(cornerRadius: 28).fill(.white.opacity(0.55)))
+                        }.padding(18).background(StorybookPanel(cornerRadius: 28))
                         Text("FantasiVen · 1.0").font(.system(.caption, design: .rounded)).opacity(0.55)
                     }.padding(22).frame(maxWidth: 570).frame(maxWidth: .infinity)
                 }
@@ -91,7 +91,7 @@ struct SettingsView: View {
                 Spacer(minLength: 0)
                 if store.settings.language == language { Image(systemName: "checkmark.circle.fill").foregroundColor(GameStyle.purple) }
             }.padding(15).frame(maxWidth: .infinity).frame(minHeight: 76)
-                .background(RoundedRectangle(cornerRadius: 24).fill(.white.opacity(0.9)))
+                .background(StorybookPanel(cornerRadius: 24))
                 .overlay(RoundedRectangle(cornerRadius: 24).stroke(store.settings.language == language ? GameStyle.purple : .clear, lineWidth: 3))
         }.buttonStyle(SquishStyle()).accessibilityAddTraits(store.settings.language == language ? .isSelected : [])
     }

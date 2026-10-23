@@ -26,6 +26,7 @@ struct WelcomeGardenBackdrop:View {
                     trail.addCurve(to:CGPoint(x:s.width*0.62,y:s.height*0.73),control1:CGPoint(x:s.width*0.85,y:s.height*0.89),control2:CGPoint(x:s.width*0.3,y:s.height*0.80))
                     c.stroke(trail,with:.color(Color(red:1,green:0.86,blue:0.58).opacity(0.65)),style:StrokeStyle(lineWidth:40,lineCap:.round))
                 }
+                StorybookVillage()
                 ForEach(0..<3) {i in
                     CloudArtwork().frame(width:100+CGFloat(i)*25,height:70)
                         .position(x:proxy.size.width*(0.15+CGFloat(i)*0.31)+(drifting ? 12 : -12),y:proxy.size.height*(0.17+CGFloat(i%2)*0.15))
@@ -36,7 +37,7 @@ struct WelcomeGardenBackdrop:View {
                         .position(x:proxy.size.width*CGFloat((i*23+7)%100)/100,y:proxy.size.height*(0.94+CGFloat(i%2)*0.035))
                 }
             }
-        }.ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
+        }.storybookScene(lamps:true,foliage:true).ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
             .onAppear {SoundService.shared.setWorld(.meadow)}
             .task(id:"\(phase)-\(reduced)") {
                 drifting=false
@@ -51,7 +52,11 @@ struct WelcomeCompanion:View {
     var body:some View {
         GeometryReader {proxy in
             ZStack {
-                Ellipse().fill(.white.opacity(0.28)).frame(width:proxy.size.width*0.9,height:proxy.size.height*0.80)
+                Ellipse().fill(RadialGradient(colors:[StorybookStyle.cream.opacity(0.55),.clear],
+                    center:.center,startRadius:0,endRadius:proxy.size.height*0.5))
+                    .frame(width:proxy.size.width*0.9,height:proxy.size.height)
+                StorybookPedestal().frame(width:min(proxy.size.width*0.7,proxy.size.height*1.1),height:44)
+                    .position(x:proxy.size.width*0.47,y:proxy.size.height*0.91)
                 LivingFriend(friend:friend,action:.hug,signal:1)
                     .frame(width:min(proxy.size.width*0.8,proxy.size.height*1.05),height:proxy.size.height)
                     .position(x:proxy.size.width*0.47,y:proxy.size.height*0.52)
@@ -59,7 +64,7 @@ struct WelcomeCompanion:View {
                     .font(.system(size:15,weight:.heavy,design:.rounded))
                     .lineLimit(2).multilineTextAlignment(.center).frame(maxWidth:proxy.size.width*0.58)
                     .padding(.horizontal,16).padding(.vertical,9)
-                    .background(Capsule().fill(WorkshopLook.cream))
+                    .background(StorybookPanel(cornerRadius:24))
                     .rotationEffect(.degrees(-5))
                     .position(x:proxy.size.width*0.62,y:proxy.size.height*0.16)
                     .allowsHitTesting(false)

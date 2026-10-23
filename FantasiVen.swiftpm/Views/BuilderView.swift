@@ -38,7 +38,7 @@ struct BuilderView: View {
         GeometryReader { geometry in
             let wide=geometry.size.width>=740
             ZStack {
-                WorkshopLook.sea.ignoresSafeArea()
+                StorybookWorkshopWall().ignoresSafeArea()
                 VStack(spacing:0) {
                     header(wide:wide)
                     if wide {
@@ -167,7 +167,7 @@ struct BuilderView: View {
                     Text(store.t(Words.partKeys[item.rawValue])).font(.system(size:10,weight:.heavy,design:.rounded)).lineLimit(1)
                 }.foregroundColor(part == item ? WorkshopLook.sea : .white)
                     .frame(width:67,height:65)
-                    .background(RoundedRectangle(cornerRadius:18).fill(part == item ? WorkshopLook.yellow : .clear))
+                    .background {if part == item {CandySurface(color:WorkshopLook.yellow,cornerRadius:18)}}
                     .contentShape(Rectangle())
             }.buttonStyle(SquishStyle()).accessibilityLabel(store.t(Words.partKeys[item.rawValue]))
                 .accessibilityAddTraits(part == item ? .isSelected : [])
@@ -206,7 +206,7 @@ struct BuilderView: View {
                 }.id(part)
             }
         }.padding(.top,12).padding(.bottom,10).frame(maxWidth:.infinity,maxHeight:.infinity)
-            .background(WorkshopLook.cream)
+            .background(StorybookShelf())
     }
     private func choices(wide:Bool)->some View {
         ForEach(0..<optionCount,id:\.self) { index in
@@ -217,7 +217,7 @@ struct BuilderView: View {
                         Text(store.t(Words.bodyKeys[index])).font(.system(size:11,weight:.bold,design:.rounded))
                     }
                 }.foregroundColor(WorkshopLook.sea).padding(7)
-                    .background(RoundedRectangle(cornerRadius:23).fill(chosen(index) ? WorkshopLook.yellow.opacity(0.65) : .white))
+                    .background(CandySurface(color:chosen(index) ? WorkshopLook.yellow : StorybookStyle.cream,cornerRadius:23))
                     .overlay(RoundedRectangle(cornerRadius:23).stroke(chosen(index) ? WorkshopLook.blue : WorkshopLook.sea.opacity(0.12),lineWidth:chosen(index) ? 3 : 1))
                     .contentShape(Rectangle())
             }.buttonStyle(SquishStyle())
@@ -342,7 +342,7 @@ struct BuilderView: View {
                 .disabled(selection == .body)
             Text(store.t("creatorHandleHint")).font(.system(.body,design:.rounded)).multilineTextAlignment(.center)
             Spacer(minLength:0)
-        }.padding(26).background(WorkshopLook.cream).foregroundColor(GameStyle.ink)
+        }.padding(26).background(StorybookShelf()).foregroundColor(GameStyle.ink)
     }
     private func beginGesture() { if transaction == nil { transaction=friend } }
     private func finishGesture() {

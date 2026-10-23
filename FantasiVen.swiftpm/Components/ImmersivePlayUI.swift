@@ -12,7 +12,7 @@ struct PlayHUD: View {
         HStack(spacing:8) {
             RoundButton(icon:"chevron.left",label:store.t("close")) {presentation.wrappedValue.dismiss()}
             Text(title).font(.system(size:18,weight:.heavy,design:.rounded)).lineLimit(1).minimumScaleFactor(0.7)
-                .padding(.horizontal,12).padding(.vertical,10).background(Capsule().fill(.white.opacity(0.92)))
+                .padding(.horizontal,12).padding(.vertical,10).background(StorybookPanel(cornerRadius:24))
             Spacer(minLength:0)
             RoundButton(icon:"slider.horizontal.3",label:store.t("settings")) {wasPaused=paused;paused=true;settings=true}
             RoundButton(icon:paused ? "play.fill" : "pause.fill",label:store.t(paused ? "resumeGame" : "pauseGame")) {paused.toggle()}
@@ -42,7 +42,7 @@ struct PlayPauseOverlay:View {
             VStack(spacing:20) {
                 CloudArtwork().frame(width:100,height:80)
                 CandyButton(title:store.t("resumeGame"),icon:"play.fill",action:resume)
-            }.padding(28).frame(maxWidth:340).background(CandySurface(color:Color(red:1,green:0.96,blue:0.82),cornerRadius:36))
+            }.padding(28).frame(maxWidth:340).background(StorybookPanel(cornerRadius:36))
         }
     }
 }
@@ -51,7 +51,7 @@ struct PlayDock<Content:View>:View {
     @ViewBuilder var content:()->Content
     var body:some View {
         HStack(spacing:spacing,content:content).padding(12)
-            .background(CandySurface(color:Color(red:1,green:0.96,blue:0.82),cornerRadius:28))
+            .background(StorybookPanel(cornerRadius:28))
             .shadow(color:GameStyle.ink.opacity(0.15),radius:12,y:5)
             .padding(.horizontal,12).padding(.bottom,12)
     }
@@ -67,7 +67,7 @@ struct PlayToken:View {
                 PlayControlArtwork(symbol:symbol).frame(width:38,height:38)
                 Text(label).font(.system(size:12,weight:.heavy,design:.rounded)).lineLimit(2).multilineTextAlignment(.center)
             }.frame(minWidth:52,minHeight:66)
-                .background(RoundedRectangle(cornerRadius:18).fill(selected ? StudioStyle.colors[0] : .clear))
+                .background { if selected {CandySurface(color:StorybookStyle.honey,cornerRadius:18)} }
         }.buttonStyle(SquishStyle()).accessibilityLabel(label)
     }
 }

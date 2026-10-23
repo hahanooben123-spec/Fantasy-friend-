@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 enum GameStyle {
-    static let ink = Color(red: 0.16, green: 0.11, blue: 0.25)
+    static let ink = StorybookStyle.plum
     static let purple = Color(red: 0.47, green: 0.16, blue: 0.79)
     // Keep hue order stable so existing friends and brush strokes retain their identity.
     static let palette: [Color] = [
@@ -34,7 +34,7 @@ struct CandySurface: View {
     var body: some View {
         RoundedRectangle(cornerRadius:cornerRadius)
             .fill(LinearGradient(stops:[
-                .init(color:GameStyle.mixed(color,with:.white,amount:0.43),location:0),
+                .init(color:GameStyle.mixed(color,with:StorybookStyle.cream,amount:0.34),location:0),
                 .init(color:GameStyle.mixed(color,with:.white,amount:0.1),location:0.28),
                 .init(color:color,location:0.62),
                 .init(color:GameStyle.mixed(color,with:GameStyle.ink,amount:0.28),location:1)],
@@ -48,7 +48,7 @@ struct CandySurface: View {
                 Capsule().fill(LinearGradient(colors:[.white.opacity(0.35),.clear],startPoint:.top,endPoint:.bottom))
                     .frame(height:14).padding(.horizontal,cornerRadius*0.65).padding(.top,6)
             }
-            .shadow(color:GameStyle.mixed(color,with:GameStyle.ink,amount:0.5),radius:0,y:4)
+            .shadow(color:GameStyle.mixed(color,with:StorybookStyle.timber,amount:0.58),radius:0,y:4)
             .shadow(color:GameStyle.ink.opacity(0.2),radius:6,x:0,y:7)
             .allowsHitTesting(false)
     }
@@ -80,7 +80,7 @@ struct SquishStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.scaleEffect(configuration.isPressed && !reducedMotion ? 0.95 : 1)
             .offset(y:configuration.isPressed && !reducedMotion ? 2 : 0)
-            .animation(reducedMotion ? nil : .easeOut(duration: 0.16), value: configuration.isPressed)
+            .animation(reducedMotion ? nil : .spring(response: 0.28, dampingFraction: 0.68), value: configuration.isPressed)
     }
 }
 
@@ -105,7 +105,7 @@ enum ToyFinish {
         guard r.width>0,r.height>0 else {return}
         let key=CGPoint(x:r.minX+r.width*0.29,y:r.minY+r.height*0.22)
         let light=GameStyle.mixed(color,with:Color(red:1,green:0.96,blue:0.83),amount:0.35)
-        let shade=GameStyle.mixed(color,with:Color(red:0.14,green:0.10,blue:0.28),amount:0.46)
+        let shade=GameStyle.mixed(color,with:StorybookStyle.plum,amount:0.46)
         context.fill(path,with:.radialGradient(Gradient(stops:[
             .init(color:light,location:0),.init(color:color,location:0.48),
             .init(color:shade,location:1)]),center:key,startRadius:0,endRadius:max(r.width,r.height)*0.88))

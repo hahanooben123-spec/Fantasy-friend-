@@ -32,7 +32,7 @@ struct WorldBackdrop: View {
                 }
                 cloudRibbon.frame(width: geometry.size.width, height: geometry.size.height)
                     .offset(x: drift ? 8 : -8, y: drift ? -3 : 3)
-            }
+            }.storybookScene(night:world == .stars,foliage:immersive && (world == .forest || world == .meadow))
         }
     }
 

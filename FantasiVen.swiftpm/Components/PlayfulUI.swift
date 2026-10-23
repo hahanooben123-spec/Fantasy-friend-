@@ -139,7 +139,7 @@ struct AdventureHeading: View {
             }
             Spacer(minLength: 0)
         }.foregroundColor(GameStyle.ink).padding(.horizontal, 12).padding(.vertical, 9)
-            .background(CandySurface(color:Color(red:1,green:0.96,blue:0.83),cornerRadius:28))
+            .background(StorybookPanel(cornerRadius:28))
             .padding(.horizontal, 12).padding(.top, 8)
             .overlay(alignment: .trailing) {
                 if leaving {
@@ -162,16 +162,18 @@ struct FriendHomeCard: View {
     var body: some View {
         VStack(spacing: 0) {
             ZStack {
-                RoundedRectangle(cornerRadius: 68).fill(GameStyle.mixed(GameStyle.palette[friend.color], with: .white, amount: 0.64))
+                WorldBackdrop(world:friend.world,immersive:false,animated:false)
+                    .clipShape(RoundedRectangle(cornerRadius:30))
+                StorybookPedestal().frame(height:42).padding(.horizontal,12).offset(y:68)
                 Ellipse().fill(GameStyle.palette[friend.accent].opacity(0.4)).frame(height: 23).offset(y: 70)
                 CharacterView(friend: friend).padding(.horizontal, 12).padding(.top, 6).padding(.bottom, 12)
             }.frame(height: 181)
             Text(friend.name).font(.system(.headline, design: .rounded).weight(.heavy))
                 .lineLimit(2).multilineTextAlignment(.center).frame(maxWidth: .infinity, minHeight: 45)
-                .background(Capsule().fill(Color.white.opacity(0.94))).padding(.horizontal, 10).padding(.top, -10)
+                .background(StorybookPanel(cornerRadius:22)).padding(.horizontal, 10).padding(.top, -10)
         }.padding(8).padding(.bottom, 6)
-        .background(CandySurface(color:Color(red:1,green:0.97,blue:0.88),cornerRadius:38))
-        .overlay(RoundedRectangle(cornerRadius: 38).stroke(.white.opacity(0.9), lineWidth: 3))
+        .background(StorybookPanel(cornerRadius:38))
+        .foregroundColor(GameStyle.ink)
     }
 }
 

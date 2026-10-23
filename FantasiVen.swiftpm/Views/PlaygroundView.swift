@@ -35,7 +35,7 @@ struct PlaygroundView: View {
                                     Text(store.t(toy == .slide ? "buildTrackToy" : "game_trampoline"))
                                         .font(.system(size:12,weight:.heavy,design:.rounded))
                                 }.padding(.horizontal,12).frame(minHeight:52)
-                                    .background(Capsule().fill(.white.opacity(0.94)))
+                                    .background(StorybookPanel(cornerRadius:24))
                             }.buttonStyle(SquishStyle()).disabled(paused)
                         }
                         Spacer(minLength:0)
@@ -60,7 +60,7 @@ struct PlaygroundView: View {
                             Button {action=item;signal+=1} label:{
                                 ToyGlyph(kind:toys[index]).frame(width:36,height:36)
                                     .frame(maxWidth:.infinity,minHeight:52)
-                                    .background(RoundedRectangle(cornerRadius:16).fill(StudioStyle.colors[index]))
+                                    .background(CandySurface(color:StudioStyle.colors[index],cornerRadius:16))
                             }.buttonStyle(SquishStyle()).accessibilityLabel(store.t(item.rawValue))
                         }
                     }.disabled(paused)
@@ -101,7 +101,7 @@ struct PlaygroundView: View {
                                     VStack(spacing: 9) {
                                         WorldBackdrop(world: world, immersive: false, animated: false).frame(height: 112).clipShape(RoundedRectangle(cornerRadius: 24))
                                         Text(store.t(Words.worldKeys[world.rawValue])).font(.system(.headline, design: .rounded)).padding(.bottom, 10)
-                                    }.padding(8).background(RoundedRectangle(cornerRadius: 30).fill(.white.opacity(0.85)))
+                                    }.padding(8).background(StorybookPanel(cornerRadius:30))
                                         .overlay(RoundedRectangle(cornerRadius: 30).stroke(friend?.world == world ? GameStyle.purple : .white, lineWidth: 3))
                                 }.buttonStyle(SquishStyle()).accessibilityAddTraits(friend?.world == world ? .isSelected : [])
                             }

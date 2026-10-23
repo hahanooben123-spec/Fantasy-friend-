@@ -53,7 +53,7 @@ struct RoomInterior:View {
             let light=CGPoint(x:w*0.48,y:h*0.16)
             c.fill(Path(CGRect(origin:.zero,size:size)),with:.radialGradient(
                 Gradient(colors:[.white.opacity(0.18),.clear]),center:light,startRadius:0,endRadius:w*0.65))
-        }.allowsHitTesting(false).accessibilityHidden(true)
+        }.storybookScene(lamps:true).allowsHitTesting(false).accessibilityHidden(true)
     }
 }
 struct RoomFurniture:View {

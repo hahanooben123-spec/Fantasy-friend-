@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum PumpkinLook {
-    static let ink=Color(red:0.20,green:0.13,blue:0.22)
+    static let ink=StorybookStyle.plum
     static let cream=Color(red:1,green:0.94,blue:0.76)
     static let skin:[Color]=[
         Color(red:1,green:0.41,blue:0.07),Color(red:1,green:0.66,blue:0.29),

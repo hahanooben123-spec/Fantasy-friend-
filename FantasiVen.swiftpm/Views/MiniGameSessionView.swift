@@ -73,7 +73,7 @@ struct MiniGameSessionView: View {
                         Text(kind == .hide ? "\(count) / 3" : "\(count)")
                             .font(.system(size:22,weight:.heavy,design:.rounded)).monospacedDigit()
                     }
-                        .padding(12).background(Capsule().fill(.white.opacity(0.9)))
+                        .padding(12).background(StorybookPanel(cornerRadius:24))
                         .accessibilityLabel(store.t(kind == .hide ? "friendsFound" : kind == .apples ? "applesCaught" : "bubblesPopped"))
                         .accessibilityValue("\(count)")
                     Spacer()
@@ -83,12 +83,12 @@ struct MiniGameSessionView: View {
                                 Image(systemName:["leaf.fill","wind","cloud.sun.fill"][apples.weather.rawValue])
                                 Text(store.t(apples.weather.key))
                             }.font(.system(size:12,weight:.heavy,design:.rounded))
-                                .padding(12).frame(minHeight:48).background(Capsule().fill(.white.opacity(0.92)))
+                                .padding(12).frame(minHeight:48).background(StorybookPanel(cornerRadius:24))
                         }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("changeFruitWeather")).disabled(paused || picnic)
                     }
                 }.padding(.horizontal,18)
                 Spacer().allowsHitTesting(false)
-                if !interacted {Text(store.t(kind == .apples ? "appleHelp" : kind == .hide ? "hideHelp" : "bubbleSwipe")).font(.system(.subheadline,design:.rounded).weight(.bold)).padding(10).background(Capsule().fill(.white.opacity(0.9)))}
+                if !interacted {Text(store.t(kind == .apples ? "appleHelp" : kind == .hide ? "hideHelp" : "bubbleSwipe")).font(.system(.subheadline,design:.rounded).weight(.bold)).padding(10).background(StorybookPanel(cornerRadius:24))}
                 if kind == .apples && apples.fruitBasket.count>=6 && !picnic {
                     Text(store.t("picnicReady")).font(.system(size:14,weight:.heavy,design:.rounded))
                         .padding(10).background(Capsule().fill(WorkshopLook.yellow))

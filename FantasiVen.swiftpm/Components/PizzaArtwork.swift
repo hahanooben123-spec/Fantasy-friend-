@@ -49,7 +49,7 @@ struct PizzaKitchenBackdrop:View {
                     Gradient(colors:[Color.yellow.opacity(0.3),.clear]),center:CGPoint(x:x,y:y),startRadius:0,endRadius:15))
                 c.fill(Path(ellipseIn:CGRect(x:x-3,y:y-3,width:6,height:8)),with:.color(Color(red:1,green:0.91,blue:0.54)))
             }
-        }.ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
+        }.storybookScene().ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
     }
 }
 struct PizzaIllustration:View {

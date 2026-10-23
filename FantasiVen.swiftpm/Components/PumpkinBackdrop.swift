@@ -93,21 +93,7 @@ struct PumpkinBackdrop:View {
         }
     }
     private func garland(_ c:GraphicsContext,size:CGSize) {
-        let y=size.height*0.04,drop=min(62,size.width*0.11)
-        var wire=Path();wire.move(to:CGPoint(x:-10,y:y))
-        wire.addQuadCurve(to:CGPoint(x:size.width+10,y:y),control:CGPoint(x:size.width/2,y:y+drop*2))
-        c.stroke(wire,with:.color(Color(red:0.18,green:0.13,blue:0.22)),lineWidth:3)
-        for i in 0..<9 {
-            let t=CGFloat(i+1)/10
-            let x=t*size.width,cy=y+4*t*(1-t)*drop
-            let color=[Color(red:1,green:0.65,blue:0.22),Color(red:1,green:0.37,blue:0.49),Color(red:0.4,green:0.87,blue:0.72)][i%3]
-            let halo=CGRect(x:x-27,y:cy-20,width:54,height:54)
-            c.fill(Path(ellipseIn:halo),with:.radialGradient(Gradient(colors:[color.opacity(0.3+darkness*0.15),.clear]),
-                center:CGPoint(x:x,y:cy+7),startRadius:1,endRadius:27))
-            c.fill(Path(roundedRect:CGRect(x:x-3,y:cy-3,width:6,height:7),cornerRadius:2),with:.color(PumpkinLook.ink))
-            c.fill(Path(ellipseIn:CGRect(x:x-6,y:cy+2,width:12,height:16)),
-                with:.linearGradient(Gradient(colors:[.white,color]),startPoint:CGPoint(x:x-4,y:cy),endPoint:CGPoint(x:x+6,y:cy+18)))
-        }
+        StorybookScenery.garland(c,size:size,darkness:darkness)
     }
     private func timber(_ c:GraphicsContext,size:CGSize) {
         let floorY=size.height*(garden ? 0.43 : 0.76)

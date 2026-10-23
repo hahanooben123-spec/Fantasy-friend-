@@ -34,7 +34,7 @@ struct FriendRoomView:View {
         GeometryReader {proxy in
             let wide=proxy.size.width>=740
             ZStack {
-                WorkshopLook.sea.ignoresSafeArea()
+                StorybookWorkshopWall().ignoresSafeArea()
                 VStack(spacing:0) {
                     header(wide)
                     if let friend=friend {
@@ -97,7 +97,7 @@ struct FriendRoomView:View {
             if !future.isEmpty {CreatorToolButton(mark:.redo,label:store.t("redo"),action:redo)}
             Spacer(minLength:0)
             HStack(spacing:3) {modeButton(build:true,wide:wide);modeButton(build:false,wide:wide)}
-                .padding(3).background(Capsule().fill(WorkshopLook.cream))
+                .padding(3).background(StorybookPanel(cornerRadius:25))
         }.padding(.horizontal,10).padding(.vertical,8)
     }
     private func modeButton(build:Bool,wide:Bool)->some View {
@@ -121,7 +121,7 @@ struct FriendRoomView:View {
             Text(store.t(full ? "roomFull" : editing ? (draggingItem != nil ? "roomDropHere" : choice != nil && !trayOpen ? "roomSelectedHint" : "roomSimpleHint") : "roomPlayHint"))
                 .font(.system(size:12,weight:.bold,design:.rounded)).multilineTextAlignment(.center)
                 .padding(.horizontal,14).padding(.vertical,9)
-                .background(Capsule().fill(.white.opacity(0.90))).padding(10).allowsHitTesting(false)
+                .background(StorybookPanel(cornerRadius:24)).padding(10).allowsHitTesting(false)
         }.background(GeometryReader {proxy in
             Color.clear.preference(key:RoomSurfaceFrameKey.self,value:proxy.frame(in:.named("roomWorkshop")))
         })
@@ -135,7 +135,7 @@ struct FriendRoomView:View {
                             RoomFurniture(kind:[6,1,13][index]).frame(width:36,height:36)
                             Text(store.t("roomCategory\(index)")).font(.system(size:11,weight:.heavy,design:.rounded)).lineLimit(1)
                         }.frame(maxWidth:.infinity,minHeight:59)
-                            .background(RoundedRectangle(cornerRadius:17).fill(category == index ? WorkshopLook.yellow : .white.opacity(0.65)))
+                            .background(CandySurface(color:category == index ? WorkshopLook.yellow : StorybookStyle.cream,cornerRadius:17))
                     }.buttonStyle(SquishStyle()).accessibilityAddTraits(category == index ? .isSelected : [])
                 }
             }.padding(.horizontal,10)
@@ -144,7 +144,7 @@ struct FriendRoomView:View {
                     items(vertical:vertical)
                 }.padding(10)
             }
-        }.padding(.top,8).background(WorkshopLook.cream)
+        }.padding(.top,8).background(StorybookShelf())
     }
     private func items(vertical:Bool)->some View {
         ForEach(RoomItem.allCases.filter {$0.category == category},id:\.rawValue) {item in
@@ -226,7 +226,7 @@ struct FriendRoomView:View {
                     simpleTool("square.3.layers.3d.bottom.filled","roomBack") {transform {$0.layer = -1}}
                 }
             }.padding(24)
-        }.background(WorkshopLook.cream)
+        }.background(StorybookShelf())
     }
     private var playTools:some View {
         HStack(spacing:12) {
@@ -251,7 +251,7 @@ struct FriendRoomView:View {
                 }
             }
             Spacer(minLength:0)
-        }.padding(26).background(WorkshopLook.cream)
+        }.padding(26).background(StorybookShelf())
     }
     private func load() {
         guard !loaded,let friend=friend else {return}

@@ -107,8 +107,9 @@ struct FriendRevealView:View {
                         .offset(x:(side == 0 ? -1 : 1)*(curtainsOpen ? proxy.size.width*0.73 : proxy.size.width*0.24))
                 }
                 Capsule().fill(WorkshopLook.yellow).frame(height:13).frame(maxHeight:.infinity,alignment:.top)
-            }.clipShape(RoundedRectangle(cornerRadius:40))
-                .overlay(RoundedRectangle(cornerRadius:40).stroke(.white.opacity(0.75),lineWidth:3))
+            }.storybookScene(night:true,lamps:true).clipShape(RoundedRectangle(cornerRadius:40))
+                .overlay(RoundedRectangle(cornerRadius:40).stroke(StorybookStyle.honey,lineWidth:3))
+                .shadow(color:StorybookStyle.plum.opacity(0.24),radius:12,y:8)
         }
     }
 }

@@ -221,7 +221,7 @@ struct ConcertBackdrop:View {
                 plank.addLine(to:CGPoint(x:x,y:s.height))
                 c.stroke(plank,with:.color(.white.opacity(0.12)),lineWidth:2)
             }
-        }.ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
+        }.storybookScene(night:true,lamps:true).ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
     }
 }
 

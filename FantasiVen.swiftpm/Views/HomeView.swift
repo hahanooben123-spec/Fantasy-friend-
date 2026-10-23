@@ -70,7 +70,7 @@ struct HomeView:View {
             NavigationLink(destination:SettingsView()) {
                 Image(systemName:"gearshape.fill").font(.system(size:22,weight:.bold))
                     .foregroundColor(GameStyle.ink).frame(width:52,height:52)
-                    .background(CandySurface(color:WorkshopLook.cream,cornerRadius:24))
+                    .background(StorybookPanel(cornerRadius:24))
             }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("settings"))
         }
     }
@@ -115,7 +115,7 @@ struct HomeView:View {
             Text(title).font(.system(size:15,weight:.heavy,design:.rounded)).lineLimit(2)
                 .frame(maxWidth:.infinity,alignment:.leading)
         }.padding(.horizontal,10).frame(maxWidth:.infinity,minHeight:65)
-            .background(CandySurface(color:WorkshopLook.cream,cornerRadius:23))
+            .background(StorybookPanel(cornerRadius:23))
     }
     private func workshop(title:String,pumpkin:Bool)->some View {
         HStack(spacing:7) {

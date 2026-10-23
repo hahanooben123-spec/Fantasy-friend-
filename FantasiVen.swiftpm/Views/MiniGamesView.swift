@@ -28,7 +28,7 @@ struct MiniGamesView:View {
                                     .font(.system(size:22,weight:.bold)).frame(width:52,height:52)
                                     .background(CandySurface(color:WorkshopLook.yellow,cornerRadius:19))
                             }.buttonStyle(SquishStyle()).accessibilityLabel(store.t(store.friends.isEmpty ? "create" : "chooseFriend"))
-                        }.padding(.horizontal,13).padding(.vertical,5).background(CandySurface(color:WorkshopLook.cream,cornerRadius:26))
+                        }.padding(.horizontal,13).padding(.vertical,5).background(StorybookPanel(cornerRadius:26))
                         LazyVGrid(columns:[GridItem(.flexible(),spacing:14),GridItem(.flexible(),spacing:14)],spacing:15) {
                             ForEach(MiniGameKind.menuGames) {kind in
                                 NavigationLink(destination:GameDestinationView(kind:kind,friend:friend).id(friend.id)) {

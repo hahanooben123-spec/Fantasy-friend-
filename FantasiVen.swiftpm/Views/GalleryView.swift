@@ -18,7 +18,7 @@ struct GalleryView: View {
                                     Label(store.t("newFriend"), systemImage: "plus.circle.fill")
                                         .font(.system(.headline, design: .rounded).weight(.heavy)).multilineTextAlignment(.center)
                                 }.foregroundColor(GameStyle.ink).padding(12).frame(maxWidth: .infinity).frame(height: 246)
-                                    .background(RoundedRectangle(cornerRadius: 38).fill(StudioStyle.colors[0].opacity(0.65)))
+                                    .background(CandySurface(color:StorybookStyle.honey,cornerRadius:38))
                                     .overlay(RoundedRectangle(cornerRadius: 38).stroke(.white, style: StrokeStyle(lineWidth: 3, dash: [9, 6])))
                             }.buttonStyle(SquishStyle())
                             ForEach(store.friends) { friend in
