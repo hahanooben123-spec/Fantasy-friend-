@@ -37,7 +37,7 @@ struct PumpkinGameView:View {
         }.alert(words.t("error"),isPresented:Binding(get:{library.errorKey != nil},set:{if !$0 {library.errorKey=nil}})) {
             Button("OK") {library.errorKey=nil}
         } message:{Text(words.t(library.errorKey ?? "lanternSaveError"))}
-            .onAppear {SoundService.shared.setWorld(.castle)}
+            .onAppear {SoundService.shared.setWorld(.castle);words.visit(.pumpkin)}
             .onDisappear {SoundService.shared.stopSpeech()}
     }
     private func newLantern() {

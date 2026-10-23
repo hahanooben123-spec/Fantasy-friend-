@@ -7,13 +7,14 @@ struct PlayHUD: View {
     let hint:String
     @Binding var paused:Bool
     @State private var settings=false
+    @State private var wasPaused=false
     var body:some View {
         HStack(spacing:8) {
             RoundButton(icon:"chevron.left",label:store.t("close")) {presentation.wrappedValue.dismiss()}
             Text(title).font(.system(size:18,weight:.heavy,design:.rounded)).lineLimit(1).minimumScaleFactor(0.7)
                 .padding(.horizontal,12).padding(.vertical,10).background(Capsule().fill(.white.opacity(0.92)))
             Spacer(minLength:0)
-            RoundButton(icon:"slider.horizontal.3",label:store.t("settings")) {settings=true}
+            RoundButton(icon:"slider.horizontal.3",label:store.t("settings")) {wasPaused=paused;paused=true;settings=true}
             RoundButton(icon:paused ? "play.fill" : "pause.fill",label:store.t(paused ? "resumeGame" : "pauseGame")) {paused.toggle()}
         }.padding(.horizontal,12).padding(.top,8)
             .sheet(isPresented:$settings) {
@@ -29,7 +30,7 @@ struct PlayHUD: View {
                         CandyButton(title:store.t("continue"),icon:"checkmark") {settings=false}
                     }.padding(28).frame(maxWidth:480)
                 }
-            }.onChange(of:settings) { value in if value {paused=true} }
+            }.onChange(of:settings) { value in if !value {paused=wasPaused} }
     }
 }
 struct PlayPauseOverlay:View {
@@ -39,7 +40,7 @@ struct PlayPauseOverlay:View {
         ZStack {
             Color.indigo.opacity(0.4).ignoresSafeArea()
             VStack(spacing:20) {
-                Text("☁️").font(.system(size:80))
+                CloudArtwork().frame(width:100,height:80)
                 CandyButton(title:store.t("resumeGame"),icon:"play.fill",action:resume)
             }.padding(28).frame(maxWidth:340).background(CandySurface(color:Color(red:1,green:0.96,blue:0.82),cornerRadius:36))
         }
@@ -63,9 +64,9 @@ struct PlayToken:View {
     var body:some View {
         Button(action:action) {
             VStack(spacing:2) {
-                Text(symbol).font(.system(size:29))
-                Text(label).font(.system(size:10,weight:.heavy,design:.rounded)).lineLimit(1).minimumScaleFactor(0.7)
-            }.frame(minWidth:44,minHeight:56)
+                PlayControlArtwork(symbol:symbol).frame(width:38,height:38)
+                Text(label).font(.system(size:12,weight:.heavy,design:.rounded)).lineLimit(2).multilineTextAlignment(.center)
+            }.frame(minWidth:52,minHeight:66)
                 .background(RoundedRectangle(cornerRadius:18).fill(selected ? StudioStyle.colors[0] : .clear))
         }.buttonStyle(SquishStyle()).accessibilityLabel(label)
     }

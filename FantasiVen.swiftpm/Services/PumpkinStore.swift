@@ -14,14 +14,17 @@ final class PumpkinStore:ObservableObject {
     }
     init(directory:URL? = nil) {
         self.directory=directory ?? FileManager.default.urls(for:.applicationSupportDirectory,in:.userDomainMask)[0].appendingPathComponent("FantasiVen",isDirectory:true)
-        let file=self.directory.appendingPathComponent("lanterns.json")
+        reload()
+    }
+    func reload() {
+        let file=directory.appendingPathComponent("lanterns.json")
         guard FileManager.default.fileExists(atPath:file.path) else {return}
         do {
             let archive=try JSONDecoder().decode(Archive.self,from:Data(contentsOf:file))
             guard archive.version == 1,archive.lanterns.allSatisfy(\.isValid),
                   Set(archive.lanterns.map(\.id)).count == archive.lanterns.count,
                   archive.draft?.isValid ?? true else {throw CocoaError(.fileReadCorruptFile)}
-            lanterns=archive.lanterns;draft=archive.draft
+            lanterns=archive.lanterns;draft=archive.draft;readable=true;errorKey=nil
         } catch {readable=false;errorKey="lanternLoadError"}
     }
     private func write(_ values:[PumpkinLantern],draft:PumpkinLantern?)->Bool {

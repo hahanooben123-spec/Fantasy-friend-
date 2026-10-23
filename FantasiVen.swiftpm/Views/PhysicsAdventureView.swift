@@ -65,13 +65,13 @@ struct PhysicsAdventureView:View {
                             .position(x:proxy.size.width*0.5,y:proxy.size.height*0.83)
                     }
                     ForEach(trail.stars) {star in
-                        Text("⭐️").font(.system(size:34)).position(x:star.x*proxy.size.width,y:star.y*proxy.size.height)
+                        StarArtwork().frame(width:34,height:34).position(x:star.x*proxy.size.width,y:star.y*proxy.size.height)
                             .allowsHitTesting(false)
                     }
                     PlayCelebration(revision:celebration)
                     VStack {
                         HStack {
-                            Text("⭐️ \(trail.collected)").font(.system(size:24,weight:.heavy,design:.rounded))
+                            HStack {StarArtwork().frame(width:30,height:30);Text("\(trail.collected)").font(.system(size:24,weight:.heavy,design:.rounded))}
                                 .padding(12).background(Capsule().fill(.white.opacity(0.92)))
                             Spacer()
                             if saved {Text(store.t("saved")).padding(10).background(Capsule().fill(.white))}

@@ -32,6 +32,7 @@ struct RoomScene:View {
                         onTap:{onTap(value)},onMove:onMove)
                         .zIndex(editing && selected == value.id ? 4000 : Double(shown.level)*1000+shown.y*100)
                 }
+                GestureLesson(activity:pulse+(selected == nil ? 0 : 1),from:UnitPoint(x:0.25,y:0.65),to:UnitPoint(x:0.4,y:0.6)).zIndex(4500)
                 companion(size)
                     .zIndex(1000+Double(friendPreview?.y ?? CGFloat(layout.design.friendY))*100)
                 if layout.design.night {
@@ -125,14 +126,22 @@ private struct RoomPlacedObject:View {
             .position(x:object.x*roomSize.width,y:object.y*roomSize.height)
             .onTapGesture(perform:onTap)
             .gesture(DragGesture(minimumDistance:5,coordinateSpace:.named("friendRoomScene")).onChanged {event in
-                guard editing else {return}
+                guard editing || object.kind == RoomItem.ball.rawValue else {return}
                 if origin == nil {origin=object}
                 guard var next=origin else {return}
                 next.move(x:next.x+Double(event.translation.width/max(1,roomSize.width)),
                     y:next.y+Double(event.translation.height/max(1,roomSize.height)))
                 gestureValue=next;onMove(next,false)
-            }.onEnded {_ in
-                if let next=gestureValue {onMove(next,true)}
+            }.onEnded {event in
+                if var next=gestureValue {
+                    if object.kind == RoomItem.ball.rawValue {
+                        let dx=Double((event.predictedEndTranslation.width-event.translation.width)/max(1,roomSize.width))*0.45
+                        let dy=Double((event.predictedEndTranslation.height-event.translation.height)/max(1,roomSize.height))*0.45
+                        next.move(x:next.x+dx,y:next.y+dy)
+                        withAnimation(reduced ? nil : .interpolatingSpring(stiffness:130,damping:11)) {onMove(next,true)}
+                        SoundService.shared.play(.bounce)
+                    } else {onMove(next,true)}
+                }
                 origin=nil;gestureValue=nil
             })
             .simultaneousGesture(MagnificationGesture().onChanged {factor in

@@ -3,7 +3,7 @@ import Foundation
 
 @MainActor
 final class SoundService {
-    enum Cue: String { case click, reaction, complete }
+    enum Cue: String { case click,reaction,complete,pourFlour,pourWater,pourOil,mix,oven,munch,bubble,catchFruit,bounce }
     static let shared = SoundService()
     private var settings = GameSettings()
     private var effects: [AVAudioPlayer] = []
@@ -90,7 +90,7 @@ final class SoundService {
     func play(_ cue: Cue) {
         guard settings.sound && active else { return }
         let now = ProcessInfo.processInfo.systemUptime
-        let interval = cue == .click ? 0.075 : 0.18
+        let interval:Double = cue == .click ? 0.075 : cue == .mix ? 0.20 : cue == .oven ? 0.85 : 0.16
         if let previous = lastCue[cue], now - previous < interval { return }
         lastCue[cue] = now
         let name: String
@@ -98,9 +98,18 @@ final class SoundService {
         case .click: name = ["kenney_click_001", "kenney_click_002", "kenney_click_003"].randomElement()!
         case .reaction: name = ["kenney_pluck_001", "kenney_pluck_002", "kenney_drop_001"].randomElement()!
         case .complete: name = "kenney_confirmation_001"
+        case .pourFlour:name="foley_pour_flour"
+        case .pourWater:name="foley_pour_water"
+        case .pourOil:name="foley_pour_oil"
+        case .mix:name="foley_mix"
+        case .oven:name="foley_oven"
+        case .munch:name="foley_munch"
+        case .bubble:name="foley_bubble"
+        case .catchFruit:name="foley_catch"
+        case .bounce:name="foley_bounce"
         }
         if let url = Self.audioURL(name), let player = try? AVAudioPlayer(contentsOf: url) {
-            startEffect(player, gain: cue == .click ? 0.28 : 0.55, varied: cue != .complete)
+            startEffect(player, gain: cue == .click ? 0.28 : cue == .oven ? 0.3 : 0.55, varied: cue != .complete)
         } else {
             playNotes(cue == .click ? [660] : [523.25, 659.25, 783.99], duration: cue == .click ? 0.055 : 0.14, timbre: 0)
         }

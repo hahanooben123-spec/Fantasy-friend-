@@ -6,6 +6,8 @@ struct BuilderView: View {
     @Environment(\.presentationMode) private var presentation
     let original: FantasyFriend
     let existing: Bool
+    var resuming=false
+    @Environment(\.scenePhase) private var phase
     @State private var friend: FantasyFriend
     @State private var history: [FantasyFriend] = []
     @State private var future: [FantasyFriend] = []
@@ -22,10 +24,14 @@ struct BuilderView: View {
     @State private var celebration = false
     @State private var discard = false
     @State private var revision = 0
+    @State private var moreTools=false
+    @State private var dragPick:CreatorPick?
+    @State private var dragPoint=CGPoint.zero
+    @State private var stageFrame=CGRect.zero
     private let categories: [Part] = [.body,.color,.eyes,.mouth,.arms,.legs,.extras,.paint]
 
-    init(original: FantasyFriend, existing: Bool) {
-        self.original=original;self.existing=existing
+    init(original: FantasyFriend, existing: Bool, resuming:Bool=false) {
+        self.original=original;self.existing=existing;self.resuming=resuming
         _friend=State(initialValue:original)
     }
     var body: some View {
@@ -47,16 +53,43 @@ struct BuilderView: View {
                         drawer(wide:false).frame(height:min(220,max(164,geometry.size.height*0.28)))
                     }
                 }
+                if let pick=dragPick {
+                    choiceArt(pick.index).frame(width:92,height:94)
+                        .shadow(color:GameStyle.ink.opacity(0.25),radius:8,y:8)
+                        .position(dragPoint).allowsHitTesting(false)
+                }
                 if celebration { celebrationView }
-            }
+                if let message=store.error {
+                    VStack {
+                        Spacer()
+                        HStack(spacing:12) {
+                            Text(message).font(.system(.subheadline,design:.rounded)).fixedSize(horizontal:false,vertical:true)
+                            Button("OK") {store.error=nil}.font(.headline).frame(minWidth:48,minHeight:48)
+                        }.padding(16).background(CandySurface(color:WorkshopLook.cream,cornerRadius:24))
+                            .padding(18)
+                    }.foregroundColor(GameStyle.ink)
+                }
+            }.coordinateSpace(name:"creatorWorkshop")
+                .onPreferenceChange(CreatorStageFrameKey.self) {stageFrame=$0}
         }.foregroundColor(WorkshopLook.sea)
             .sheet(isPresented:$starters) {
                 StarterFriendsSheet(onChoose:chooseStarter,onClose:{starters=false}).environmentObject(store)
             }
-            .task {if !existing {starters=true}}
+            .task {if !existing && !resuming {starters=true}}
+            .task(id:friend) {
+                guard !celebration else {return}
+                do {try await Task.sleep(nanoseconds:650_000_000)} catch {return}
+                guard !celebration else {return}
+                store.saveEditorDraft(friend,existing:existing)
+            }
+            .onChange(of:phase) {value in
+                if value != .active && !celebration {dragPick=nil;incoming=nil;finishGesture();store.saveEditorDraft(friend,existing:existing)}
+            }
+            .onDisappear {if !celebration {store.saveEditorDraft(friend,existing:existing)}}
+            .sheet(isPresented:$moreTools) {advancedTools}
             .sheet(isPresented:$naming) {
                 NamingView(friend:$friend) {
-                    if store.save(friend) { naming=false;celebration=true;SoundService.shared.play(.complete) }
+                    if store.save(friend) { naming=false;celebration=true;store.clearEditorDraft(friend.id);SoundService.shared.play(.complete) }
                 }.environmentObject(store)
             }
             .sheet(isPresented:$personality) {
@@ -71,7 +104,7 @@ struct BuilderView: View {
         HStack(spacing:10) {
             CreatorToolButton(mark:.close,label:store.t("close")) {
                 finishGesture()
-                if friend != original { discard=true } else { presentation.wrappedValue.dismiss() }
+                if store.saveEditorDraft(friend,existing:existing) {presentation.wrappedValue.dismiss()}
             }
             if wide {
                 VStack(alignment:.leading,spacing:2) {
@@ -165,17 +198,17 @@ struct BuilderView: View {
                 ScrollView(wide ? .vertical : .horizontal,showsIndicators:false) {
                     if wide {
                         LazyVGrid(columns:[GridItem(.flexible()),GridItem(.flexible())],spacing:10) {
-                            choices
+                            choices(wide:wide)
                         }.padding(12)
                     } else {
-                        HStack(alignment:.center,spacing:14) { choices }.padding(.horizontal,16).padding(.vertical,5)
+                        HStack(alignment:.center,spacing:14) { choices(wide:wide) }.padding(.horizontal,16).padding(.vertical,5)
                     }
                 }.id(part)
             }
         }.padding(.top,12).padding(.bottom,10).frame(maxWidth:.infinity,maxHeight:.infinity)
             .background(WorkshopLook.cream)
     }
-    private var choices: some View {
+    private func choices(wide:Bool)->some View {
         ForEach(0..<optionCount,id:\.self) { index in
             Button { apply(CreatorPick(part:part,index:index),at:nil) } label: {
                 VStack(spacing:2) {
@@ -189,10 +222,7 @@ struct BuilderView: View {
                     .contentShape(Rectangle())
             }.buttonStyle(SquishStyle())
                 .accessibilityLabel(store.t(Words.partKeys[part.rawValue])+" \(index+1)")
-                .onDrag {
-                    incoming=CreatorPick(part:part,index:index)
-                    return NSItemProvider(object:"fantasiven-creator" as NSString)
-                }
+                .simultaneousGesture(pickGesture(CreatorPick(part:part,index:index),wide:wide))
         }
     }
     @ViewBuilder private func choiceArt(_ index:Int)->some View {
@@ -258,8 +288,11 @@ struct BuilderView: View {
     private var selectionTools: some View {
         HStack(spacing:12) {
             if selection != nil && selection != .body && part != .paint {
-                CreatorToolButton(mark:.duplicate,label:store.t("copyPiece"),action:duplicate).disabled(selection == .mouth)
-                CreatorToolButton(mark:.mirror,label:store.t("mirror"),action:mirror)
+                Button {moreTools=true} label:{
+                    Label(store.t("roomMore"),systemImage:"ellipsis")
+                        .font(.system(size:14,weight:.heavy,design:.rounded))
+                        .frame(width:88,height:52).background(CandySurface(color:.white,cornerRadius:18))
+                }.buttonStyle(SquishStyle())
                 CreatorToolButton(mark:.trash,label:store.t("removePart"),action:removeSelection)
                 Button { part = .color } label: {
                     ZStack { Circle().fill(GameStyle.palette[friend.color]).frame(width:26,height:26).offset(x:-6);Circle().fill(GameStyle.palette[friend.accent]).frame(width:23,height:23).offset(x:8,y:7) }
@@ -271,6 +304,45 @@ struct BuilderView: View {
                     .padding(.horizontal,15).padding(.vertical,9).background(Capsule().fill(.white.opacity(0.9)))
             }
         }.frame(height:48).frame(maxWidth:.infinity)
+    }
+    private func pickGesture(_ pick:CreatorPick,wide:Bool)->some Gesture {
+        DragGesture(minimumDistance:12,coordinateSpace:.named("creatorWorkshop")).onChanged {value in
+            if dragPick == nil {
+                let across=abs(value.translation.width),up=abs(value.translation.height)
+                guard wide ? across>up*0.7 : up>across*0.7 else {return}
+                finishGesture();SoundService.shared.play(.click)
+            }
+            dragPick=pick;incoming=pick;dragPoint=value.location
+        }.onEnded {value in
+            defer {dragPick=nil;incoming=nil}
+            guard dragPick != nil,stageFrame.width>0,stageFrame.height>0,stageFrame.contains(value.location) else {return}
+            var point=CGPoint(x:((value.location.x-stageFrame.minX)/stageFrame.width-0.5)/1.1*300+150,
+                              y:((value.location.y-stageFrame.minY)/stageFrame.height-0.5)/1.1*320+160)
+            let anchors:[CGPoint]
+            switch pick.part {
+            case .eyes:anchors=[CGPoint(x:150,y:157)]
+            case .mouth:anchors=[CGPoint(x:151,y:207)]
+            case .arms:anchors=[CGPoint(x:74,y:181),CGPoint(x:226,y:181)]
+            case .legs:anchors=[CGPoint(x:117,y:265),CGPoint(x:183,y:265)]
+            default:anchors=[]
+            }
+            if let nearest=anchors.min(by:{hypot($0.x-point.x,$0.y-point.y)<hypot($1.x-point.x,$1.y-point.y)}),
+               hypot(nearest.x-point.x,nearest.y-point.y)<13 {point=nearest}
+            apply(pick,at:point)
+        }
+    }
+    private var advancedTools:some View {
+        VStack(spacing:22) {
+            HStack {Text(store.t("roomMore")).font(.title2.bold());Spacer()
+                RoundButton(icon:"xmark",label:store.t("close")) {moreTools=false}}
+            CharacterView(friend:friend).frame(height:200)
+            CandyButton(title:store.t("copyPiece"),icon:"square.on.square") {duplicate();moreTools=false}
+                .disabled(selection == .mouth || selection == .body)
+            CandyButton(title:store.t("mirror"),icon:"arrow.left.and.right") {mirror();moreTools=false}
+                .disabled(selection == .body)
+            Text(store.t("creatorHandleHint")).font(.system(.body,design:.rounded)).multilineTextAlignment(.center)
+            Spacer(minLength:0)
+        }.padding(26).background(WorkshopLook.cream).foregroundColor(GameStyle.ink)
     }
     private func beginGesture() { if transaction == nil { transaction=friend } }
     private func finishGesture() {

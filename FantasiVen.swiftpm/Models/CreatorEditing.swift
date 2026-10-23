@@ -47,11 +47,16 @@ enum CreatorGeometry {
         let height = (sine * rect.width + cosine * rect.height) * factor
         return CGRect(x: center.x - width / 2, y: center.y - height / 2, width: width, height: height)
     }
-    static func hit(_ point: CGPoint, friend: FantasyFriend, margin: CGFloat) -> CreatorSelection? {
+    static func hit(_ point: CGPoint, friend: FantasyFriend, margin: CGFloat, minimumTouchSize:CGFloat=0) -> CreatorSelection? {
         let pieces = (friend.pieces ?? []).reversed().map { CreatorSelection.piece($0.id) }
         let face: [CreatorSelection] = [.eyes, .mouth].filter { !friend.isHidden($0 == .eyes ? "eyes" : "mouth") }
         let attachments = AttachmentLayout.attachments(in: friend).reversed().filter { !friend.isHidden($0.rawValue) }.map { CreatorSelection.attachment($0) }
-        return (pieces + face + attachments + [.body]).first { bounds($0, friend: friend).insetBy(dx: -margin, dy: -margin).contains(point) }
+        return (pieces + face + attachments + [.body]).first {
+            let rect=bounds($0,friend:friend)
+            let dx=max(margin,(minimumTouchSize-rect.width)/2)
+            let dy=max(margin,(minimumTouchSize-rect.height)/2)
+            return rect.insetBy(dx:-dx,dy:-dy).contains(point)
+        }
     }
     static func pose(_ selection: CreatorSelection, friend: FantasyFriend) -> PartPlacement {
         switch selection {

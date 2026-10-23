@@ -31,3 +31,6 @@ SwiftPM processes Resources; Xcode explicitly bundles every Audio/*.wav.
 Missing files fall back to the existing synthesized cues.
 Music remains opt-in; existing saved preferences are preserved.
 Device listening and Apple compilation have not been performed for this change.
+
+## Contextual effects
+Nine original Foley-inspired synthesized WAV effects are generated with tools/generate_foley.py (Python standard library). They contain no third-party samples and require no third-party credit. Pour flour/water/oil, mixing, oven, munch, bubble, fruit catch and bounce have distinct sounds.

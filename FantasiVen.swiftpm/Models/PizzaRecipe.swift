@@ -1,27 +1,34 @@
 import Foundation
 
-struct PizzaPoint:Equatable {
+struct PizzaPoint:Codable,Equatable {
     var x:Double
     var y:Double
     var onDough:Bool {x.isFinite && y.isFinite && hypot(x-0.5,y-0.48)<0.37}
 }
-struct PizzaSauceStroke:Identifiable,Equatable {
+struct PizzaSauceStroke:Identifiable,Codable,Equatable {
     var id=UUID()
     var points:[PizzaPoint]
 }
-struct PizzaSprinkle:Identifiable,Equatable {
+struct PizzaSprinkle:Identifiable,Codable,Equatable {
     var id=UUID()
     var kind:Int
     var point:PizzaPoint
     var angle:Double
 }
-struct PizzaRecipe:Equatable {
+struct PizzaRecipe:Codable,Equatable {
     var ingredients:Set<Int> = []
     var mixed=0.0
     var formed=0.0
     var sauce:[PizzaSauceStroke]=[]
     var spices:[PizzaSprinkle]=[]
     var toppings:[PizzaTopping]=[]
+    var isValid:Bool {
+        ingredients.allSatisfy {(0..<3).contains($0)} &&
+        mixed.isFinite && formed.isFinite && (0...1).contains(mixed) && (0...1).contains(formed) &&
+        sauce.count<=60 && sauce.allSatisfy {!$0.points.isEmpty && $0.points.count<=300 && $0.points.allSatisfy {$0.x.isFinite && $0.y.isFinite && (-0.1...1.1).contains($0.x) && (-0.1...1.1).contains($0.y)}} &&
+        toppings.count<=120 && toppings.allSatisfy {$0.point.onDough && $0.angle.isFinite} &&
+        spices.count<=360 && spices.allSatisfy {(0...3).contains($0.kind) && $0.point.onDough && $0.angle.isFinite}
+    }
     var readyToShape:Bool {ingredients.count == 3 && mixed>=1}
     var readyForSauce:Bool {readyToShape && formed>=0.7}
     mutating func sprinkle(_ kind:Int,at point:PizzaPoint) {
@@ -58,11 +65,11 @@ struct PizzaRecipe:Equatable {
     }
 }
 
-enum PizzaToppingKind:Int,CaseIterable {
+enum PizzaToppingKind:Int,Codable,CaseIterable {
     case cheese,pepperoni,ham,mushroom,pepper,olive,pineapple
     var key:String {"pizzaTopping\(rawValue)"}
 }
-struct PizzaTopping:Identifiable,Equatable {
+struct PizzaTopping:Identifiable,Codable,Equatable {
     var id=UUID()
     var kind:PizzaToppingKind
     var point:PizzaPoint

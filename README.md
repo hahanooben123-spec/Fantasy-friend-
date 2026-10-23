@@ -2,6 +2,22 @@
 
 Et originalt, lokalt iPhone-spil til børn på 3–8 år. Swift 6, SwiftUI og iOS 15+. Ingen tredjepartspakker, login, netværkskald eller køb.
 
+## Samlet forbedring af spiloplevelsen
+
+- En personlig **Fortsæt din leg**-indgang viser den aktuelle figur-, pizza- eller græskarkreation. Den fører også tilbage til værelset eller det seneste minispil.
+- Figurværkstedet og pizzaen gemmer validerede kladder atomisk i sessions.json efter en kort pause i arbejdet, ved baggrundsskift og ved afslutning. Gemte venner ændres fortsat først ved Gem. Pizzaens opskrift, trin, ovnfremskridt og spiste stykker gendannes.
+- Dele trækkes direkte fra figurens bakke uden systemets lange tryk. En miniature følger fingeren, scenen markeres, og små placeringsforslag hjælper tæt på ansigt og lemmer. Fri placering og trykvalg bevares. Kopiering/spejling er samlet under Mere, og grebene er større.
+- Møbler reagerer også under indretning. Bolden kan trækkes og kastes med en kort fjederbevægelse. To korte hånddemonstrationer hjælper i værksteder og legeaktiviteter.
+- Frugt, blomster, stjerner og instrumenter har originale illustrationer. Picnic lader barnet dele den fangede frugt med vennen. Bobler kan trækkes sammen og blander farve.
+- Orkestret har direkte spilbare instrumenter, fem toner på xylofonen og en koncertscene. Optagede toner gemmes i melodien; rytmeeditor og melodiforslag ligger under Mere. Melodien gemmes automatisk.
+- Ni originale lokale effekter giver hældning, omrøring, ovn, spisning, bobler, fangst og boldspil forskellige lyde. Ingen nye krediteringskrav.
+- Pauseindstillinger vender tilbage til den tidligere pausetilstand. Playgrounds-pakken understøtter nu også landskab.
+- Hovedmenuens minispil er fortsat frugtfangst, bobler, pizza og orkester. Rutsjebane/trampolin hører til legepladsen. Gemmeleg og stispil er ikke eksponeret i hovedmenuen.
+
+Genoptagelse af frugtfangst, bobler og fysisk leg åbner aktiviteten igen; midlertidige fysikpositioner og tællere gemmes ikke. Kladder, samling, værelse, sang og græskar gemmes lokalt. Der er ingen backend.
+
+Denne samlede ændring er ikke bygget, afprøvet visuelt eller lydmæssigt eller testet på Apple-enheder. Projektgeneratoren er kun kørt for at registrere nye Swift-kilder og ressourcer.
+
 ## Åbn og kør
 
 1. Åbn **FantasiVen.xcodeproj** på en Mac med Xcode 16 eller nyere.
@@ -48,7 +64,7 @@ Fortryd og gendan fungerer for valg, dele og hele træk. Gemte venner beholder d
 
 Figurdata indeholder kun stabile ID'er og indeks. Rendereren udleder tegningen af dataene. Tilbehør gemmes som et sæt, så valg kan kombineres. Lagringen er versionsmærket og atomisk i Application Support/FantasiVen. Ændringer offentliggøres først i hukommelsen, når filskrivningen lykkes. En korrupt eller ukendt samling bevares, og overskrivning blokeres med en synlig fejl. Ingen automatisk nulstilling, kvote eller beskæring af samlingen.
 
-Tilføj eventuelt egne `click.wav`, `reaction.wav`, `complete.wav` og `music.wav` i Resources. Registrér nye ressourcer i projektgeneratoren for Xcode, og kør generatoren igen. SoundService benytter Bundle.main og falder tilbage til genererede toner, hvis filerne mangler eller ikke kan afspilles.
+Lydfiler ligger i Resources/Audio. Projektgeneratoren inkluderer WAV-filerne i Xcode, og SwiftPM behandler Resources automatisk. SoundService finder både pakkens og appens ressourcer og har syntetiske reservetoner. Kilder og reproduktion: Documentation/Audio/README.md.
 
 ## Verifikation og næste fase
 

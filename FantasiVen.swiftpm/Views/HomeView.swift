@@ -4,10 +4,13 @@ struct EditorRequest:Identifiable {
     let id=UUID()
     var friend:FantasyFriend
     var existing:Bool
+    var resuming=false
 }
 struct HomeView:View {
     @EnvironmentObject private var store:FriendStore
     @State private var editor:EditorRequest?
+    @State private var resumeNavigation=false
+    @StateObject private var pumpkins=PumpkinStore()
     @State private var starter=FriendSeed.bimse.make()
     private var mascot:FantasyFriend {store.friends.first ?? starter}
     var body:some View {
@@ -20,6 +23,8 @@ struct HomeView:View {
                     ScrollView(showsIndicators:false) {
                         VStack(spacing:tablet ? 24 : 18) {
                             header(tablet:tablet)
+                            NavigationLink(destination:resumeDestination,isActive:$resumeNavigation) {EmptyView()}.hidden()
+                            if recent != nil {resumeCard}
                             if landscape {
                                 HStack(alignment:.top,spacing:28) {
                                     welcome(height:max(310,min(470,proxy.size.height-215)))
@@ -37,9 +42,10 @@ struct HomeView:View {
                         }.padding(.horizontal,tablet ? 28 : 16).padding(.top,16).padding(.bottom,28)
                             .frame(maxWidth:1280).frame(maxWidth:.infinity)
                     }
-                }
+                }.onAppear {pumpkins.reload()}
             }.navigationBarHidden(true)
         }.navigationViewStyle(.stack).accentColor(GameStyle.purple).foregroundColor(GameStyle.ink)
+            .onAppear {pumpkins.reload()}
             .task {
                 #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("--preview-creator") {
@@ -48,7 +54,7 @@ struct HomeView:View {
                 #endif
             }
             .fullScreenCover(item:$editor) {request in
-                BuilderView(original:request.friend,existing:request.existing).environmentObject(store)
+                BuilderView(original:request.friend,existing:request.existing,resuming:request.resuming).environmentObject(store)
             }
             .alert(store.t("error"),isPresented:Binding(get:{store.error != nil && editor == nil},set:{if !$0 {store.error=nil}})) {
                 Button("OK") {store.error=nil}
@@ -115,6 +121,60 @@ struct HomeView:View {
             .background(CandySurface(color:pumpkin ? Color(red:0.47,green:0.29,blue:0.62) : Color(red:1,green:0.76,blue:0.39),cornerRadius:25))
             .foregroundColor(pumpkin ? WorkshopLook.cream : GameStyle.ink)
     }
+
+    private var recent:ActivityBookmark? {
+        if let value=store.sessions.recent {
+            if value.kind == .creator && store.sessions.editor == nil {return nil}
+            if value.kind == .room && !store.friends.contains(where:{$0.id == value.friendID}) {return nil}
+            return value
+        }
+        return nil
+    }
+    private var recentFriend:FantasyFriend {
+        store.friends.first {$0.id == recent?.friendID}
+            ?? (recent?.kind == .pizza ? store.sessions.pizza?.companion : nil) ?? mascot
+    }
+    private var resumeCard:some View {
+        Button(action:resume) {
+            HStack(spacing:14) {
+                Group {
+                    switch recent?.kind {
+                    case .creator:CharacterView(friend:store.sessions.editor?.friend ?? mascot)
+                    case .pizza:PizzaIllustration(recipe:store.sessions.pizza?.recipe ?? .sample,baked:store.sessions.pizza?.baked ?? 1)
+                    case .pumpkin:PumpkinIllustration(lantern:pumpkins.draft ?? pumpkins.lanterns.first ?? PumpkinDoor.sample,animated:false)
+                    default:CharacterView(friend:recentFriend)
+                    }
+                }.frame(width:72,height:78).accessibilityHidden(true)
+                VStack(alignment:.leading,spacing:5) {
+                    Text(store.t("resumePlay")).font(.system(size:20,weight:.heavy,design:.rounded))
+                    Text(store.t("resume_"+(recent?.kind.rawValue ?? "creator")))
+                        .font(.system(size:14,weight:.bold,design:.rounded))
+                }
+                Spacer(minLength:0)
+                Image(systemName:"play.fill").font(.system(size:25,weight:.bold))
+                    .frame(width:54,height:54).background(Circle().fill(.white.opacity(0.7)))
+            }.padding(14).foregroundColor(GameStyle.ink)
+                .background(CandySurface(color:WorkshopLook.yellow,cornerRadius:28))
+        }.buttonStyle(SquishStyle())
+    }
+    private func resume() {
+        if recent?.kind == .creator,let draft=store.sessions.editor {
+            editor=EditorRequest(friend:draft.friend,existing:draft.existing,resuming:true)
+        } else {resumeNavigation=true}
+    }
+    @ViewBuilder private var resumeDestination:some View {
+        switch recent?.kind {
+        case .pizza:KitchenGameView(friend:recentFriend)
+        case .pumpkin:PumpkinGameView()
+        case .room:FriendRoomView(friendID:recentFriend.id)
+        case .apples:MiniGameSessionView(kind:.apples,friend:recentFriend)
+        case .bubbles:MiniGameSessionView(kind:.bubbles,friend:recentFriend)
+        case .orchestra:OrchestraGameView(friend:recentFriend)
+        case .playground:PlaygroundView(initialID:recentFriend.id,onCreate:create)
+        default:GalleryView(onEdit:openEditor)
+        }
+    }
+
     private func create() {openEditor(FantasyFriend.studioStarter(),existing:false)}
     private func openEditor(_ friend:FantasyFriend,existing:Bool) {
         editor=EditorRequest(friend:friend,existing:existing)

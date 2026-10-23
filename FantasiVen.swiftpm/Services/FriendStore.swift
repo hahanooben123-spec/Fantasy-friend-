@@ -5,6 +5,8 @@ final class FriendStore: ObservableObject {
     @Published private(set) var friends: [FantasyFriend] = []
     @Published private(set) var settings = GameSettings()
     @Published var error: String?
+    @Published private(set) var sessions=PlaySessions()
+    private var sessionsReadable=true
     private let directory: URL
     private var collectionReadable = true
     private struct Archive: Codable {
@@ -15,6 +17,7 @@ final class FriendStore: ObservableObject {
     init(directory: URL? = nil) {
         self.directory = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("FantasiVen", isDirectory: true)
         load()
+        loadSessions()
         SoundService.shared.configure(settings)
     }
     func t(_ key: String) -> String { Words.text(key, settings.language) }
@@ -37,6 +40,40 @@ final class FriendStore: ObservableObject {
             collectionReadable = false
             self.error = t("loadError")
         }
+    }
+
+
+    private func loadSessions() {
+        let url=directory.appendingPathComponent("sessions.json")
+        guard FileManager.default.fileExists(atPath:url.path) else {return}
+        do {
+            let value=try JSONDecoder().decode(PlaySessions.self,from:Data(contentsOf:url))
+            guard value.isValid else {throw CocoaError(.fileReadCorruptFile)}
+            sessions=value
+        } catch {sessionsReadable=false;self.error=t("loadError")}
+    }
+    @discardableResult private func updateSessions(_ update:(inout PlaySessions)->Void)->Bool {
+        guard sessionsReadable else {error=t("loadError");return false}
+        var next=sessions;update(&next)
+        guard next != sessions else {return true}
+        guard next.isValid else {error=t("error");return false}
+        do {try write(next,to:"sessions.json");sessions=next;return true}
+        catch {self.error=t("error");return false}
+    }
+    @discardableResult func saveEditorDraft(_ friend:FantasyFriend,existing:Bool)->Bool {
+        updateSessions {
+            $0.editor=EditorDraft(friend:friend,existing:existing)
+            $0.recent=ActivityBookmark(kind:.creator,friendID:friend.id)
+        }
+    }
+    func clearEditorDraft(_ id:UUID) {
+        updateSessions {if $0.editor?.friend.id == id {$0.editor=nil;$0.recent=ActivityBookmark(kind:.playground,friendID:id)}}
+    }
+    @discardableResult func savePizzaDraft(_ draft:PizzaDraft)->Bool {
+        updateSessions {$0.pizza=draft;$0.recent=ActivityBookmark(kind:.pizza,friendID:draft.companion.id)}
+    }
+    func visit(_ kind:ActivityKind,friendID:UUID?=nil) {
+        updateSessions {$0.recent=ActivityBookmark(kind:kind,friendID:friendID)}
     }
 
     private func write<T: Encodable>(_ value: T, to file: String) throws {

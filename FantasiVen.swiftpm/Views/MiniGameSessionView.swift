@@ -9,6 +9,12 @@ struct MiniGameSessionView: View {
     let friend: FantasyFriend
     @Environment(\.presentationMode) private var presentation
     @State private var picnic = false
+    @State private var picnicSignal=0
+    @State private var picnicFruit:Int?
+    @State private var picnicShared:Set<Int>=[]
+    @State private var bubbleOffsets:[Int:CGSize]=[:]
+    @State private var bubbleOrigins:[Int:CGPoint]=[:]
+    @State private var giantColor=Color.cyan
     @State private var celebration = 0
     @State private var lastGolden = 0
     @State private var surprises:[BubbleSurprise] = []
@@ -51,8 +57,15 @@ struct MiniGameSessionView: View {
             VStack {
                 PlayHUD(title:store.t(kind.titleKey),hint:store.t(kind.hintKey),paused:$paused)
                 HStack {
-                    Text(kind == .hide ? "🌿 \(count) / 3" : kind == .apples ? "🍎 \(count)  ·  ✨ \(apples.streak)" : "🫧 \(count)")
-                        .font(.system(size:22,weight:.heavy,design:.rounded)).monospacedDigit()
+                    HStack(spacing:8) {
+                        Group {
+                            if kind == .apples {FruitArtwork()}
+                            else if kind == .bubbles {BubbleToy(color:.cyan)}
+                            else {FlowerArtwork()}
+                        }.frame(width:30,height:32)
+                        Text(kind == .hide ? "\(count) / 3" : "\(count)")
+                            .font(.system(size:22,weight:.heavy,design:.rounded)).monospacedDigit()
+                    }
                         .padding(12).background(Capsule().fill(.white.opacity(0.9)))
                         .accessibilityLabel(store.t(kind == .hide ? "friendsFound" : kind == .apples ? "applesCaught" : "bubblesPopped"))
                         .accessibilityValue("\(count)")
@@ -69,14 +82,14 @@ struct MiniGameSessionView: View {
                     if kind == .apples {
                         movementButton(direction:-1)
                         Spacer(minLength:0)
-                        PlayToken(symbol:"🧺",label:store.t("picnic")) {picnic=true}
+                        PlayToken(symbol:"🧺",label:store.t("picnic")) {picnicShared=[];picnic=true}
                         Spacer(minLength:0)
                         movementButton(direction:1)
                     } else if kind == .bubbles {
                         PlayToken(symbol:"🫧",label:store.t("bubbleGrow")) {bubbleScale = bubbleScale >= 1.3 ? 1 : bubbleScale+0.1}
                         Spacer(minLength:0)
                         PlayToken(symbol:"🌈",label:store.t(giantBubble ? "releaseBubble" : "bubbleMerge"),selected:giantBubble) {
-                            if giantBubble {release()} else {giantBubble=true}
+                            if giantBubble {release()} else {giantColor = .cyan;giantBubble=true}
                         }
                     } else {
                         Spacer()
@@ -94,22 +107,46 @@ struct MiniGameSessionView: View {
             if picnic {picnicOverlay}
             if paused {PlayPauseOverlay(resume:{paused=false;lastTick=nil})}
         }.foregroundColor(GameStyle.ink).navigationBarHidden(true).statusBar(hidden:true)
-            .onAppear {visible=true;lastTick=nil}
+            .onAppear {visible=true;lastTick=nil;if kind == .apples || kind == .bubbles {store.visit(kind == .apples ? .apples : .bubbles,friendID:friend.id)}}
             .onDisappear {visible=false;lastTick=nil;SoundService.shared.stopSpeech()}
-            .onChange(of:scenePhase) {_ in lastTick=nil}
-            .onChange(of:paused) {_ in lastTick=nil}
+            .onChange(of:scenePhase) {_ in lastTick=nil;bubbleOffsets=[:];bubbleOrigins=[:]}
+            .onChange(of:paused) {_ in lastTick=nil;bubbleOffsets=[:];bubbleOrigins=[:]}
             .onReceive(clock) {date in tick(date)}
     }
+
     private var picnicOverlay:some View {
         ZStack {
-            Color.indigo.opacity(0.3).ignoresSafeArea()
-            VStack(spacing:18) {
-                CharacterView(friend:friend,happy:true).frame(width:190,height:200)
+            Color.indigo.opacity(0.38).ignoresSafeArea()
+            ScrollView(showsIndicators:false) {
+            VStack(spacing:14) {
+                LivingFriend(friend:friend,action:.feed,signal:picnicSignal,feedingFood:nil)
+                    .frame(height:180).allowsHitTesting(false)
                 Text(store.t("picnic")).font(.system(.title2,design:.rounded).weight(.heavy))
-                Text(apples.fruitBasket.suffix(12).map {["🍎","🍌","🫐"][$0]}.joined()).font(.system(size:30))
+                Text(store.t("picnicShareHint")).font(.system(.subheadline,design:.rounded).weight(.bold)).multilineTextAlignment(.center)
+                LazyVGrid(columns:Array(repeating:GridItem(.flexible(),spacing:10),count:4),spacing:12) {
+                    ForEach(Array(apples.fruitBasket.enumerated()),id:\.offset) {index,kind in
+                        Button {shareFruit(index,kind:kind)} label:{
+                            FruitArtwork(kind:kind).frame(height:56)
+                                .padding(5).background(Circle().fill(.white.opacity(0.8)))
+                                .opacity(picnicShared.contains(index) ? 0.15 : 1)
+                        }.buttonStyle(SquishStyle()).disabled(picnicShared.contains(index))
+                            .accessibilityLabel(store.t("shareFruit"))
+                    }
+                }.padding(18).background(PicnicBlanket())
+                if apples.fruitBasket.isEmpty {Text(store.t("picnicEmpty")).font(.system(.body,design:.rounded))}
                 CandyButton(title:store.t("keepPlaying"),icon:"play.fill") {picnic=false;lastTick=nil}
-            }.padding(24).frame(maxWidth:400).background(RoundedRectangle(cornerRadius:36).fill(.white)).padding(20)
+            }.padding(22).frame(maxWidth:440)
+                .background(CandySurface(color:WorkshopLook.cream,cornerRadius:36)).padding(18)
+            }.frame(maxWidth:480)
+            if let fruit=picnicFruit,picnicSignal>0 {
+                FruitDelivery(kind:fruit,revision:picnicSignal).frame(maxWidth:440,maxHeight:550)
+            }
         }
+    }
+    private func shareFruit(_ index:Int,kind:Int) {
+        guard !picnicShared.contains(index) else {return}
+        picnicShared.insert(index);picnicFruit=kind;picnicSignal+=1
+        SoundService.shared.play(.munch)
     }
 
     private var appleField: some View {
@@ -119,15 +156,11 @@ struct MiniGameSessionView: View {
                 VStack {FruitCanopy(weather:apples.weather);Spacer()}.allowsHitTesting(false)
                 Ellipse().fill(Color.green.opacity(0.16)).frame(width: size.width * 1.5, height: 120).position(x: size.width / 2, y: size.height * 0.99)
                 ForEach(Array(apples.flowers.enumerated()), id: \.offset) { index, x in
-                    Text(["🌼", "🌸", "🌷"][index % 3]).font(.system(size: 26))
+                    FlowerArtwork(index:index).frame(width:32,height:38)
                         .position(x: x * size.width, y: size.height * 0.94)
                 }
                 ForEach(apples.drops) { apple in
-                    Group {
-                        if apple.golden {Text("🌟").font(.system(size:48))}
-                        else if apple.fruit == 0 { AppleToy() }
-                        else { Text(apple.fruit == 1 ? "🍌" : "🫐").font(.system(size: 39)) }
-                    }.frame(width: 46, height: 48)
+                    FruitArtwork(kind:apple.fruit,golden:apple.golden).frame(width:46,height:48)
                         .rotationEffect(.degrees(reducedMotion ? 0 : sin(apple.y * 9) * 12))
                         .position(x: apple.x * size.width, y: apple.y * size.height)
                         .accessibilityHidden(true)
@@ -139,7 +172,7 @@ struct MiniGameSessionView: View {
                 BasketToy().position(x: apples.playerX * size.width, y: size.height * 0.75)
                     .allowsHitTesting(false)
                 if elapsed < cheerUntil {
-                    Text(["🍎","🍌","🫐"][apples.lastFruit]+" ✨").font(.system(size:35))
+                    FruitArtwork(kind:apples.lastFruit).frame(width:47,height:47)
                         .position(x: apples.playerX * size.width, y: size.height * 0.57)
                         .allowsHitTesting(false)
                 }
@@ -175,7 +208,9 @@ struct MiniGameSessionView: View {
                 ForEach(0..<6) { slot in
                     let generation = bubbles.generations[slot]
                     let diameter = min(170, max(70, proxy.size.width * 0.22)) * bubbleScale
-                    let center=bubbleCenter(slot,generation:generation,size:proxy.size)
+                    let base=bubbleOrigins[slot] ?? bubbleCenter(slot,generation:generation,size:proxy.size)
+                    let offset=bubbleOffsets[slot] ?? .zero
+                    let center=CGPoint(x:base.x+offset.width,y:base.y+offset.height)
                     Button { pop(slot, generation: generation) } label: {
                         BubbleToy(color: GameStyle.palette[(slot * 2 + generation) % GameStyle.palette.count])
                             .overlay {
@@ -190,6 +225,7 @@ struct MiniGameSessionView: View {
                     }.buttonStyle(SquishStyle())
                         .scaleEffect(elapsed-(popTimes[slot] ?? -10)<0.22 ? 0.1 : 1,anchor:.center)
                         .position(center)
+                        .simultaneousGesture(bubbleDrag(slot,generation:generation,size:proxy.size))
                         .animation(reducedMotion ? nil : .spring(response:0.35,dampingFraction:0.6),value:elapsed-(popTimes[slot] ?? -10)<0.22)
                         .accessibilityLabel(store.t("popBubble"))
                         .disabled(paused || giantBubble)
@@ -204,23 +240,48 @@ struct MiniGameSessionView: View {
                 }
                 if giantBubble {
                     Button(action: release) {
-                        BubbleToy(color: .cyan).overlay(CharacterView(friend: friend).padding(30))
+                        BubbleToy(color:giantColor).overlay(CharacterView(friend: friend).padding(30))
                             .frame(width: min(260, proxy.size.width * 0.8), height: min(260, proxy.size.width * 0.8))
                     }.buttonStyle(SquishStyle()).position(x: proxy.size.width / 2, y: proxy.size.height * 0.45)
                         .accessibilityLabel(store.t("releaseBubble")).disabled(paused || picnic)
                 }
             }.frame(width:proxy.size.width,height:proxy.size.height)
-                .simultaneousGesture(DragGesture(minimumDistance:5).onChanged {value in
-                    guard !paused && !giantBubble else {return}
-                    let radius=min(170,max(70,proxy.size.width*0.22))*bubbleScale/2
-                    for slot in 0..<6 {
-                        let generation=bubbles.generations[slot]
-                        let point=bubbleCenter(slot,generation:generation,size:proxy.size)
-                        if hypot(point.x-value.location.x,point.y-value.location.y)<radius {pop(slot,generation:generation)}
-                    }
-                })
+                .coordinateSpace(name:"bubbleGarden")
+                .overlay(GestureLesson(activity:interacted ? 1 : 0,from:UnitPoint(x:0.2,y:0.57),to:UnitPoint(x:0.5,y:0.4)))
         }
     }
+
+    private func bubbleDrag(_ slot:Int,generation:Int,size:CGSize)->some Gesture {
+        DragGesture(minimumDistance:10,coordinateSpace:.named("bubbleGarden")).onChanged {value in
+            guard !paused,!giantBubble else {return}
+            interacted=true
+            if bubbleOrigins[slot] == nil {bubbleOrigins[slot]=bubbleCenter(slot,generation:generation,size:size)}
+            bubbleOffsets[slot]=value.translation
+        }.onEnded {value in
+            defer {bubbleOffsets[slot]=nil;bubbleOrigins[slot]=nil}
+            guard !paused,!giantBubble else {return}
+            let origin=bubbleOrigins[slot] ?? bubbleCenter(slot,generation:generation,size:size)
+            let end=CGPoint(x:origin.x+value.translation.width,y:origin.y+value.translation.height)
+            let radius=min(170,max(70,size.width*0.22))*bubbleScale*0.55
+            if let other=(0..<6).filter({$0 != slot}).min(by:{
+                let a=bubbleCenter($0,generation:bubbles.generations[$0],size:size)
+                let b=bubbleCenter($1,generation:bubbles.generations[$1],size:size)
+                return hypot(a.x-end.x,a.y-end.y)<hypot(b.x-end.x,b.y-end.y)
+            }) {
+                let target=bubbleCenter(other,generation:bubbles.generations[other],size:size)
+                if hypot(target.x-end.x,target.y-end.y)<radius {
+                    let first=GameStyle.palette[(slot*2+generation)%16]
+                    let second=GameStyle.palette[(other*2+bubbles.generations[other])%16]
+                    giantColor=GameStyle.mixed(first,with:second,amount:0.5)
+                    _=bubbles.pop(slot:slot,generation:generation)
+                    _=bubbles.pop(slot:other,generation:bubbles.generations[other])
+                    withAnimation(reducedMotion ? nil : .spring(response:0.45,dampingFraction:0.65)) {giantBubble=true}
+                    SoundService.shared.play(.bubble)
+                }
+            }
+        }
+    }
+
     private var blowing:Bool {sin(elapsed*2.6)>0.65}
     private var blowingFriend:FantasyFriend {
         var copy=friend
@@ -260,7 +321,7 @@ struct MiniGameSessionView: View {
                                     .frame(width: min(115, cellWidth), height: min(125, cellHeight))
                                     .offset(y: -24)
                             } else if opened {
-                                Text("🌼").font(.system(size: 48)).offset(y: -20)
+                                FlowerArtwork().frame(width:48,height:54).offset(y: -20)
                             }
                             BushToy().scaleEffect(min(0.9, cellWidth / 180))
                                 .offset(y: opened ? 40 : 5)
@@ -297,7 +358,7 @@ struct MiniGameSessionView: View {
         surprises.removeAll {elapsed-$0.born >= $0.lifetime}
         if kind == .apples, apples.step(dt, spawnX: Double.random(in: 0.17...0.83), catchRadius: catchRadius, level:store.settings.challengeLevel,adventurous:true) {
             cheerUntil = elapsed + 0.7
-            SoundService.shared.react(voice: friend.voice?.rawValue ?? 0)
+            SoundService.shared.play(.catchFruit)
             if apples.caught.isMultiple(of:5) || apples.goldenCaught>lastGolden {celebration += 1}
             lastGolden=apples.goldenCaught
         }
@@ -315,7 +376,7 @@ struct MiniGameSessionView: View {
         if bubbles.popped.isMultiple(of:6) {celebration += 1}
         interacted = true
         bubbleFlash = slot; cheerUntil = elapsed + 0.25
-        SoundService.shared.play(bubbles.popped.isMultiple(of: 10) ? .complete : .reaction)
+        SoundService.shared.play(bubbles.popped.isMultiple(of: 10) ? .complete : .bubble)
     }
 
     private func release() {
@@ -326,6 +387,7 @@ struct MiniGameSessionView: View {
     }
     private func restart() {
         apples = AppleRain(); bubbles = BubbleGarden(); seek = HideAndSeek()
+        picnicShared=[];picnicSignal=0;picnicFruit=nil;bubbleOffsets=[:];bubbleOrigins=[:]
         interacted = false; popTimes=[:]; surprises=[]; lastGolden=0
         picnic = false; giantBubble = false; bubbleScale = 1; clueSpot = nil; flyUntil = 0
         elapsed = 0; cheerUntil = 0; bubbleFlash = nil; lastTick = nil

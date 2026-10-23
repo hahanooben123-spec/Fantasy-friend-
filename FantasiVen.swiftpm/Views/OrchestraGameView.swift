@@ -21,6 +21,8 @@ struct OrchestraGameView:View {
         AdventureGameShell(kind:.orchestra) {active in
             GeometryReader {proxy in
                 ZStack {
+                    ConcertBackdrop()
+                    GestureLesson(activity:signals.reduce(0,+),from:UnitPoint(x:0.5,y:0.65),to:UnitPoint(x:0.56,y:0.63))
                     Ellipse().fill(Color.purple.opacity(0.6)).frame(width:proxy.size.width*1.2,height:proxy.size.height*0.3)
                         .position(x:proxy.size.width/2,y:proxy.size.height*0.65).allowsHitTesting(false)
                     HStack(alignment:.bottom,spacing:6) {
@@ -30,12 +32,7 @@ struct OrchestraGameView:View {
                                     .frame(height:proxy.size.height*0.37)
                                     .scaleEffect(reduced || signals[row].isMultiple(of:2) ? 1 : 1.04)
                                     .animation(reduced ? nil : .spring(response:0.3,dampingFraction:0.65),value:signals[row])
-                                Button {strike(row)} label:{
-                                    Text(["🥁","🎹","🎤"][row]).font(.system(size:proxy.size.width>600 ? 65 : 42))
-                                        .frame(maxWidth:.infinity,minHeight:90)
-                                        .background(RoundedRectangle(cornerRadius:28).fill(StudioStyle.colors[row]))
-                                        .overlay(RoundedRectangle(cornerRadius:28).stroke(.white,lineWidth:3))
-                                }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("instrument_\(row)"))
+                                PlayableInstrument(row:row,signal:signals[row],strike:{note in strike(row,note:note)})
                             }.frame(width:max(1,(proxy.size.width-32)/3))
                         }
                     }.padding(.horizontal,10).position(x:proxy.size.width/2,y:proxy.size.height*0.46)
@@ -57,34 +54,37 @@ struct OrchestraGameView:View {
                             PlayToken(symbol:"🔴",label:store.t("recordMusic"),selected:recording) {
                                 recording.toggle();if recording {pattern=OrchestraPattern();saved=false;beat = -1;playing=true}
                             }
-                            PlayToken(symbol:"🎲",label:store.t("newBeat")) {preset+=1;seed();playing=true}
-                            PlayToken(symbol:"🎼",label:store.t("editBeat")) {editing=true}
-                            RoundButton(icon:"heart.fill",label:store.t("saveCreation"),action:save)
+                            PlayToken(symbol:"🎼",label:store.t("roomMore")) {editing=true}
                         }
                     }
                 }
             }
             .task(id:"\(active)-\(playing)-\(editing)") {
-                SoundService.shared.setPerformance(active && playing && !editing)
+                SoundService.shared.setPerformance(active && !editing)
                 guard active && playing && !editing else {return}
                 while !Task.isCancelled {
                     beat=(beat+1)%8
                     for row in 0..<3 where pattern.rows[row][beat] {
-                        SoundService.shared.instrument(row,beat:beat,voice:performer(row).voice?.rawValue ?? 0);signals[row]+=1
+                        SoundService.shared.instrument(row,beat:pattern.note(row:row,beat:beat),voice:performer(row).voice?.rawValue ?? 0);signals[row]+=1
                     }
                     do {try await Task.sleep(nanoseconds:UInt64([0.55,0.42,0.32][store.settings.challengeLevel-1]*1_000_000_000))}
                     catch {return}
                 }
             }
-        }.onAppear {if let song=friend.song {pattern=song} else {seed()}}
+        }.onAppear {if let song=friend.song {pattern=song} else {seed()};store.visit(.orchestra,friendID:friend.id)}
+            .task(id:pattern) {
+                do {try await Task.sleep(nanoseconds:650_000_000)} catch {return}
+                save()
+            }
             .onDisappear {SoundService.shared.setPerformance(false)}
             .sheet(isPresented:$editing) {editor}
     }
-    private func strike(_ row:Int) {
-        SoundService.shared.instrument(row,beat:max(0,beat),voice:performer(row).voice?.rawValue ?? 0);signals[row]+=1;celebration+=1
+    private func strike(_ row:Int,note:Int?=nil) {
+        SoundService.shared.instrument(row,beat:note ?? max(0,beat),voice:performer(row).voice?.rawValue ?? 0);signals[row]+=1
+        if signals[row].isMultiple(of:4) {celebration+=1}
         if recording {
             let column=max(0,beat)
-            if !pattern.rows[row][column] {pattern.toggle(row:row,beat:column);saved=false}
+            pattern.record(row:row,beat:column,note:note ?? column);saved=false
         }
     }
     private func seed() {
@@ -116,6 +116,7 @@ struct OrchestraGameView:View {
                         }
                     }.padding(8)
                 }
+                CandyButton(title:store.t("newBeat"),icon:"shuffle") {preset+=1;seed();playing=true}
                 CandyButton(title:store.t("continue"),icon:"checkmark") {editing=false}
             }.padding(24).frame(maxWidth:600)
         }

@@ -63,8 +63,8 @@ struct FriendRoomView:View {
             }.coordinateSpace(name:"roomWorkshop")
                 .onPreferenceChange(RoomSurfaceFrameKey.self) {roomFrame=$0}
         }.foregroundColor(GameStyle.ink).navigationBarHidden(true).statusBar(hidden:true)
-            .onAppear(perform:load)
-            .onChange(of:phase) {value in if value != .active {draggingItem=nil;trayDragged=false}}
+            .onAppear {load();store.visit(.room,friendID:friendID)}
+            .onChange(of:phase) {value in if value != .active {draggingItem=nil;trayDragged=false;moving=nil;friendPreview=nil}}
             .task(id:draggingItem == nil && trayDragged) {
                 guard draggingItem == nil,trayDragged else {return}
                 do {try await Task.sleep(nanoseconds:220_000_000)} catch {return}
@@ -307,8 +307,11 @@ struct FriendRoomView:View {
     }
     private func tap(_ value:RoomObject) {
         pending=nil
-        if editing {selected=value.id;SoundService.shared.play(.click)}
-        else {use(value)}
+        if editing {
+            selected=value.id
+            if !trayOpen {use(value)}
+            else {SoundService.shared.play(.click)}
+        } else {use(value)}
     }
     private func transform(_ update:(inout RoomObject)->Void) {
         guard let selected=selected,let i=layout.objects.firstIndex(where:{$0.id == selected}) else {return}

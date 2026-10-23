@@ -137,7 +137,18 @@ struct SlideTrack: Codable, Equatable {
 }
 struct OrchestraPattern: Codable, Equatable {
     var rows: [[Bool]] = Array(repeating: Array(repeating: false, count: 8), count: 3)
-    var isValid: Bool { rows.count == 3 && rows.allSatisfy { $0.count == 8 } }
+    var notes:[[Int]]?
+    func note(row:Int,beat:Int)->Int {
+        guard let notes=notes,notes.indices.contains(row),notes[row].indices.contains(beat) else {return beat}
+        return notes[row][beat]
+    }
+    mutating func record(row:Int,beat:Int,note:Int) {
+        guard rows.indices.contains(row),rows[row].indices.contains(beat) else {return}
+        rows[row][beat]=true
+        var pitches=notes ?? Array(repeating:Array(0..<8),count:3)
+        pitches[row][beat]=min(7,max(0,note));notes=pitches
+    }
+    var isValid: Bool { rows.count == 3 && rows.allSatisfy { $0.count == 8 } && (notes.map {$0.count == 3 && $0.allSatisfy {$0.count == 8 && $0.allSatisfy {(0..<8).contains($0)}}} ?? true) }
     mutating func toggle(row: Int, beat: Int) {
         guard rows.indices.contains(row), rows[row].indices.contains(beat) else { return }
         rows[row][beat].toggle()

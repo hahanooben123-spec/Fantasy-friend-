@@ -4,6 +4,8 @@ struct KitchenGameView:View {
     @EnvironmentObject private var store:FriendStore
     @Environment(\.accessibilityReduceMotion) private var reduced
     let friend:FantasyFriend
+    @Environment(\.scenePhase) private var phase
+    @State private var loaded=false
     @State private var recipe=PizzaRecipe()
     @State private var step=0
     @State private var spice=0
@@ -45,6 +47,11 @@ struct KitchenGameView:View {
                             controls.frame(height:step == 0 || (step == 3 && !inserted) ? 245 : step == 2 ? (herbs ? 255 : 320) : 175)
                         }
                     }.padding(.top,77).padding(.horizontal,12).padding(.bottom,12)
+                    if step == 0 && recipe.ingredients.isEmpty && pouringIngredient == nil {
+                        GestureLesson(activity:pourRevision,from:UnitPoint(x:wide ? 0.86 : 0.25,y:wide ? 0.50 : 0.78),
+                            to:UnitPoint(x:surfaceFrame.midX/max(1,proxy.size.width),
+                                         y:(surfaceFrame.minY+surfaceFrame.height*0.45)/max(1,proxy.size.height)))
+                    }
                     dragOverlay
                     if let ingredient=pouringIngredient {
                         PizzaPourEffect(kind:ingredient,reduced:reduced)
@@ -79,12 +86,34 @@ struct KitchenGameView:View {
                         try await Task.sleep(nanoseconds:120_000_000)
                         try Task.checkCancellation()
                         baked=min(1,baked+0.025)
+                        SoundService.shared.play(.oven)
                     }
                     SoundService.shared.play(.complete)
                 } catch {return}
             }
-        }
+        }.onAppear(perform:restore)
+            .task(id:snapshot) {
+                guard loaded else {return}
+                do {try await Task.sleep(nanoseconds:650_000_000)} catch {return}
+                store.savePizzaDraft(snapshot)
+            }
+            .onChange(of:phase) {value in if value != .active && loaded {store.savePizzaDraft(snapshot)}}
+            .onDisappear {if loaded {store.savePizzaDraft(snapshot)}}
     }
+
+    private var snapshot:PizzaDraft {
+        PizzaDraft(companion:friend,recipe:recipe,step:step,spice:spice,topping:topping,herbs:herbs,
+                   inserted:inserted,baked:baked,served:served,eaten:eaten)
+    }
+    private func restore() {
+        guard !loaded else {return}
+        if let draft=store.sessions.pizza,draft.isValid,draft.companion.id == friend.id {
+            recipe=draft.recipe;step=draft.step;spice=draft.spice;topping=draft.topping;herbs=draft.herbs
+            inserted=draft.inserted;baked=draft.baked;served=draft.served;eaten=draft.eaten
+        }
+        loaded=true;store.visit(.pizza,friendID:friend.id)
+    }
+
     private var steps:some View {
         HStack(spacing:6) {
             ForEach(0..<4) {index in
@@ -324,7 +353,7 @@ struct KitchenGameView:View {
     private func startPour(_ index:Int) {
         guard step == 0,pouringIngredient == nil,!recipe.ingredients.contains(index) else {return}
         finish();pouringIngredient=index;pourRevision+=1
-        SoundService.shared.play(.reaction)
+        SoundService.shared.play(index == 0 ? .pourFlour : index == 1 ? .pourWater : .pourOil)
     }
     private func begin() {if before == nil {before=recipe}}
     private func finish() {
@@ -352,7 +381,7 @@ struct KitchenGameView:View {
         }
     }
     private func insert() {finish();inserted=true;ovenDrag = .zero;SoundService.shared.play(.click)}
-    private func eat() {guard eaten<8 else {return};eaten+=1;signal+=1;biteRevision+=1}
+    private func eat() {guard eaten<8 else {return};eaten+=1;signal+=1;biteRevision+=1;SoundService.shared.play(.munch)}
     private func reset() {
         pouringIngredient=nil;biteRevision=0;recipe=PizzaRecipe();step=0;herbs=false;topping = .cheese;spice=0;history=[];before=nil;inserted=false;baked=0;served=false;eaten=0;signal=0
     }
@@ -405,6 +434,7 @@ private struct PizzaWorkSurface:View {
         if step == 0 {
             guard recipe.ingredients.count == 3 else {return}
             turn+=Double(distance)*300
+            if distance>0.005 {SoundService.shared.play(.mix)}
             if !recipe.readyToShape {recipe.mixed=min(1,recipe.mixed+Double(distance)*0.9)}
             else if p.onDough {recipe.formed=min(1,recipe.formed+Double(distance)*0.6)}
         } else if step == 1 && p.onDough {

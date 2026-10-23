@@ -49,7 +49,7 @@ struct PhysicsPlayfield: View {
             Circle().fill(StudioStyle.colors[0]).overlay(Circle().stroke(GameStyle.ink, lineWidth: 2))
                 .overlay(Circle().trim(from: 0, to: 0.5).stroke(StudioStyle.colors[1], lineWidth: 7).padding(9))
         } else if kind == 1 {
-            RoundedRectangle(cornerRadius: 8).fill(StudioStyle.colors[5]).overlay(RoundedRectangle(cornerRadius: 8).stroke(GameStyle.ink, lineWidth: 2)).overlay(Text("★").foregroundColor(.white))
+            RoundedRectangle(cornerRadius: 8).fill(StudioStyle.colors[5]).overlay(RoundedRectangle(cornerRadius: 8).stroke(GameStyle.ink, lineWidth: 2)).overlay(StarArtwork().padding(16))
         } else {
             Ellipse().fill(StudioStyle.colors[1]).overlay(Ellipse().stroke(GameStyle.ink, lineWidth: 2)).overlay(Ellipse().fill(.white.opacity(0.5)).frame(width: 8, height: 16).offset(x: -9, y: -8))
         }

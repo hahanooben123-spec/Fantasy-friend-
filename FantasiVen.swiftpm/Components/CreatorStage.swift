@@ -22,6 +22,7 @@ struct CreatorStage: View {
     @State private var lean = 0.0
     @State private var breathing=false
     @State private var delighted=false
+    @State private var interactionRevision=0
     private let zoom: CGFloat = 1.1
 
     var body: some View {
@@ -42,7 +43,15 @@ struct CreatorStage: View {
                     selectionFrame(selected,size:size)
                 }
                 StudioBurst(revision:revision).allowsHitTesting(false)
-            }.frame(width:width,height:height).coordinateSpace(name:"creatorStage").contentShape(Rectangle())
+                if incoming != nil {
+                    RoundedRectangle(cornerRadius:40).stroke(WorkshopLook.yellow,lineWidth:4)
+                        .padding(12).allowsHitTesting(false)
+                }
+                GestureLesson(activity:revision+interactionRevision+(incoming == nil ? 0 : 1),from:UnitPoint(x:0.28,y:0.62),to:UnitPoint(x:0.42,y:0.45))
+            }.frame(width:width,height:height)
+                .background(GeometryReader {proxy in
+                    Color.clear.preference(key:CreatorStageFrameKey.self,value:proxy.frame(in:.named("creatorWorkshop")))
+                }).coordinateSpace(name:"creatorStage").contentShape(Rectangle())
                 .gesture(DragGesture(minimumDistance:0,coordinateSpace:.named("creatorStage"))
                     .onChanged { value in
                         let point = canonical(value.location,size:size)
@@ -52,8 +61,8 @@ struct CreatorStage: View {
                             appendPaint(point,brush:brush); return
                         }
                         if origin == nil {
-                            origin=friend
-                            movingSelection=CreatorGeometry.hit(canonical(value.startLocation,size:size),friend:friend,margin:7)
+                            origin=friend;interactionRevision+=1
+                            movingSelection=CreatorGeometry.hit(canonical(value.startLocation,size:size),friend:friend,margin:7,minimumTouchSize:48*300/width/zoom)
                             selection=movingSelection
                             onBegin()
                         }
@@ -129,7 +138,7 @@ struct CreatorStage: View {
     }
     private func bodyHandle(horizontal:Bool,size:CGSize)->some View {
         CreatorLineIcon(mark:.resize,color:.white).frame(width:29,height:29).rotationEffect(.degrees(horizontal ? 45 : -45))
-            .frame(width:46,height:46).background(Circle().fill(WorkshopLook.blue)).overlay(Circle().stroke(.white,lineWidth:3))
+            .frame(width:56,height:56).background(Circle().fill(WorkshopLook.blue)).overlay(Circle().stroke(.white,lineWidth:3))
             .highPriorityGesture(DragGesture(coordinateSpace:.named("creatorStage")).onChanged { value in
                 if handleOrigin == nil { handleOrigin=friend;onBegin() }
                 guard let source=handleOrigin else { return }
@@ -139,7 +148,7 @@ struct CreatorStage: View {
     }
     private func transformHandle(_ selected:CreatorSelection,rotating:Bool,size:CGSize)->some View {
         CreatorLineIcon(mark:rotating ? .rotate : .resize,color:.white).frame(width:27,height:27)
-            .frame(width:44,height:44).background(Circle().fill(WorkshopLook.blue)).overlay(Circle().stroke(.white,lineWidth:3))
+            .frame(width:56,height:56).background(Circle().fill(WorkshopLook.blue)).overlay(Circle().stroke(.white,lineWidth:3))
             .highPriorityGesture(DragGesture(coordinateSpace:.named("creatorStage")).onChanged { value in
                 if handleOrigin == nil { handleOrigin=friend;onBegin() }
                 guard let source=handleOrigin else { return }
@@ -159,5 +168,13 @@ struct CreatorStage: View {
             stroke.points.append(p)
         }
         draft=stroke
+    }
+}
+
+
+struct CreatorStageFrameKey:PreferenceKey {
+    static let defaultValue=CGRect.zero
+    static func reduce(value:inout CGRect,nextValue:()->CGRect) {
+        let next=nextValue();if next.width>0 && next.height>0 {value=next}
     }
 }

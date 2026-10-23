@@ -72,6 +72,7 @@ struct PlaygroundView: View {
             }
             if paused {PlayPauseOverlay(resume:{paused=false})}
         }.foregroundColor(GameStyle.ink).navigationBarHidden(true).statusBar(hidden:true)
+            .onAppear {store.visit(.playground,friendID:friend?.id)}
             .sheet(item:$picker) {choice in pickerContent(choice)}
             .onChange(of:picker != nil) {value in paused=value}
     }
