@@ -31,6 +31,7 @@ struct HomeView: View {
                             }
                             Text(store.t("tagline")).font(.system(.subheadline, design: .rounded).weight(.semibold)).multilineTextAlignment(.center)
                             welcomeStage.frame(height: min(geometry.size.height * (wide ? 0.35 : 0.29), wide ? 350 : 245))
+                            PumpkinDoor()
                             FantasyMapView(onCreate: create, onEdit: openEditor)
                             Text(store.t("homeFooter")).font(.system(.caption, design: .rounded).weight(.semibold)).padding(.top, 7).opacity(0.7)
                         }.padding(.horizontal, wide ? 28 : 19).padding(.top, 12).padding(.bottom, 24)

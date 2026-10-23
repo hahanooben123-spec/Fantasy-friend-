@@ -535,3 +535,126 @@ extension FantasiVenTests {
         for data in encoded {XCTAssertTrue(try JSONDecoder().decode(OrchestraPattern.self,from:data).isValid)}
     }
 }
+
+extension FantasiVenTests {
+    func testLanternVariantsRoundTripWithRealCuts() throws {
+        for form in PumpkinForm.allCases {
+            for light in PumpkinLight.allCases {
+                var lantern=PumpkinLantern()
+                lantern.form=form;lantern.light=light;lantern.color=form.rawValue
+                lantern.addFace()
+                lantern.cuts.append(try XCTUnwrap(PumpkinCut.fromStroke([
+                    PumpkinPoint(x:0.2,y:0.2),PumpkinPoint(x:0.4,y:0.2),
+                    PumpkinPoint(x:0.4,y:0.4),PumpkinPoint(x:0.2,y:0.4),PumpkinPoint(x:0.21,y:0.21)])))
+                XCTAssertTrue(lantern.isValid)
+                XCTAssertEqual(lantern,try JSONDecoder().decode(PumpkinLantern.self,from:JSONEncoder().encode(lantern)))
+            }
+        }
+    }
+    func testCarvingNeedsAClosedAreaAndNormalizesItsOutline() throws {
+        let square=[PumpkinPoint(x:0.2,y:0.3),PumpkinPoint(x:0.6,y:0.3),
+                    PumpkinPoint(x:0.6,y:0.7),PumpkinPoint(x:0.2,y:0.7),PumpkinPoint(x:0.21,y:0.31)]
+        let cut=try XCTUnwrap(PumpkinCut.fromStroke(square))
+        XCTAssertTrue(cut.isValid);XCTAssertEqual(cut.width,0.4,accuracy:0.001)
+        XCTAssertEqual(cut.x,0.4,accuracy:0.001)
+        XCTAssertTrue(cut.outline.allSatisfy(\.isValid))
+        XCTAssertNil(PumpkinCut.fromStroke(Array(square.prefix(4))))
+        XCTAssertNil(PumpkinCut.fromStroke(Array(square.prefix(3))))
+        XCTAssertNil(PumpkinCut.fromStroke(Array(repeating:PumpkinPoint(x:0.5,y:0.5),count:5)))
+        var invalid=square;invalid[0].x = .nan
+        XCTAssertNil(PumpkinCut.fromStroke(invalid))
+    }
+    func testInvalidLanternGeometryAndDuplicateCutsAreRejected() {
+        var lantern=PumpkinLantern();lantern.addFace()
+        lantern.cuts.append(lantern.cuts[0]);XCTAssertFalse(lantern.isValid)
+        lantern=PumpkinLantern();lantern.brightness=0;XCTAssertFalse(lantern.isValid)
+        lantern=PumpkinLantern();lantern.gardenX = .infinity;XCTAssertFalse(lantern.isValid)
+        lantern=PumpkinLantern();lantern.cuts=[PumpkinCut(kind:.circle,width:-1)]
+        XCTAssertFalse(lantern.isValid)
+    }
+    func testCutHitGeometryFollowsEveryPumpkinForm() {
+        for form in PumpkinForm.allCases {
+            var lantern=PumpkinLantern();lantern.form=form
+            var cut=PumpkinCut(kind:.circle)
+            cut.move(x:-4,y:8);XCTAssertEqual(cut.x,0.05);XCTAssertEqual(cut.y,0.95)
+            cut.move(x:.nan,y:0);XCTAssertEqual(cut.y,0.95)
+            cut.move(x:0.4,y:0.6);cut.rotation=35
+            lantern.cuts=[cut]
+            let r=PumpkinGeometry.rect(form)
+            let center=CGPoint(x:r.minX+r.width*0.4,y:r.minY+r.height*0.6)
+            XCTAssertEqual(PumpkinGeometry.hit(center,lantern:lantern),cut.id)
+            XCTAssertNil(PumpkinGeometry.hit(CGPoint(x:-100,y:-100),lantern:lantern))
+        }
+    }
+    @MainActor
+    func testLanternDraftGardenAndEditsPersistIndependently() throws {
+        let directory=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer {try? FileManager.default.removeItem(at:directory)}
+        let store=PumpkinStore(directory:directory)
+        var lantern=PumpkinLantern();lantern.addFace()
+        XCTAssertTrue(store.saveDraft(lantern))
+        XCTAssertEqual(PumpkinStore(directory:directory).draft,lantern)
+        XCTAssertTrue(store.save(lantern));XCTAssertNil(store.draft)
+        var placed=try XCTUnwrap(store.lanterns.first)
+        placed.gardenX=0.7;placed.gardenY=0.4;placed.gardenScale=1.3;placed.lit=false
+        XCTAssertTrue(store.arrange(placed))
+        lantern.color=3;lantern.light = .rainbow
+        XCTAssertTrue(store.save(lantern))
+        let reloaded=PumpkinStore(directory:directory)
+        let saved=try XCTUnwrap(reloaded.lanterns.first)
+        XCTAssertEqual(saved.color,3);XCTAssertEqual(saved.light,.rainbow)
+        XCTAssertEqual(saved.gardenX,0.7);XCTAssertEqual(saved.gardenY,0.4)
+        XCTAssertEqual(saved.gardenScale,1.3);XCTAssertNil(reloaded.draft)
+    }
+    @MainActor
+    func testBrokenOrFutureLanternArchivesCannotBeOverwritten() throws {
+        let directory=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer {try? FileManager.default.removeItem(at:directory)}
+        try FileManager.default.createDirectory(at:directory,withIntermediateDirectories:true)
+        let file=directory.appendingPathComponent("lanterns.json")
+        for text in ["broken archive","{\"version\":99,\"lanterns\":[]}"] {
+            let original=Data(text.utf8);try original.write(to:file)
+            let store=PumpkinStore(directory:directory)
+            XCTAssertEqual(store.errorKey,"lanternLoadError")
+            XCTAssertFalse(store.save(PumpkinLantern()))
+            XCTAssertFalse(store.saveDraft(PumpkinLantern()))
+            XCTAssertEqual(try Data(contentsOf:file),original)
+        }
+    }
+    @MainActor
+    func testLanternWriteFailureDoesNotCommitState() throws {
+        let directory=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer {try? FileManager.default.removeItem(at:directory)}
+        try Data("not a directory".utf8).write(to:directory)
+        let store=PumpkinStore(directory:directory)
+        XCTAssertFalse(store.save(PumpkinLantern()))
+        XCTAssertFalse(store.saveDraft(PumpkinLantern()))
+        XCTAssertTrue(store.lanterns.isEmpty);XCTAssertNil(store.draft)
+        XCTAssertEqual(store.errorKey,"lanternSaveError")
+    }
+    @MainActor
+    func testGardenHasNoSmallCollectionLimitAndDeleteKeepsOtherLanterns() throws {
+        let directory=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer {try? FileManager.default.removeItem(at:directory)}
+        let store=PumpkinStore(directory:directory)
+        for _ in 0..<75 {XCTAssertTrue(store.save(PumpkinLantern()))}
+        XCTAssertEqual(store.lanterns.count,75)
+        let removed=try XCTUnwrap(store.lanterns.first)
+        let remaining=Array(store.lanterns.dropFirst())
+        XCTAssertTrue(store.saveDraft(removed));XCTAssertTrue(store.delete(removed.id))
+        let reloaded=PumpkinStore(directory:directory)
+        XCTAssertEqual(reloaded.lanterns,remaining);XCTAssertNil(reloaded.draft)
+    }
+    @MainActor
+    func testLanternsAndFriendsShareDirectoryWithoutSharingFiles() throws {
+        let directory=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer {try? FileManager.default.removeItem(at:directory)}
+        let friends=FriendStore(directory:directory),lanterns=PumpkinStore(directory:directory)
+        let friend=FantasyFriend.random()
+        XCTAssertTrue(friends.save(friend));XCTAssertTrue(lanterns.save(PumpkinLantern()))
+        let file=directory.appendingPathComponent("lanterns.json"),before=try Data(contentsOf:file)
+        XCTAssertTrue(friends.delete(friend))
+        XCTAssertEqual(try Data(contentsOf:file),before)
+        XCTAssertEqual(PumpkinStore(directory:directory).lanterns.count,1)
+    }
+}

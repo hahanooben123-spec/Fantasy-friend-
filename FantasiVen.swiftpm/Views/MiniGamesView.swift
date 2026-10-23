@@ -14,6 +14,7 @@ struct MiniGamesView: View {
             WorldBackdrop(world: .rainbow)
             VStack(spacing: 12) {
                 AdventureHeading(title: store.t("miniGames"), subtitle: store.t("miniGamesHint"))
+                PumpkinDoor().padding(.horizontal,18)
                 if let friend = friend {
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 20) {

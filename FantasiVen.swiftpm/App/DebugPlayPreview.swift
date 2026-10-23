@@ -27,6 +27,8 @@ struct DebugPlayPreview: View {
                 else if route == "playground" {PlaygroundView(initialID:friend.id,onCreate:{})}
                 else if route == "yard" { SharedToyYardView(initialFriend: friend) }
                 else if route == "room" { FriendRoomView(friendID: friend.id) }
+                else if route == "pumpkin" {PumpkinGameView(directory:FileManager.default.temporaryDirectory.appendingPathComponent("Pumpkin-preview-"+UUID().uuidString),previewMode:1)}
+                else if route == "pumpkin-garden" {PumpkinGameView(directory:FileManager.default.temporaryDirectory.appendingPathComponent("Pumpkin-preview-"+UUID().uuidString),previewMode:2)}
                 else if route == "hub" { MiniGamesView(onCreate: {}) }
                 else if let kind = MiniGameKind(rawValue: route) { GameDestinationView(kind: kind, friend: friend) }
                 else { HomeView() }

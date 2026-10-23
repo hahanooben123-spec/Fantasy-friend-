@@ -136,3 +136,7 @@ Køkkenets ingredienser blandes til synlige farver og seks forskellige opdagelse
 Æbleregn veksler mellem grupper i frugthaven, en blid brise og regnbueregn. Bobler flyver fra vennens boblepind og indeholder toner, sommerfugle, små udgaver af vennen eller farvesprøjt. Overraskelser har kort levetid og en fast grænse på otte samtidig.
 
 Musik bruger originale lokalt syntetiserede tromme-, klokke- og stemmelyde. Både figuren og instrumentknappen kan anslå instrumentet. Stemmelyden følger vennens stemmetype. Fire forskellige rytmeforslag kan afprøves, og optagelse starter med en tom rytme. Eksisterende gemte sange og baner bevares.
+
+## Græskargløden
+
+Et selvstændigt, helårligt græskarværksted fra forsiden og minispilsmenuen. Vælg mellem seks former og farver, skrab kerner ud, brug seks stempler eller tegn lukkede udskæringer med fingeren. Flyt, drej, skalér, luk huller og fortryd. Syv lys, nat og lysstyrke giver en levende afsløring; et swipe puster lyset ud. Kladden og den redigerbare lanternehave gemmes separat fra vennerne. Haven viser seks flytbare lanterner per side uden en grænse på samlingens størrelse. Ingen figur kræves.
