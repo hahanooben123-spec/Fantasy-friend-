@@ -6,6 +6,14 @@ final class FriendStore: ObservableObject {
     @Published private(set) var settings = GameSettings()
     @Published var error: String?
     @Published private(set) var sessions=PlaySessions()
+    private let guestCompanion=FriendSeed.bimse.make()
+    var companion:FantasyFriend {
+        friends.first {$0.id == sessions.companionID} ?? friends.first ?? guestCompanion
+    }
+    func selectCompanion(_ id:UUID) {
+        guard friends.contains(where:{$0.id == id}) else {return}
+        updateSessions {$0.companionID=id}
+    }
     private var sessionsReadable=true
     private let directory: URL
     private var collectionReadable = true
@@ -73,7 +81,10 @@ final class FriendStore: ObservableObject {
         updateSessions {$0.pizza=draft;$0.recent=ActivityBookmark(kind:.pizza,friendID:draft.companion.id)}
     }
     func visit(_ kind:ActivityKind,friendID:UUID?=nil) {
-        updateSessions {$0.recent=ActivityBookmark(kind:kind,friendID:friendID)}
+        updateSessions {
+            $0.recent=ActivityBookmark(kind:kind,friendID:friendID)
+            if let id=friendID,friends.contains(where:{$0.id == id}) {$0.companionID=id}
+        }
     }
 
     private func write<T: Encodable>(_ value: T, to file: String) throws {
@@ -90,7 +101,7 @@ final class FriendStore: ObservableObject {
         var updated = friends
         if let index = updated.firstIndex(where: { $0.id == friend.id }) { updated[index] = friend }
         else { updated.insert(friend, at: 0) }
-        do { try write(Archive(friends: updated), to: "friends.json"); friends = updated; return true }
+        do { try write(Archive(friends: updated), to: "friends.json"); friends = updated; selectCompanion(friend.id); return true }
         catch { self.error = t("error"); return false }
     }
 

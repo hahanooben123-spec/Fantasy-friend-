@@ -75,6 +75,7 @@ struct BuilderView: View {
             .sheet(isPresented:$starters) {
                 StarterFriendsSheet(onChoose:chooseStarter,onClose:{starters=false}).environmentObject(store)
             }
+            .onAppear {SoundService.shared.setWorld(.castle)}
             .task {if !existing && !resuming {starters=true}}
             .task(id:friend) {
                 guard !celebration else {return}

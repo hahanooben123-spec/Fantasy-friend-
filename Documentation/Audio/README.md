@@ -20,7 +20,10 @@ compositions and synthesized instruments, without external recordings,
 samples or pre-existing melodies. No third-party music credit is required.
 They use 16-bar arrangements, stereo placement and circular delay tails.
 Garden: 88 BPM, 43.64 s. Dream: 72 BPM, 53.33 s.
-Workshop: 96 BPM, 40 s.
+Workshop: 88 BPM, 43.64 s.
+All three arrangements now share the same key and melodic phrases.
+The workshop retains the village pulse, while the dream arrangement slows
+the same theme for a quiet room. Existing crossfades connect the locations.
 
 ## Development
 Install numpy and soundfile in your development Python environment.

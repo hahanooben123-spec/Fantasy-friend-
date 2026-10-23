@@ -10,6 +10,19 @@ struct GalleryView: View {
                 AdventureHeading(title: store.t("friendVillage"), subtitle: store.t("villageSubtitle"))
                 if store.friends.isEmpty { EmptyCollectionView { onEdit(FantasyFriend.studioStarter(), false) } }
                 else {
+                    NavigationLink(destination:FriendRoomView(friendID:store.companion.id)) {
+                        HStack(spacing:12) {
+                            ZStack {
+                                RoomInterior(design:store.companion.roomDesign ?? RoomDesign())
+                                    .clipShape(RoundedRectangle(cornerRadius:17))
+                                CharacterView(friend:store.companion).padding(4)
+                            }.frame(width:82,height:72).accessibilityHidden(true)
+                            Text(store.t("villageMyHome")+" "+store.companion.name)
+                                .font(.system(size:18,weight:.heavy,design:.rounded))
+                                .lineLimit(2).frame(maxWidth:.infinity,alignment:.leading)
+                            Image(systemName:"door.left.hand.open").font(.system(size:26,weight:.bold))
+                        }.padding(10).background(StorybookPanel(cornerRadius:26))
+                    }.buttonStyle(SquishStyle()).padding(.horizontal,20).frame(maxWidth:800)
                     ScrollView {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 148, maximum: 235), spacing: 16)], spacing: 22) {
                             Button { onEdit(FantasyFriend.studioStarter(), false) } label: {
@@ -88,6 +101,7 @@ struct FriendDetailView: View {
                 }
             }
         }.foregroundColor(GameStyle.ink).navigationBarHidden(true)
+        .onAppear {store.selectCompanion(friendID)}
         .sheet(isPresented: $gate, onDismiss: { confirm = gatePassed; gatePassed = false }) {
             ParentGate { gatePassed = true; gate = false }.environmentObject(store)
         }

@@ -2,6 +2,20 @@
 
 Et originalt, lokalt iPhone-spil til børn på 3–8 år. Swift 6, SwiftUI og iOS 15+. Ingen tredjepartspakker, login, netværkskald eller køb.
 
+## Eventyrtorv og sammenhæng mellem aktiviteterne
+
+Forsiden er nu et originalt illustreret torv med fem store, trykbare bygninger: figurværksted, pizzabageri, spillehus, vennernes hjem og græskarhave. På liggende iPad ligger husene bredt omkring en fælles plads; på stående skærme følger man stier ned gennem landsbyen. Indstillinger og dag/aften er samlet i den lille topbjælke. Fortsæt åbner stadig den konkrete seneste aktivitet eller kladde.
+
+Den valgte ledsager gemmes som et valgfrit UUID i den eksisterende lokale sessionsfil, så ældre filer stadig kan åbnes. Vennevælgeren, samlingen, nye gemte figurer og besøg i aktiviteter holder valget fælles. Spillehuset og legepladsen bruger dette valg som udgangspunkt. Genoptagelse af en bestemt pizza eller aktivitet bevarer dens egen tilknyttede ven.
+
+Indgange bruger samme bygning på torvet og i en cirka 0,52 sekunders overgang. Dørene åbner, vennen går frem, og bygningen kommer tættere på. Et tryk springer direkte videre; Reducer bevægelse springer bevægelsen over. Der er ingen ekstra bekræftelsesknap. Aktiviteterne beholder deres fulde skærmareal.
+
+Gemte græskar står ved haven. En serveret pizza står ved bageriet. Andre gemte venner kigger frem ved hjemmene, og en tegnet figur vises som et lille indrammet billede ved værkstedet. Ledsagerens hus bruger farven fra det gemte værelse. Samlingen har en direkte indgang til denne vens værelse. Blomsten på torvet reagerer på tryk, og barnet kan selv vælge dag eller aften.
+
+De oprindelige musikarrangementer er samlet i samme toneart og genkendelige melodiske fraser. Værkstedet beholder landsbyens puls på 88 BPM, mens den rolige variation bruger 72 BPM. Værelset vælger rolig musik om aftenen. Musik er fortsat valgfri og lokal; eksisterende lydindstillinger bevares.
+
+Projektgeneratoren er kørt for at registrere de nye Swift-filer. Musikfilerne er genereret lokalt fra projektets originale komposition. Ingen build, tests, lytning eller visuel afprøvning på iPad er kørt for denne ændring.
+
 ## Ledbaserede animationer og fysisk efterbevægelse
 
 `Animations/CreatureRig.swift` definerer et fælles 2D-skelet med skuldre, hofter, ansigt og tilbehørsankre. Tidsstyrede klip omfatter gang, hop, grin, spisning, dans, kram og søvn. Gangen skifter mellem plantet fod og svingben med knæbøjning og modsatrettede arme. Hop har forberedelse, afsæt, svævefase, landing og efterbevægelse. Spisning har række-bevægelse, åben mund, bid, tygning og et tilfreds smil. Blink, øjenbryn, hovedhældning, kæbe og kinder indgår i renderingen.

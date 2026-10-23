@@ -11,40 +11,54 @@ struct HomeView:View {
     @State private var editor:EditorRequest?
     @State private var resumeNavigation=false
     @StateObject private var pumpkins=PumpkinStore()
-    @State private var starter=FriendSeed.bimse.make()
-    private var mascot:FantasyFriend {store.friends.first ?? starter}
+    @State private var journey:VillagePlace?
+    @State private var destination=VillagePlace.games
+    @State private var visitNavigation=false
+    @State private var choosingFriend=false
+    @State private var createAfterChoosing=false
+    @State private var dusk=false
+    @State private var homeVisible=true
+    @State private var travelFriend:FantasyFriend?
+    @Environment(\.accessibilityReduceMotion) private var reduced
+    @Environment(\.scenePhase) private var phase
+    private var mascot:FantasyFriend {store.companion}
     var body:some View {
         NavigationView {
             GeometryReader {proxy in
                 let tablet=proxy.size.width>=700
-                let landscape=proxy.size.width>=900 && proxy.size.width>proxy.size.height
+                let wide=proxy.size.width>=900 && proxy.size.width>proxy.size.height
                 ZStack {
-                    WelcomeGardenBackdrop()
-                    ScrollView(showsIndicators:false) {
-                        VStack(spacing:tablet ? 18 : 12) {
-                            header(tablet:tablet)
-                            NavigationLink(destination:resumeDestination,isActive:$resumeNavigation) {EmptyView()}.hidden()
-                            if landscape {
-                                HStack(alignment:.center,spacing:28) {
-                                    VStack(spacing:14) {
-                                        welcome(height:min(410,max(270,proxy.size.height-280)))
-                                        if recent != nil {resumeCard}
-                                    }.frame(width:proxy.size.width*0.39)
-                                    menu(height:min(230,max(165,proxy.size.height*0.29)))
-                                        .frame(maxWidth:.infinity)
-                                }
-                            } else {
-                                welcome(height:tablet ? 235 : 155)
-                                if recent != nil {resumeCard}
-                                menu(height:tablet ? 183 : 145)
-                            }
-                        }.padding(.horizontal,tablet ? 28 : 16).padding(.top,16).padding(.bottom,28)
-                            .frame(maxWidth:1280).frame(maxWidth:.infinity)
+                    WelcomeGardenBackdrop(dusk:dusk)
+                    VStack(spacing:0) {
+                        header(tablet:tablet).padding(.horizontal,tablet ? 28 : 16).padding(.vertical,12)
+                        ScrollView(showsIndicators:false) {
+                            VillageSquare(friend:mascot,lanterns:pumpkins.lanterns,pizza:store.sessions.pizza,
+                                wide:wide,dusk:dusk,active:homeVisible && journey == nil && phase == .active,
+                                visit:beginVisit,chooseFriend:{choosingFriend=true})
+                                .frame(height:wide ? max(650,proxy.size.height-175) :
+                                    tablet ? max(900,proxy.size.height-175) : 690)
+                                .frame(maxWidth:1400).frame(maxWidth:.infinity)
+                        }
+                        if recent != nil {
+                            resumeCard.padding(.horizontal,tablet ? 28 : 16).padding(.vertical,8).frame(maxWidth:850)
+                        }
+                    }.disabled(journey != nil).accessibilityHidden(journey != nil)
+                    NavigationLink(destination:visitDestination,isActive:$visitNavigation) {EmptyView()}.hidden()
+                    NavigationLink(destination:resumeDestination,isActive:$resumeNavigation) {EmptyView()}.hidden()
+                    if let place=journey {
+                        VillageJourney(place:place,friend:travelFriend ?? mascot) {finishVisit(place)}
+                            .zIndex(10)
                     }
-                }.onAppear {pumpkins.reload()}
+                }
             }.navigationBarHidden(true)
+                .onAppear {homeVisible=true;pumpkins.reload();SoundService.shared.setWorld(.meadow)}
+                .onDisappear {homeVisible=false;journey=nil}
         }.navigationViewStyle(.stack).accentColor(GameStyle.purple).foregroundColor(GameStyle.ink)
-            .onAppear {pumpkins.reload()}
+            .sheet(isPresented:$choosingFriend,onDismiss:{
+                if createAfterChoosing {createAfterChoosing=false;create()}
+            }) {
+                VillageCompanionPicker(create:{createAfterChoosing=true},close:{choosingFriend=false})
+            }
             .task {
                 #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("--preview-creator") {
@@ -60,74 +74,45 @@ struct HomeView:View {
             } message:{Text(store.error ?? "")}
     }
     private func header(tablet:Bool)->some View {
-        HStack(alignment:.center,spacing:12) {
-            VStack(alignment:.leading,spacing:6) {
-                BrandTitle(size:tablet ? 43 : 33)
-                Text(store.t("homeInvitation")).font(.system(size:tablet ? 16 : 13,weight:.bold,design:.rounded))
-                    .foregroundColor(WorkshopLook.sea)
+        HStack(spacing:12) {
+            VStack(alignment:.leading,spacing:5) {
+                BrandTitle(size:tablet ? 40 : 31)
+                Text(store.t("villageInvitation")).font(.system(size:tablet ? 15 : 12,weight:.bold,design:.rounded))
+                    .foregroundColor(dusk ? StorybookStyle.cream : WorkshopLook.sea)
             }
             Spacer(minLength:0)
+            Button {
+                withAnimation(reduced ? nil : .easeInOut(duration:0.5)) {dusk.toggle()}
+                SoundService.shared.play(.click)
+            } label: {
+                Image(systemName:dusk ? "moon.stars.fill" : "sun.max.fill")
+                    .font(.system(size:21,weight:.bold)).frame(width:48,height:48)
+                    .background(StorybookPanel(cornerRadius:23))
+            }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("villageLights"))
             NavigationLink(destination:SettingsView()) {
-                Image(systemName:"gearshape.fill").font(.system(size:22,weight:.bold))
-                    .foregroundColor(GameStyle.ink).frame(width:52,height:52)
-                    .background(StorybookPanel(cornerRadius:24))
+                Image(systemName:"gearshape.fill").font(.system(size:21,weight:.bold))
+                    .frame(width:48,height:48).background(StorybookPanel(cornerRadius:23))
             }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("settings"))
         }
     }
-    private func welcome(height:CGFloat)->some View {
-        WelcomeCompanion(friend:mascot).frame(height:height)
+    private func beginVisit(_ place:VillagePlace) {
+        guard journey == nil,!visitNavigation else {return}
+        travelFriend=mascot
+        journey=place
     }
-    private func menu(height:CGFloat)->some View {
-        VStack(spacing:14) {
-            HStack(spacing:14) {
-                Button(action:create) {
-                    WelcomeActionCard(kind:.studio,title:store.t("create"),subtitle:store.t("homeCreateHint"),
-                        color:Color(red:1,green:0.68,blue:0.22),height:height)
-                }
-                NavigationLink(destination:MiniGamesView(onCreate:create)) {
-                    WelcomeActionCard(kind:.games,title:store.t("homePlayGames"),subtitle:store.t("homePlayHint"),
-                        color:Color(red:0.20,green:0.70,blue:0.86),height:height)
-                }
-            }.buttonStyle(SquishStyle())
-            HStack(spacing:12) {
-                NavigationLink(destination:GalleryView(onEdit:openEditor)) {
-                    littleDoor(title:store.t("homeCollection"),kind:.village)
-                }
-                if let friend=store.friends.first {
-                    NavigationLink(destination:FriendRoomView(friendID:friend.id)) {
-                        littleDoor(title:store.t("myRoom"),kind:.studio)
-                    }
-                } else {
-                    NavigationLink(destination:PlaygroundView(onCreate:create)) {
-                        littleDoor(title:store.t("homePlay"),kind:.playground)
-                    }
-                }
-            }.buttonStyle(SquishStyle())
-            HStack(spacing:12) {
-                NavigationLink(destination:KitchenGameView(friend:mascot)) {workshop(title:store.t("game_kitchen"),pumpkin:false)}
-                NavigationLink(destination:PumpkinGameView()) {workshop(title:store.t("pumpkinTitle"),pumpkin:true)}
-            }.buttonStyle(SquishStyle())
+    private func finishVisit(_ place:VillagePlace) {
+        journey=nil
+        if place == .studio {create()}
+        else {destination=place;visitNavigation=true}
+    }
+    @ViewBuilder private var visitDestination:some View {
+        switch destination {
+        case .studio: EmptyView()
+        case .pizza: KitchenGameView(friend:travelFriend ?? mascot)
+        case .games: MiniGamesView(onCreate:create)
+        case .homes: GalleryView(onEdit:openEditor)
+        case .pumpkins: PumpkinGameView()
         }
-    }
-    private func littleDoor(title:String,kind:HomeDestination)->some View {
-        HStack(spacing:7) {
-            HomeDestinationArt(kind:kind).frame(width:54,height:52)
-            Text(title).font(.system(size:15,weight:.heavy,design:.rounded)).lineLimit(2)
-                .frame(maxWidth:.infinity,alignment:.leading)
-        }.padding(.horizontal,10).frame(maxWidth:.infinity,minHeight:65)
-            .background(StorybookPanel(cornerRadius:23))
-    }
-    private func workshop(title:String,pumpkin:Bool)->some View {
-        HStack(spacing:7) {
-            Group {
-                if pumpkin {PumpkinIllustration(lantern:PumpkinDoor.sample,animated:false)}
-                else {PizzaIllustration(recipe:.sample,baked:1,board:false)}
-            }.frame(width:49,height:61).accessibilityHidden(true)
-            Text(title).font(.system(size:15,weight:.heavy,design:.rounded))
-                .lineLimit(2).minimumScaleFactor(0.72).frame(maxWidth:.infinity,alignment:.leading)
-        }.padding(.horizontal,10).frame(maxWidth:.infinity).frame(height:72)
-            .background(CandySurface(color:pumpkin ? Color(red:0.47,green:0.29,blue:0.62) : Color(red:1,green:0.76,blue:0.39),cornerRadius:25))
-            .foregroundColor(pumpkin ? WorkshopLook.cream : GameStyle.ink)
     }
 
     private var recent:ActivityBookmark? {

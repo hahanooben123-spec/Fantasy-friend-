@@ -3,11 +3,9 @@ import SwiftUI
 struct MiniGamesView:View {
     @EnvironmentObject private var store:FriendStore
     let onCreate:()->Void
-    @State private var guest=FriendSeed.bimse.make()
-    @State private var selectedID:UUID?
     @State private var choosingFriend=false
     private var friend:FantasyFriend {
-        store.friends.first {$0.id == selectedID} ?? store.friends.first ?? guest
+        store.companion
     }
     var body:some View {
         ZStack {
@@ -63,7 +61,7 @@ struct MiniGamesView:View {
                         ScrollView {
                             LazyVGrid(columns:[GridItem(.adaptive(minimum:145))],spacing:18) {
                                 ForEach(store.friends) {candidate in
-                                    Button {selectedID=candidate.id;choosingFriend=false;SoundService.shared.play(.click)} label:{
+                                    Button {store.selectCompanion(candidate.id);choosingFriend=false;SoundService.shared.play(.click)} label:{
                                         FriendHomeCard(friend:candidate)
                                     }.buttonStyle(SquishStyle())
                                 }

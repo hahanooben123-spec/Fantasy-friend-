@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct WelcomeGardenBackdrop:View {
+    var dusk=false
     @Environment(\.accessibilityReduceMotion) private var reduced
     @Environment(\.scenePhase) private var phase
     @State private var drifting=false
@@ -9,12 +10,13 @@ struct WelcomeGardenBackdrop:View {
             ZStack {
                 Canvas {c,s in
                     c.fill(Path(CGRect(origin:.zero,size:s)),with:.linearGradient(Gradient(colors:[
-                        Color(red:0.40,green:0.82,blue:0.93),Color(red:0.89,green:0.96,blue:0.81)]),
+                        dusk ? Color(red:0.10,green:0.17,blue:0.35) : Color(red:0.40,green:0.82,blue:0.93),
+                        dusk ? Color(red:0.49,green:0.37,blue:0.58) : Color(red:0.89,green:0.96,blue:0.81)]),
                         startPoint:.zero,endPoint:CGPoint(x:0,y:s.height)))
                     let sun=CGPoint(x:s.width*0.83,y:s.height*0.14)
                     c.fill(Path(ellipseIn:CGRect(x:sun.x-120,y:sun.y-120,width:240,height:240)),
                         with:.radialGradient(Gradient(colors:[Color.yellow.opacity(0.45),.clear]),center:sun,startRadius:15,endRadius:120))
-                    ToyFinish.paint(c,path:Path(ellipseIn:CGRect(x:sun.x-31,y:sun.y-31,width:62,height:62)),color:Color(red:1,green:0.86,blue:0.31),edge:0.5)
+                    ToyFinish.paint(c,path:Path(ellipseIn:CGRect(x:sun.x-31,y:sun.y-31,width:62,height:62)),color:dusk ? StorybookStyle.cream : Color(red:1,green:0.86,blue:0.31),edge:0.5)
                     for i in 0..<3 {
                         let y=s.height*(0.69+CGFloat(i)*0.12)
                         var hill=Path();hill.move(to:CGPoint(x:-40,y:y))
@@ -37,7 +39,7 @@ struct WelcomeGardenBackdrop:View {
                         .position(x:proxy.size.width*CGFloat((i*23+7)%100)/100,y:proxy.size.height*(0.94+CGFloat(i%2)*0.035))
                 }
             }
-        }.storybookScene(lamps:true,foliage:true).ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
+        }.storybookScene(night:dusk,lamps:true,foliage:true).ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
             .onAppear {SoundService.shared.setWorld(.meadow)}
             .task(id:"\(phase)-\(reduced)") {
                 drifting=false

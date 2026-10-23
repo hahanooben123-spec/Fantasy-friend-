@@ -17,7 +17,7 @@ struct PlaygroundView: View {
     @State private var picker: PlayPicker?
     private let toys: [ToyKind] = [.feather, .berry, .jump, .music, .moon, .heart]
     private var friend: FantasyFriend? {
-        store.friends.first { $0.id == (selectedID ?? initialID) } ?? store.friends.first ?? guest
+        store.friends.first { $0.id == (selectedID ?? initialID) } ?? (store.friends.isEmpty ? guest : store.companion)
     }
 
     var body: some View {
@@ -107,7 +107,7 @@ struct PlaygroundView: View {
                             }
                         } else {
                             ForEach(store.friends) { value in
-                                Button { selectedID = value.id; signal = 0; picker = nil } label: { FriendHomeCard(friend: value) }
+                                Button { selectedID = value.id; store.selectCompanion(value.id); signal = 0; picker = nil } label: { FriendHomeCard(friend: value) }
                                     .buttonStyle(SquishStyle()).accessibilityAddTraits(friend?.id == value.id ? .isSelected : [])
                             }
                         }

@@ -74,8 +74,8 @@ def theme(name, bpm, transpose, dreamy=False):
 def main():
     OUT.mkdir(parents=True,exist_ok=True)
     theme("music_garden",88,0)
-    theme("music_dream",72,2,True)
-    theme("music_workshop",96,5)
+    theme("music_dream",72,0,True)
+    theme("music_workshop",88,0)
     archive=ROOT/"tools/kenney_interface-sounds.zip"
     with zipfile.ZipFile(archive) as z:
         for name in ["click_001","click_002","click_003","pluck_001","pluck_002","drop_001","confirmation_001"]:

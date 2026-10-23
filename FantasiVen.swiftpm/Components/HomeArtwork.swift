@@ -56,7 +56,7 @@ struct HomeDestinationArt:View {
         }.aspectRatio(240.0/170,contentMode:.fit).accessibilityHidden(true).allowsHitTesting(false)
     }
 }
-private enum HomeCottage {
+enum HomeCottage {
     static func draw(_ c:GraphicsContext,x:CGFloat,y:CGFloat,width w:CGFloat,height h:CGFloat,color:Color,roof:Color) {
         let wall=Path(roundedRect:CGRect(x:x,y:y+h*0.28,width:w,height:h*0.72),cornerRadius:w*0.12)
         ToyFinish.paint(c,path:wall,color:color,edge:2)

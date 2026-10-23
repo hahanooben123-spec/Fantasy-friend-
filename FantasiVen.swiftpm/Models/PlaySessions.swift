@@ -33,5 +33,6 @@ struct PlaySessions:Codable,Equatable {
     var editor:EditorDraft?
     var pizza:PizzaDraft?
     var recent:ActivityBookmark?
+    var companionID:UUID?
     var isValid:Bool {version == 1 && (editor?.friend.isValid ?? true) && (pizza?.isValid ?? true)}
 }

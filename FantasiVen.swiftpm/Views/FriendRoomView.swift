@@ -63,7 +63,8 @@ struct FriendRoomView:View {
             }.coordinateSpace(name:"roomWorkshop")
                 .onPreferenceChange(RoomSurfaceFrameKey.self) {roomFrame=$0}
         }.foregroundColor(GameStyle.ink).navigationBarHidden(true).statusBar(hidden:true)
-            .onAppear {load();store.visit(.room,friendID:friendID)}
+            .onAppear {load();store.visit(.room,friendID:friendID);SoundService.shared.setWorld(layout.design.night ? .stars : .castle)}
+            .onChange(of:layout.design.night) {night in SoundService.shared.setWorld(night ? .stars : .castle)}
             .onChange(of:phase) {value in if value != .active {draggingItem=nil;trayDragged=false;moving=nil;friendPreview=nil}}
             .task(id:draggingItem == nil && trayDragged) {
                 guard draggingItem == nil,trayDragged else {return}
