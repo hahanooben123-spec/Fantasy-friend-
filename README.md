@@ -196,3 +196,7 @@ Forsiden har en samlet velkomstscene med den gemte ven, to startvenner, modeller
 På brede iPad-landskabsvinduer står velkomstscene og menu ved siden af hinanden. På iPad i portræt og smalle vinduer ligger scenen over menuen. Menukort har fælles højde og faste afstande; adaptive kolonneantal og den tidligere særskilte store græskarbjælke er fjernet fra forsiden. Indholdet kan rulles på små skærme og i delte vinduer.
 
 Ingen kompilering, tests eller visuel kontrol kørt efter brugerens ønske.
+
+Værelsesbyggeren er forenklet til et børneforløb: rummet åbner uden møbelbakke og med to store valg, Tilføj ting og Rummets farver. Indret og Leg vises som to navngivne knapper. Bakken har billedkategorier og store miniaturer i et gitter; ting kan vælges med tryk eller trækkes direkte ind uden langt tryk. En Færdig-knap lukker bakken.
+
+En markeret ting har store greb til størrelse og drejning. Hovedværktøjerne er Farve, Læg væk, Flere og Tilføj. Kopi, spejling, præcis størrelse og lag findes under Flere. Valg af farve lukker paletten igen. Fortryd er altid øverst, og Gendan vises, når der er noget at gendanne. Legetilstanden viser kun legehandlinger. Gemning og eksisterende indretninger bevares. Ingen kompilering, tests eller visuel kontrol kørt.

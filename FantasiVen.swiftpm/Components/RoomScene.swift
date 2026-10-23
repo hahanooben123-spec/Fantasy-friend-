@@ -30,7 +30,7 @@ struct RoomScene:View {
                     RoomPlacedObject(object:shown,roomSize:size,editing:editing,selected:selected == value.id,
                         night:layout.design.night,pulse:activeID == value.id ? pulse : 0,
                         onTap:{onTap(value)},onMove:onMove)
-                        .zIndex(Double(shown.level)*1000+shown.y*100)
+                        .zIndex(editing && selected == value.id ? 4000 : Double(shown.level)*1000+shown.y*100)
                 }
                 companion(size)
                     .zIndex(1000+Double(friendPreview?.y ?? CGFloat(layout.design.friendY))*100)
@@ -92,6 +92,8 @@ private struct RoomPlacedObject:View {
     @State private var origin:RoomObject?
     @State private var gestureValue:RoomObject?
     @State private var lifted=false
+    @State private var resizeOrigin:RoomObject?
+    @State private var resizeWidth:CGFloat=1
     private var width:CGFloat {
         let ratio=RoomItem(rawValue:object.kind)?.widthFactor ?? 1
         return min(155,max(76,roomSize.width*0.2))*ratio*object.sizeFactor
@@ -114,6 +116,12 @@ private struct RoomPlacedObject:View {
         }.frame(width:width,height:width*1.1)
             .rotationEffect(.degrees(object.angle))
             .contentShape(Rectangle())
+            .overlay(alignment:.bottomTrailing) {
+                if editing && selected {resizeHandle.offset(x:6,y:6)}
+            }
+            .overlay(alignment:.topTrailing) {
+                if editing && selected {turnHandle.offset(x:6,y:-6)}
+            }
             .position(x:object.x*roomSize.width,y:object.y*roomSize.height)
             .onTapGesture(perform:onTap)
             .gesture(DragGesture(minimumDistance:5,coordinateSpace:.named("friendRoomScene")).onChanged {event in
@@ -151,5 +159,44 @@ private struct RoomPlacedObject:View {
                 do {try await Task.sleep(nanoseconds:260_000_000)} catch {lifted=false;return}
                 withAnimation(.spring(response:0.5,dampingFraction:0.45)) {lifted=false}
             }
+    }
+
+    private var resizeHandle:some View {
+        Image(systemName:"arrow.up.left.and.arrow.down.right").font(.system(size:21,weight:.heavy))
+            .foregroundColor(GameStyle.ink).frame(width:48,height:48)
+            .background(Circle().fill(WorkshopLook.yellow)).overlay(Circle().stroke(.white,lineWidth:3))
+            .shadow(color:GameStyle.ink.opacity(0.2),radius:4,y:3)
+            .highPriorityGesture(DragGesture().onChanged {value in
+                if resizeOrigin == nil {resizeOrigin=object;resizeWidth=width}
+                guard var next=resizeOrigin else {return}
+                let delta=Double((value.translation.width+value.translation.height)/max(50,resizeWidth))
+                next.scale=min(1.6,max(0.6,next.sizeFactor*(1+delta)))
+                gestureValue=next;onMove(next,false)
+            }.onEnded {_ in
+                if let next=gestureValue {onMove(next,true)}
+                resizeOrigin=nil;gestureValue=nil
+            })
+            .accessibilityLabel(words.t("roomResizeHandle"))
+            .accessibilityAdjustableAction {direction in
+                var next=object;next.scale=min(1.6,max(0.6,next.sizeFactor+(direction == .increment ? 0.15 : -0.15)))
+                onMove(next,true)
+            }
+    }
+    private var turnHandle:some View {
+        Button {
+            var next=object;next.rotation=next.angle>=150 ? -180 : next.angle+30;onMove(next,true)
+        } label:{
+            Image(systemName:"rotate.right").font(.system(size:21,weight:.heavy))
+                .foregroundColor(GameStyle.ink).frame(width:48,height:48)
+                .background(Circle().fill(WorkshopLook.cream)).overlay(Circle().stroke(.white,lineWidth:3))
+                .shadow(color:GameStyle.ink.opacity(0.2),radius:4,y:3)
+        }.buttonStyle(SquishStyle()).accessibilityLabel(words.t("roomRotate"))
+    }
+}
+
+struct RoomSurfaceFrameKey:PreferenceKey {
+    static let defaultValue=CGRect.zero
+    static func reduce(value:inout CGRect,nextValue:()->CGRect) {
+        let next=nextValue();if next.width>0 && next.height>0 {value=next}
     }
 }
