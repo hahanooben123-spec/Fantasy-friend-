@@ -19,6 +19,12 @@ struct SharedToyYardView:View {
             }).disabled(!active)
             VStack {
                 PlayHUD(title:store.t("sharedYard"),hint:store.t("yardHint"),paused:$paused)
+                HStack {
+                    Spacer()
+                    RoundButton(icon:"person.badge.plus",label:store.t("addFriend")) {choosing=true}.disabled(physics.friendCount>=4 || !active)
+                    RoundButton(icon:"arrow.up",label:store.t("jump")) {physics.jump()}.disabled(!active)
+                    RoundButton(icon:"arrow.counterclockwise",label:store.t("restartGame"),action:reset)
+                }.padding(.horizontal,16)
                 Spacer().allowsHitTesting(false)
                 PlayDock {
                     ForEach(0..<3) {kind in
@@ -27,9 +33,7 @@ struct SharedToyYardView:View {
                         }.disabled(physics.toyCount>=12)
                     }
                     Spacer(minLength:0)
-                    RoundButton(icon:"person.badge.plus",label:store.t("addFriend")) {choosing=true}.disabled(physics.friendCount>=4)
-                    RoundButton(icon:"arrow.up",label:store.t("jump")) {physics.jump()}
-                    RoundButton(icon:"arrow.counterclockwise",label:store.t("restartGame"),action:reset)
+
                 }.disabled(!active)
             }
             if paused {PlayPauseOverlay(resume:{paused=false})}

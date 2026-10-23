@@ -41,7 +41,7 @@ struct PlaygroundView: View {
                         }.accessibilityLabel(store.t("sharedYard"))
                         Spacer()
                     }.padding(.horizontal,16)
-                    PlayDock {
+                    PlayDock(spacing:0) {
                         ForEach(Array(PlayAction.allCases.enumerated()),id:\.element.rawValue) { index,item in
                             Button {action=item;signal+=1} label:{
                                 ToyGlyph(kind:toys[index]).frame(width:36,height:36)

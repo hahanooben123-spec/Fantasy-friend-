@@ -46,9 +46,10 @@ struct PlayPauseOverlay:View {
     }
 }
 struct PlayDock<Content:View>:View {
+    var spacing:CGFloat=8
     @ViewBuilder var content:()->Content
     var body:some View {
-        HStack(spacing:8,content:content).padding(12)
+        HStack(spacing:spacing,content:content).padding(12)
             .background(RoundedRectangle(cornerRadius:28).fill(.white.opacity(0.93)))
             .shadow(color:GameStyle.ink.opacity(0.15),radius:12,y:5)
             .padding(.horizontal,12).padding(.bottom,12)
@@ -65,7 +66,6 @@ struct PlayToken:View {
                 Text(symbol).font(.system(size:29))
                 Text(label).font(.system(size:10,weight:.heavy,design:.rounded)).lineLimit(1).minimumScaleFactor(0.7)
             }.frame(minWidth:44,minHeight:56)
-                .padding(.horizontal,5)
                 .background(RoundedRectangle(cornerRadius:18).fill(selected ? StudioStyle.colors[0] : .clear))
         }.buttonStyle(SquishStyle()).accessibilityLabel(label)
     }

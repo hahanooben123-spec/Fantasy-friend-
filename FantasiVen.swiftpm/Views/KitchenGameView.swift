@@ -45,7 +45,7 @@ struct KitchenGameView:View {
                                 else {mix()}
                             }.disabled(recipe.ingredients.isEmpty)
                         }.padding(.horizontal,16)
-                        PlayDock {
+                        PlayDock(spacing:0) {
                             ForEach(0..<6) {index in
                                 Button {add(index)} label:{
                                     Text(foods[index]).font(.system(size:30))
