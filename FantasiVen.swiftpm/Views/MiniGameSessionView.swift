@@ -11,6 +11,7 @@ struct MiniGameSessionView: View {
     @State private var picnic = false
     @State private var celebration = 0
     @State private var lastGolden = 0
+    @State private var surprises:[BubbleSurprise] = []
     @State private var popTimes: [Int:Double] = [:]
     @State private var interacted = false
     @State private var bubbleScale = 1.0
@@ -56,6 +57,10 @@ struct MiniGameSessionView: View {
                         .accessibilityLabel(store.t(kind == .hide ? "friendsFound" : kind == .apples ? "applesCaught" : "bubblesPopped"))
                         .accessibilityValue("\(count)")
                     Spacer()
+                    if kind == .apples {
+                        Text(store.t(apples.weather.key)).font(.system(size:12,weight:.heavy,design:.rounded))
+                            .padding(10).background(Capsule().fill(.white.opacity(0.92)))
+                    }
                 }.padding(.horizontal,18)
                 Spacer().allowsHitTesting(false)
                 if !interacted {Text(store.t(kind == .apples ? "appleHelp" : kind == .hide ? "hideHelp" : "bubbleSwipe")).font(.system(.subheadline,design:.rounded).weight(.bold)).padding(10).background(Capsule().fill(.white.opacity(0.9)))}
@@ -111,6 +116,7 @@ struct MiniGameSessionView: View {
         GeometryReader { proxy in
             let size = proxy.size
             ZStack {
+                VStack {FruitCanopy(weather:apples.weather);Spacer()}.allowsHitTesting(false)
                 Ellipse().fill(Color.green.opacity(0.16)).frame(width: size.width * 1.5, height: 120).position(x: size.width / 2, y: size.height * 0.99)
                 ForEach(Array(apples.flowers.enumerated()), id: \.offset) { index, x in
                     Text(["🌼", "🌸", "🌷"][index % 3]).font(.system(size: 26))
@@ -133,7 +139,7 @@ struct MiniGameSessionView: View {
                 BasketToy().position(x: apples.playerX * size.width, y: size.height * 0.75)
                     .allowsHitTesting(false)
                 if elapsed < cheerUntil {
-                    Text("✨").font(.system(size: 35))
+                    Text(["🍎","🍌","🫐"][apples.lastFruit]+" ✨").font(.system(size:35))
                         .position(x: apples.playerX * size.width, y: size.height * 0.57)
                         .allowsHitTesting(false)
                 }
@@ -159,10 +165,13 @@ struct MiniGameSessionView: View {
     private var bubbleField: some View {
         GeometryReader { proxy in
             ZStack {
-                CharacterView(friend: friend, happy: bubbles.popped > 0)
-                    .frame(width: 130, height: 140)
-                    .position(x: proxy.size.width / 2, y: proxy.size.height * (elapsed < flyUntil ? 0.25 : 0.82))
+                CharacterView(friend:blowingFriend,happy:elapsed<cheerUntil && !blowing)
+                    .frame(width:180,height:192)
+                    .position(x:proxy.size.width/2,y:proxy.size.height*(elapsed<flyUntil ? 0.25 : 0.81))
+                    .animation(reducedMotion ? nil : .easeInOut(duration:0.6),value:flyUntil)
                     .allowsHitTesting(false)
+                BubbleWand().frame(width:55,height:70)
+                    .position(x:proxy.size.width/2+48,y:proxy.size.height*0.83).allowsHitTesting(false)
                 ForEach(0..<6) { slot in
                     let generation = bubbles.generations[slot]
                     let diameter = min(170, max(70, proxy.size.width * 0.22)) * bubbleScale
@@ -173,17 +182,25 @@ struct MiniGameSessionView: View {
                                 if bubbleFlash == slot {
                                     Text("✦").font(.system(size: 36, weight: .bold)).foregroundColor(.white)
                                 } else {
-                                    CharacterView(friend: friend).padding(11).opacity(0.75)
+                                    BubbleSurpriseArt(kind:BubbleSurpriseKind(rawValue:(slot+generation)%4) ?? .music,friend:friend,age:elapsed)
+                                        .scaleEffect(0.58).frame(width:60,height:60)
                                 }
                             }
                             .frame(width: diameter, height: diameter)
                     }.buttonStyle(SquishStyle())
                         .scaleEffect(elapsed-(popTimes[slot] ?? -10)<0.22 ? 0.1 : 1,anchor:.center)
                         .position(center)
-                        .animation(reducedMotion ? nil : .spring(response:0.35,dampingFraction:0.6),value:generation)
+                        .animation(reducedMotion ? nil : .spring(response:0.35,dampingFraction:0.6),value:elapsed-(popTimes[slot] ?? -10)<0.22)
                         .accessibilityLabel(store.t("popBubble"))
                         .disabled(paused || giantBubble)
                         .opacity(giantBubble ? 0 : 1)
+                }
+                ForEach(surprises) {surprise in
+                    let age=max(0,elapsed-surprise.born)
+                    BubbleSurpriseArt(kind:surprise.kind,friend:friend,age:age)
+                        .opacity(max(0,1-age/surprise.lifetime))
+                        .position(x:proxy.size.width*(surprise.x+(reducedMotion ? 0 : sin(age*4)*0.04)),
+                                  y:proxy.size.height*(surprise.y-(reducedMotion ? 0 : age*0.11)))
                 }
                 if giantBubble {
                     Button(action: release) {
@@ -204,12 +221,20 @@ struct MiniGameSessionView: View {
                 })
         }
     }
+    private var blowing:Bool {sin(elapsed*2.6)>0.65}
+    private var blowingFriend:FantasyFriend {
+        var copy=friend
+        if blowing {copy.mouth=3}
+        return copy
+    }
     private func bubbleCenter(_ slot:Int,generation:Int,size:CGSize)->CGPoint {
-        let base=0.18+Double(slot%3)*0.32
-        let x=base+(reducedMotion ? 0 : sin(elapsed*0.65+Double(slot))*0.06)
-        let travel=(elapsed*0.055+Double(slot)*0.12+Double(generation)*0.19).truncatingRemainder(dividingBy:0.58)
-        let y=reducedMotion ? (slot<3 ? 0.32 : 0.59) : 0.8-travel
-        return CGPoint(x:size.width*x,y:size.height*y)
+        if reducedMotion {return CGPoint(x:size.width*(0.18+Double(slot%3)*0.32),y:size.height*(slot<3 ? 0.32 : 0.59))}
+        let age=max(0,elapsed-(popTimes[slot] ?? -Double(slot)*1.3))
+        let flight=age.truncatingRemainder(dividingBy:10)
+        let spread=min(1,flight/1.6)
+        let target=0.18+Double(slot%3)*0.32
+        let x=0.5+(target-0.5)*spread+sin(flight*1.4+Double(slot))*0.035*spread
+        return CGPoint(x:size.width*x,y:size.height*(0.84-flight*0.064))
     }
 
     private var hidingField: some View {
@@ -269,7 +294,8 @@ struct MiniGameSessionView: View {
         lastTick = date
         let dt = max(0, min(0.08, date.timeIntervalSince(previous)))
         elapsed += dt
-        if kind == .apples, apples.step(dt, spawnX: Double.random(in: 0.17...0.83), catchRadius: catchRadius, level: store.settings.challengeLevel) {
+        surprises.removeAll {elapsed-$0.born >= $0.lifetime}
+        if kind == .apples, apples.step(dt, spawnX: Double.random(in: 0.17...0.83), catchRadius: catchRadius, level:store.settings.challengeLevel,adventurous:true) {
             cheerUntil = elapsed + 0.7
             SoundService.shared.react(voice: friend.voice?.rawValue ?? 0)
             if apples.caught.isMultiple(of:5) || apples.goldenCaught>lastGolden {celebration += 1}
@@ -280,7 +306,12 @@ struct MiniGameSessionView: View {
 
     private func pop(_ slot: Int, generation: Int) {
         guard !paused,!picnic,elapsed-(popTimes[slot] ?? -10)>0.28,bubbles.pop(slot:slot,generation:generation) else {return}
+        let point=bubbleCenter(slot,generation:generation,size:CGSize(width:1,height:1))
+        let kind=BubbleSurpriseKind(rawValue:(slot+generation)%4) ?? .music
+        surprises.append(BubbleSurprise(kind:kind,x:point.x,y:point.y,born:elapsed))
+        if surprises.count>8 {surprises.removeFirst()}
         popTimes[slot]=elapsed
+        if kind == .music {SoundService.shared.instrument(1,beat:slot,voice:friend.voice?.rawValue ?? 0)}
         if bubbles.popped.isMultiple(of:6) {celebration += 1}
         interacted = true
         bubbleFlash = slot; cheerUntil = elapsed + 0.25
@@ -295,7 +326,7 @@ struct MiniGameSessionView: View {
     }
     private func restart() {
         apples = AppleRain(); bubbles = BubbleGarden(); seek = HideAndSeek()
-        interacted = false; popTimes=[:]; lastGolden=0
+        interacted = false; popTimes=[:]; surprises=[]; lastGolden=0
         picnic = false; giantBubble = false; bubbleScale = 1; clueSpot = nil; flyUntil = 0
         elapsed = 0; cheerUntil = 0; bubbleFlash = nil; lastTick = nil
         SoundService.shared.play(.click)

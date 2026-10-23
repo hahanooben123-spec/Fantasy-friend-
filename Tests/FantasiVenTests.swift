@@ -466,3 +466,72 @@ extension FantasiVenTests {
         simulation.setActive(false)
     }
 }
+
+extension FantasiVenTests {
+    func testCuratedMenuAndPlaygroundHaveSeparateActivities() {
+        XCTAssertEqual(MiniGameKind.menuGames.map(\.rawValue),["apples","bubbles","kitchen","orchestra"])
+        XCTAssertEqual(MiniGameKind.playgroundToys.map(\.rawValue),["slide","trampoline"])
+        let visible=Set((MiniGameKind.menuGames+MiniGameKind.playgroundToys).map(\.rawValue))
+        XCTAssertFalse(visible.contains("hide"));XCTAssertFalse(visible.contains("path"))
+    }
+    func testIngredientsMakeSixDistinctVisibleDiscoveries() {
+        let samples:[[Int]]=[[0,4],[1],[2],[0,3],[1,5],[0,1,2,4]]
+        let expected:[DishFeeling]=[.berry,.creamy,.crunchy,.fizzy,.bouncy,.rainbow]
+        for (ingredients,feeling) in zip(samples,expected) {
+            let dish=FantasyDish.make(ingredients)
+            XCTAssertEqual(dish.feeling,feeling)
+            XCTAssertTrue([dish.red,dish.green,dish.blue].allSatisfy {(0...1).contains($0)})
+        }
+        let strawberry=FantasyDish.make([0]),blueberry=FantasyDish.make([4])
+        XCTAssertNotEqual(strawberry.red,blueberry.red)
+        XCTAssertNotEqual(strawberry.blue,blueberry.blue)
+        XCTAssertEqual(FantasyDish.make([-1,99]),FantasyDish.make([]))
+    }
+    func testKitchenKeepsLatestIngredientsForContinuedExperimenting() {
+        var recipe=KitchenRecipe()
+        for ingredient in 0..<6 {recipe.add(ingredient)}
+        XCTAssertEqual(recipe.ingredients,[1,2,3,4,5])
+        recipe.add(-1);XCTAssertEqual(recipe.ingredients.count,5)
+        recipe.clear();XCTAssertTrue(recipe.ingredients.isEmpty)
+    }
+    func testFruitWeatherChangesPatternsAndKeepsObjectsInBounds() {
+        var game=AppleRain()
+        XCTAssertEqual(game.weather,.orchard)
+        for frame in 0..<540 {
+            game.step(0.08,spawnX:0.5,adventurous:true)
+            XCTAssertLessThanOrEqual(game.drops.count,5)
+            XCTAssertTrue(game.drops.allSatisfy {$0.x.isFinite && (0.14...0.86).contains($0.x)})
+            if frame == 179 {XCTAssertEqual(game.weather,.breeze)}
+            if frame == 359 {XCTAssertEqual(game.weather,.rainbow)}
+        }
+        XCTAssertEqual(game.weather,.orchard)
+        let before=game.time
+        game.step(.infinity,spawnX:.nan,adventurous:true)
+        XCTAssertEqual(game.time,before)
+    }
+    func testInstrumentVoicesProduceDistinctBoundedPCMFiles() throws {
+        let drum=InstrumentSynth.render(row:0,beat:0,voice:0)
+        let bell=InstrumentSynth.render(row:1,beat:0,voice:0)
+        let voice=InstrumentSynth.render(row:2,beat:0,voice:0)
+        XCTAssertNotEqual(drum,bell);XCTAssertNotEqual(bell,voice)
+        XCTAssertNotEqual(voice,InstrumentSynth.render(row:2,beat:0,voice:1))
+        for sound in [drum,bell,voice] {
+            XCTAssertEqual(String(data:sound.prefix(4),encoding:.utf8),"RIFF")
+            XCTAssertEqual(String(data:sound[8..<12],encoding:.utf8),"WAVE")
+            XCTAssertGreaterThan(sound.count,1000)
+            XCTAssertEqual((sound.count-44)%2,0)
+            let bytes=[UInt8](sound)
+            for i in stride(from:44,to:bytes.count-1,by:2) {
+                let bits=UInt16(bytes[i]) | (UInt16(bytes[i+1])<<8)
+                XCTAssertLessThanOrEqual(abs(Int(Int16(bitPattern:bits))),11000)
+            }
+        }
+    }
+    func testRhythmSuggestionsAreDistinctAndCanStillBeSaved() throws {
+        let patterns=(0..<4).map {OrchestraPattern.preset($0)}
+        XCTAssertTrue(patterns.allSatisfy(\.isValid))
+        let encoded=try patterns.map {try JSONEncoder().encode($0)}
+        XCTAssertEqual(Set(encoded).count,4)
+        for data in encoded {XCTAssertTrue(try JSONDecoder().decode(OrchestraPattern.self,from:data).isValid)}
+    }
+}

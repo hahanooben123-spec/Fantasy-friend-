@@ -65,9 +65,23 @@ final class SoundService {
         let root = [523.25, 880, 261.63][min(2, max(0, voice))]
         playNotes([root, root * [1.25, 1.5, 0.75].randomElement()!], duration: 0.13, timbre: voice)
     }
-    func instrument(_ row: Int, beat: Int) {
-        let roots: [Double] = [130.81, 329.63, 523.25]
-        playNotes([roots[min(2, max(0, row))] * (beat.isMultiple(of: 4) ? 1.25 : 1)], duration: 0.18, timbre: row)
+    func instrument(_ row:Int,beat:Int,voice:Int = 0) {
+        guard settings.sound && active else {return}
+        let key="instrument-\(min(2,max(0,row)))-\(beat%8)-\(min(2,max(0,voice)))"
+        let data:Data
+        if let existing=cache[key] {data=existing}
+        else {
+            data=InstrumentSynth.render(row:row,beat:beat,voice:voice)
+            if cache.count<64 {cache[key]=data}
+        }
+        playData(data)
+    }
+    private func playData(_ data:Data) {
+        guard settings.sound && active else {return}
+        effects.removeAll {!$0.isPlaying}
+        guard effects.count<12,let player=try? AVAudioPlayer(data:data) else {return}
+        try? AVAudioSession.sharedInstance().setCategory(.ambient,mode:.default)
+        player.volume=0.25;effects.append(player);player.play()
     }
     private func playNotes(_ notes: [Double], duration: Double, timbre: Int) {
         guard settings.sound && active else { return }
@@ -80,9 +94,7 @@ final class SoundService {
             data = Self.wave(notes: notes, noteDuration: duration, timbre: timbre)
             if cache.count < 64 { cache[key] = data }
         }
-        guard let player = try? AVAudioPlayer(data: data) else { return }
-        try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
-        player.volume = 0.25; effects.append(player); player.play()
+        playData(data)
     }
     func speak(_ text: String, language: Language) {
         guard settings.speechEnabled && active else { return }

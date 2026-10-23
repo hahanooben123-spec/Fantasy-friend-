@@ -44,7 +44,8 @@ struct KitchenRecipe {
     private(set) var ingredients: [Int] = []
     var flavor: Int { ingredients.reduce(0, +) % 3 }
     mutating func add(_ ingredient: Int) {
-        guard (0..<6).contains(ingredient), ingredients.count < 5 else { return }
+        guard (0..<6).contains(ingredient) else { return }
+        if ingredients.count == 5 {ingredients.removeFirst()}
         ingredients.append(ingredient)
     }
     mutating func clear() { ingredients.removeAll() }

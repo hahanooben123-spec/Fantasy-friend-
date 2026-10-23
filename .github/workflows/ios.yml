@@ -49,7 +49,7 @@ jobs:
           xcrun simctl bootstatus "$IPAD_ID" -b
           xcrun simctl install "$IPAD_ID" build/DerivedData/Build/Products/Debug-iphonesimulator/FantasiVen.app
           xcrun simctl status_bar "$IPAD_ID" override --time "9:41" --batteryState charged --batteryLevel 100
-          for ROUTE in apples playground; do
+          for ROUTE in hub kitchen bubbles orchestra playground; do
             xcrun simctl launch --terminate-running-process "$IPAD_ID" dk.fantasiven.app "--preview-play=$ROUTE"
             sleep 3
             xcrun simctl io "$IPAD_ID" screenshot "ui-previews/$ROUTE-iPad.png"

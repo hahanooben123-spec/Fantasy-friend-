@@ -126,3 +126,13 @@ Legepladsen, fællesgården og alle otte minispil bruger nu hele vinduet som spi
 Frugtfangst har fangstserier, gyldne frugter og frivillig picnic. Bobler driver gennem verdenen og kan sprænges med et fingerstrøg. Gemmeleg viser forskellige venner. Rutsjebane og trampolin har stjerner at samle; trampolin fortsætter uden en tvungen slutning. Køkkenet understøtter træk af ingredienser til skålen og omrøring med fingeren. Musikscenen har store instrumenter, rytmeforslag, live optagelse og en særskilt nodeeditor. Stispillet giver feedback på hver korrekt del og lader vennen gå automatisk, når stien passer. Fællesgården kan få legetøj placeret med et tryk i verdenen.
 
 Stjerner og fangstserier er midlertidige legeeffekter. Ingen indholdslåse, valuta, straf eller daglige krav er tilføjet. Pause og baggrundstilstand stopper simulering og lyd. En samlet native bygning og modeltests bruges til validering; screenshottrinnet har en fast tidsgrænse og må ikke skjule fejl i kompilering eller tests.
+
+## Fire minispil og byggelegetøj på legepladsen
+
+Minispilsmenuen viser nu Æbleregn, Bobler, Fantasikøkken og Venneorkester. Rutsjebane og trampolin åbnes direkte fra legepladsen. Gemmeleg og stispillet er taget ud af det almindelige spilvalg.
+
+Køkkenets ingredienser blandes til synlige farver og seks forskellige opdagelser: bærkys, cremet mad, knas, boblemad, hoppemad og regnbuemad. Barnet kan fortsætte eksperimentet ved at tilføje nye ingredienser; skålen beholder de seneste fem. Den færdige mad kan trækkes hen til vennen eller smages med knappen. Figurens midlertidige smagsreaktioner ændrer aldrig den gemte kreation.
+
+Æbleregn veksler mellem grupper i frugthaven, en blid brise og regnbueregn. Bobler flyver fra vennens boblepind og indeholder toner, sommerfugle, små udgaver af vennen eller farvesprøjt. Overraskelser har kort levetid og en fast grænse på otte samtidig.
+
+Musik bruger originale lokalt syntetiserede tromme-, klokke- og stemmelyde. Både figuren og instrumentknappen kan anslå instrumentet. Stemmelyden følger vennens stemmetype. Fire forskellige rytmeforslag kan afprøves, og optagelse starter med en tom rytme. Eksisterende gemte sange og baner bevares.

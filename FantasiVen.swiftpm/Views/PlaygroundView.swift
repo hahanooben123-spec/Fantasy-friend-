@@ -26,6 +26,19 @@ struct PlaygroundView: View {
                 RagdollPlayground(friend:friend,action:action,signal:signal,active:!paused).id(friend.id)
                 VStack {
                     PlayHUD(title:store.t("playRoom"),hint:store.t("ragdollHint"),paused:$paused)
+                    HStack(spacing:12) {
+                        ForEach(MiniGameKind.playgroundToys) {toy in
+                            NavigationLink(destination:PhysicsAdventureView(kind:toy,friend:friend)) {
+                                HStack(spacing:8) {
+                                    MiniGameArt(kind:toy).scaleEffect(0.4).frame(width:42,height:42)
+                                    Text(store.t(toy == .slide ? "buildTrackToy" : "game_trampoline"))
+                                        .font(.system(size:12,weight:.heavy,design:.rounded))
+                                }.padding(.horizontal,12).frame(minHeight:52)
+                                    .background(Capsule().fill(.white.opacity(0.94)))
+                            }.buttonStyle(SquishStyle()).disabled(paused)
+                        }
+                        Spacer(minLength:0)
+                    }.padding(.horizontal,16)
                     Spacer().allowsHitTesting(false)
                     HStack(spacing:8) {
                         Button {picker = .friends} label:{

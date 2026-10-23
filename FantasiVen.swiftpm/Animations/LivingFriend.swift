@@ -7,6 +7,7 @@ struct LivingFriend: View {
     var action: PlayAction = .jump
     var signal = 0
     var audible = true
+    var onTouch:(()->Void)?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var blink = false
     @State private var gaze = CGPoint.zero
@@ -24,8 +25,11 @@ struct LivingFriend: View {
 
     var body: some View {
         Button {
-            tappedAction = [PlayAction.tickle, .jump, .hug].randomElement() ?? .jump
-            localSignal += 1
+            if let onTouch=onTouch {onTouch()}
+            else {
+                tappedAction = [PlayAction.tickle,.jump,.hug].randomElement() ?? .jump
+                localSignal += 1
+            }
         } label: {
             ZStack {
                 Ellipse().fill(GameStyle.ink.opacity(0.09)).frame(width: 150, height: 17).offset(y: 128)

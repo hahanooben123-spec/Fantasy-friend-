@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OrchestraGameView:View {
     @EnvironmentObject private var store:FriendStore
+    @Environment(\.accessibilityReduceMotion) private var reduced
     let friend:FantasyFriend
     @State private var pattern=OrchestraPattern()
     @State private var playing=false
@@ -25,8 +26,10 @@ struct OrchestraGameView:View {
                     HStack(alignment:.bottom,spacing:6) {
                         ForEach(0..<3) {row in
                             VStack(spacing:8) {
-                                LivingFriend(friend:performer(row),action:.dance,signal:signals[row],audible:false)
+                                LivingFriend(friend:performer(row),action:row == 0 ? .jump : row == 1 ? .dance : .tickle,signal:signals[row],audible:false,onTouch:{strike(row)})
                                     .frame(height:proxy.size.height*0.37)
+                                    .scaleEffect(reduced || signals[row].isMultiple(of:2) ? 1 : 1.04)
+                                    .animation(reduced ? nil : .spring(response:0.3,dampingFraction:0.65),value:signals[row])
                                 Button {strike(row)} label:{
                                     Text(["🥁","🎹","🎤"][row]).font(.system(size:proxy.size.width>600 ? 65 : 42))
                                         .frame(maxWidth:.infinity,minHeight:90)
@@ -52,7 +55,7 @@ struct OrchestraGameView:View {
                             PlayToken(symbol:playing ? "⏸️" : "▶️",label:store.t(playing ? "stopSong" : "playSong")) {playing.toggle()}
                             Spacer(minLength:0)
                             PlayToken(symbol:"🔴",label:store.t("recordMusic"),selected:recording) {
-                                recording.toggle();if recording {playing=true}
+                                recording.toggle();if recording {pattern=OrchestraPattern();saved=false;beat = -1;playing=true}
                             }
                             PlayToken(symbol:"🎲",label:store.t("newBeat")) {preset+=1;seed();playing=true}
                             PlayToken(symbol:"🎼",label:store.t("editBeat")) {editing=true}
@@ -67,7 +70,7 @@ struct OrchestraGameView:View {
                 while !Task.isCancelled {
                     beat=(beat+1)%8
                     for row in 0..<3 where pattern.rows[row][beat] {
-                        SoundService.shared.instrument(row,beat:beat);signals[row]+=1
+                        SoundService.shared.instrument(row,beat:beat,voice:performer(row).voice?.rawValue ?? 0);signals[row]+=1
                     }
                     do {try await Task.sleep(nanoseconds:UInt64([0.55,0.42,0.32][store.settings.challengeLevel-1]*1_000_000_000))}
                     catch {return}
@@ -78,19 +81,14 @@ struct OrchestraGameView:View {
             .sheet(isPresented:$editing) {editor}
     }
     private func strike(_ row:Int) {
-        SoundService.shared.instrument(row,beat:max(0,beat));signals[row]+=1;celebration+=1
+        SoundService.shared.instrument(row,beat:max(0,beat),voice:performer(row).voice?.rawValue ?? 0);signals[row]+=1;celebration+=1
         if recording {
             let column=max(0,beat)
             if !pattern.rows[row][column] {pattern.toggle(row:row,beat:column);saved=false}
         }
     }
     private func seed() {
-        pattern=OrchestraPattern();saved=false
-        for column in 0..<8 {
-            if (column+preset)%2 == 0 {pattern.toggle(row:0,beat:column)}
-            if (column+preset)%4 == 1 {pattern.toggle(row:1,beat:column)}
-            if (column+preset)%4 == 3 {pattern.toggle(row:2,beat:column)}
-        }
+        pattern=OrchestraPattern.preset(preset);saved=false
     }
     private func save() {
         guard var current=store.friends.first(where:{$0.id == friend.id}) else {return}

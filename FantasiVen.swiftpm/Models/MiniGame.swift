@@ -2,6 +2,8 @@ import Foundation
 
 enum MiniGameKind: String, CaseIterable, Identifiable {
     case apples, bubbles, hide, slide, trampoline, kitchen, orchestra, path
+    static let menuGames:[MiniGameKind] = [.apples,.bubbles,.kitchen,.orchestra]
+    static let playgroundToys:[MiniGameKind] = [.slide,.trampoline]
     var id: String { rawValue }
     var titleKey: String { "game_" + rawValue }
     var hintKey: String { "hint_" + rawValue }
@@ -14,6 +16,9 @@ struct AppleDrop: Identifiable {
     var y: Double
     var fruit = 0
     var golden = false
+    var anchorX = 0.5
+    var born = 0.0
+    var drifting = false
 }
 
 struct AppleRain {
@@ -24,6 +29,9 @@ struct AppleRain {
     private(set) var goldenCaught = 0
     private(set) var fruitBasket: [Int] = []
     private var spawnSequence = 0
+    private(set) var time = 0.0
+    var weather:FruitWeather {FruitWeather(rawValue:Int(time/14)%3) ?? .orchard}
+    private(set) var lastFruit = 0
     private(set) var playerX = 0.5
     private var spawnClock = 1.3
 
@@ -34,21 +42,34 @@ struct AppleRain {
 
     /// Clamping prevents a background pause from advancing the whole game at once.
     @discardableResult
-    mutating func step(_ delta: Double, spawnX: Double, catchRadius: Double = 0.15, level: Int = 1) -> Bool {
+    mutating func step(_ delta: Double, spawnX: Double, catchRadius: Double = 0.15, level:Int = 1,adventurous:Bool = false) -> Bool {
         guard delta.isFinite, delta > 0 else { return false }
         let dt = min(delta, 0.08)
+        time += dt
         spawnClock += dt
-        if spawnClock >= (level == 1 ? 1.8 : level == 2 ? 1.6 : 1.3) && drops.count < 5 {
+        let baseInterval = level == 1 ? 1.8 : level == 2 ? 1.6 : 1.3
+        let interval = baseInterval * (adventurous ? (weather == .rainbow ? 0.6 : 0.9) : 1)
+        if spawnClock >= interval && drops.count < 5 {
             spawnClock = 0
-            drops.append(AppleDrop(x: min(0.83, max(0.17, spawnX)), y: -0.06, fruit: spawnSequence % 3,golden:spawnSequence % 7 == 6))
+            var x = spawnX.isFinite ? min(0.83,max(0.17,spawnX)) : 0.5
+            if adventurous && weather == .orchard {x=[0.28,0.5,0.72][(spawnSequence/3)%3]}
+            if adventurous && weather == .rainbow {x=0.18+Double(spawnSequence%5)*0.16}
+            drops.append(AppleDrop(x:x,y:adventurous ? 0.12 : -0.06,fruit:spawnSequence%3,
+                                   golden:spawnSequence%7 == 6,anchorX:x,born:time,drifting:adventurous && weather == .breeze))
             spawnSequence += 1
         }
         var collected = false
-        for index in drops.indices { drops[index].y += dt * (level == 1 ? 0.16 : level == 2 ? 0.18 : 0.22) }
+        let speed = (level == 1 ? 0.16 : level == 2 ? 0.18 : 0.22) * (adventurous ? 1.1 : 1)
+        for index in drops.indices {
+            drops[index].y += dt * speed
+            if drops[index].drifting {
+                drops[index].x=min(0.86,max(0.14,drops[index].anchorX+sin((time-drops[index].born)*2.2)*0.07))
+            }
+        }
         var remaining: [AppleDrop] = []
         for apple in drops {
             if apple.y >= 0.70 && apple.y <= 0.79 && abs(apple.x - playerX) <= catchRadius {
-                caught += 1; streak += 1
+                caught += 1; streak += 1; lastFruit=apple.fruit
                 if apple.golden {goldenCaught += 1}
                 fruitBasket.append(apple.fruit)
                 if fruitBasket.count > 12 { fruitBasket.removeFirst() }

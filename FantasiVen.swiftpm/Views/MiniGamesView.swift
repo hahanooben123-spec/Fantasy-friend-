@@ -30,7 +30,7 @@ struct MiniGamesView: View {
                                     .background(RoundedRectangle(cornerRadius: 30).fill(.white.opacity(0.9)))
                             }.buttonStyle(SquishStyle())
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 280, maximum: 450))], spacing: 20) {
-                            ForEach(MiniGameKind.allCases) { kind in
+                            ForEach(MiniGameKind.menuGames) { kind in
                                 NavigationLink(destination: GameDestinationView(kind: kind, friend: friend).id(friend.id)) {
                                     HStack(spacing: 14) {
                                         MiniGameArt(kind: kind)
