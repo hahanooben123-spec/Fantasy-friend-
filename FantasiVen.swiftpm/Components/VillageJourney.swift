@@ -14,12 +14,13 @@ struct VillageJourney: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                LinearGradient(colors:[StorybookStyle.teal,GameStyle.mixed(place.color,with:StorybookStyle.cream,amount:0.6)],
-                    startPoint:.top,endPoint:.bottom).ignoresSafeArea()
-                StorybookAtmosphere(lamps:true)
+                PaintedVillageBackdrop(active:phase == .active).ignoresSafeArea()
+                StorybookStyle.teal.opacity(0.18).ignoresSafeArea()
                 VStack(spacing:14) {
                     Text(store.t(place.titleKey)).font(.system(size:29,weight:.heavy,design:.rounded))
-                        .foregroundColor(StorybookStyle.cream).multilineTextAlignment(.center)
+                        .foregroundColor(GameStyle.ink).multilineTextAlignment(.center)
+                        .padding(.horizontal,22).padding(.vertical,10)
+                        .background(StorybookPanel(cornerRadius:24))
                     ZStack(alignment:.bottom) {
                         VillageBuilding(place:place,opening:open ? 1 : 0)
                             .scaleEffect(closeUp && !reduced ? 1.25 : 1,anchor:.bottom)
@@ -31,7 +32,8 @@ struct VillageJourney: View {
                     }.frame(width:min(440,proxy.size.width*0.88))
                 }.frame(maxWidth:.infinity,maxHeight:.infinity)
                 VStack {Spacer();Text(store.t("villageEnter")).font(.system(size:15,weight:.bold,design:.rounded))
-                    .foregroundColor(StorybookStyle.cream).padding(20)}
+                    .foregroundColor(GameStyle.ink).padding(.horizontal,18).padding(.vertical,10)
+                    .background(StorybookPanel(cornerRadius:22)).padding(20)}
             }.contentShape(Rectangle()).onTapGesture(perform:finish)
                 .accessibilityElement(children:.ignore)
                 .accessibilityLabel(store.t(place.titleKey))

@@ -2,6 +2,18 @@
 
 Et originalt, lokalt iPhone-spil til børn på 3–8 år. Swift 6, SwiftUI og iOS 15+. Ingen tredjepartspakker, login, netværkskald eller køb.
 
+## Malede miljøer og fem unikke bygninger
+
+Torvets tidligere gentagne husform er erstattet af fem separate originale bygningsillustrationer: malerværksted med pensel og snoet tag, ovnformet pizzabageri, musikalsk spillehus, træhus og organisk græskarværksted. De har tydeligt forskellige silhuetter, malede træ-, sten-, tegl- og stofmaterialer og samme varme lysretning.
+
+En sjette illustration er en detaljeret eventyrlysning med skov, vand, fjerne huse og lanterner. Den bruges i landsbyen, velkomstscenerne, dørovergangene og skov-/engmiljøerne. Illustrationen tilpasses skærmen uden at strække proportionerne. Husene er separate PNG-filer med ægte transparens. Figurer, navne, navigation, skilte, gemte kreationer og belysning er fortsat separate lag. Dørene animerer med de malede pixels fra selve huset.
+
+Grafikken er lavet med det indbyggede image_gen-værktøj og er gemt i appens asset-katalog. Filplaceringer, integration og alle endelige prompts findes i [Documentation/Art/Village-Art.md](Documentation/Art/Village-Art.md). Ingen eksterne tjenester bruges af den færdige app.
+
+Hovedmenuens tekst står på et roligt cremefarvet panel. Stier, lys, aftenstemning og få lyspartikler binder lagene sammen. I den malede udgave bruger hjemmets lille dørmåtte den gemte værelsesfarve; selve træhuset omfarves ikke.
+
+Projektgeneratoren er kørt for at registrere den nye Swift-fil. Ingen build, tests, skærmbilleder eller visuel afprøvning af appen på Apple-enheder er kørt.
+
 ## Eventyrtorv og sammenhæng mellem aktiviteterne
 
 Forsiden er nu et originalt illustreret torv med fem store, trykbare bygninger: figurværksted, pizzabageri, spillehus, vennernes hjem og græskarhave. På liggende iPad ligger husene bredt omkring en fælles plads; på stående skærme følger man stier ned gennem landsbyen. Indstillinger og dag/aften er samlet i den lille topbjælke. Fortsæt åbner stadig den konkrete seneste aktivitet eller kladde.

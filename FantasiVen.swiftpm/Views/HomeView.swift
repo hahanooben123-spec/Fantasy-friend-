@@ -28,7 +28,7 @@ struct HomeView:View {
                 let tablet=proxy.size.width>=700
                 let wide=proxy.size.width>=900 && proxy.size.width>proxy.size.height
                 ZStack {
-                    WelcomeGardenBackdrop(dusk:dusk)
+                    WelcomeGardenBackdrop(dusk:dusk,active:homeVisible && journey == nil)
                     VStack(spacing:0) {
                         header(tablet:tablet).padding(.horizontal,tablet ? 28 : 16).padding(.vertical,12)
                         ScrollView(showsIndicators:false) {
@@ -36,7 +36,7 @@ struct HomeView:View {
                                 wide:wide,dusk:dusk,active:homeVisible && journey == nil && phase == .active,
                                 visit:beginVisit,chooseFriend:{choosingFriend=true})
                                 .frame(height:wide ? max(650,proxy.size.height-175) :
-                                    tablet ? max(900,proxy.size.height-175) : 690)
+                                    tablet ? max(1000,proxy.size.height-175) : 740)
                                 .frame(maxWidth:1400).frame(maxWidth:.infinity)
                         }
                         if recent != nil {
@@ -76,9 +76,9 @@ struct HomeView:View {
     private func header(tablet:Bool)->some View {
         HStack(spacing:12) {
             VStack(alignment:.leading,spacing:5) {
-                BrandTitle(size:tablet ? 40 : 31)
+                BrandTitle(size:tablet ? 40 : 28)
                 Text(store.t("villageInvitation")).font(.system(size:tablet ? 15 : 12,weight:.bold,design:.rounded))
-                    .foregroundColor(dusk ? StorybookStyle.cream : WorkshopLook.sea)
+                    .foregroundColor(WorkshopLook.sea)
             }
             Spacer(minLength:0)
             Button {
@@ -86,14 +86,15 @@ struct HomeView:View {
                 SoundService.shared.play(.click)
             } label: {
                 Image(systemName:dusk ? "moon.stars.fill" : "sun.max.fill")
-                    .font(.system(size:21,weight:.bold)).frame(width:48,height:48)
+                    .font(.system(size:21,weight:.bold)).frame(width:44,height:44)
                     .background(StorybookPanel(cornerRadius:23))
             }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("villageLights"))
             NavigationLink(destination:SettingsView()) {
                 Image(systemName:"gearshape.fill").font(.system(size:21,weight:.bold))
-                    .frame(width:48,height:48).background(StorybookPanel(cornerRadius:23))
+                    .frame(width:44,height:44).background(StorybookPanel(cornerRadius:23))
             }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("settings"))
-        }
+        }.padding(.horizontal,12).padding(.vertical,10)
+            .background(StorybookPanel(cornerRadius:28))
     }
     private func beginVisit(_ place:VillagePlace) {
         guard journey == nil,!visitNavigation else {return}

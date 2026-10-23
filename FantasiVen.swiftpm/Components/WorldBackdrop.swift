@@ -27,8 +27,12 @@ struct WorldBackdrop: View {
         GeometryReader { geometry in
             ZStack {
                 LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom)
-                Canvas { context, size in
-                    StorybookWorldPainter(context:context,size:size,world:world).draw()
+                if world == .forest || world == .meadow {
+                    PaintedVillageBackdrop(active:scenePhase == .active,animated:animated)
+                } else {
+                    Canvas { context, size in
+                        StorybookWorldPainter(context:context,size:size,world:world).draw()
+                    }
                 }
                 cloudRibbon.frame(width: geometry.size.width, height: geometry.size.height)
                     .offset(x: drift ? 8 : -8, y: drift ? -3 : 3)
