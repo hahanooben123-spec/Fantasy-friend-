@@ -6,6 +6,10 @@ enum Words {
         return language == .da ? pair.0 : pair.1
     }
     static let entries: [String: (String, String)] = [
+        "effectsVolume": ("Lydstyrke for legelyde", "Play sound volume"),
+        "musicVolume": ("Lydstyrke for musik", "Music volume"),
+        "previewSound": ("Hør en legelyd", "Try a play sound"),
+        "musicAtmosphere": ("Musikken skifter med verdenen og bliver stille, når vennen taler.", "Music changes with the world and softens when your friend speaks."),
         "lanternMagic": ("Lysmagi", "Light magic"),
         "pumpkinTitle": ("Græskargløden", "Pumpkin Glow"),
         "pumpkinDoorHint": ("Skær, tænd og skab din egen lanternehave", "Carve, light and grow your lantern garden"),

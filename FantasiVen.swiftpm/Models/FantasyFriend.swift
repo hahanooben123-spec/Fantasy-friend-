@@ -97,6 +97,16 @@ struct GameSettings: Codable {
     var language: Language = .da
     var sound = true
     var music = false
+    var musicVolume: Double?
+    var effectsVolume: Double?
+    var musicLevel: Double {
+        let value = musicVolume ?? 0.55
+        return value.isFinite ? min(1, max(0, value)) : 0.55
+    }
+    var effectsLevel: Double {
+        let value = effectsVolume ?? 0.65
+        return value.isFinite ? min(1, max(0, value)) : 0.65
+    }
     var speech: Bool?
     var challenge: Int?
     var speechEnabled: Bool { speech ?? true }

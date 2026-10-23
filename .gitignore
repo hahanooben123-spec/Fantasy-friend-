@@ -10,3 +10,6 @@ __pycache__/
 *.xcresult/
 FantasiVen-MVP.zip
 artifacts/
+
+# Development-only source audio download
+tools/kenney_interface-sounds.zip

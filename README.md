@@ -200,3 +200,7 @@ Ingen kompilering, tests eller visuel kontrol kørt efter brugerens ønske.
 Værelsesbyggeren er forenklet til et børneforløb: rummet åbner uden møbelbakke og med to store valg, Tilføj ting og Rummets farver. Indret og Leg vises som to navngivne knapper. Bakken har billedkategorier og store miniaturer i et gitter; ting kan vælges med tryk eller trækkes direkte ind uden langt tryk. En Færdig-knap lukker bakken.
 
 En markeret ting har store greb til størrelse og drejning. Hovedværktøjerne er Farve, Læg væk, Flere og Tilføj. Kopi, spejling, præcis størrelse og lag findes under Flere. Valg af farve lukker paletten igen. Fortryd er altid øverst, og Gendan vises, når der er noget at gendanne. Legetilstanden viser kun legehandlinger. Gemning og eksisterende indretninger bevares. Ingen kompilering, tests eller visuel kontrol kørt.
+
+## Musik og legelyde
+
+Tre originale musiktemaer og varierede Kenney CC0-effekter ligger nu i appen. Musik skifter med miljøet, toner blødt ind og dæmpes under tale. Musik og legelyde har separat lydstyrke under Indstillinger. Musik slås til med den eksisterende musikkontakt. Alt virker offline. Kilder og licenser: [Documentation/Audio](Documentation/Audio/README.md).

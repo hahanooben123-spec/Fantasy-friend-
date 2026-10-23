@@ -32,6 +32,12 @@ def generate():
         resources.append(obj("build:" + path, f'isa = PBXBuildFile; fileRef = {ref};'))
         source_refs.append(ref)
 
+    for audio in sorted((ROOT / "FantasiVen.swiftpm/Resources/Audio").glob("*.wav")):
+        path = audio.relative_to(ROOT).as_posix()
+        ref = obj(path, f'isa = PBXFileReference; lastKnownFileType = audio.wav; path = {quote(path)}; sourceTree = SOURCE_ROOT;')
+        resources.append(obj("build:" + path, f'isa = PBXBuildFile; fileRef = {ref};'))
+        source_refs.append(ref)
+
     app = obj("product", 'isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FantasiVen.app; sourceTree = BUILT_PRODUCTS_DIR;')
     test_app = obj("test-product", 'isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FantasiVenTests.xctest; sourceTree = BUILT_PRODUCTS_DIR;')
     test_path = "Tests/FantasiVenTests.swift"

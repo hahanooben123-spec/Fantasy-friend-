@@ -8,12 +8,25 @@ final class SoundService {
     private var settings = GameSettings()
     private var effects: [AVAudioPlayer] = []
     private var music: AVAudioPlayer?
+    private var fadingMusic: [AVAudioPlayer] = []
     private let speech = AVSpeechSynthesizer()
     private var speechTask: Task<Void, Never>?
     private var cache: [String: Data] = [:]
     private var active = true
     private var performing = false
     private var world = World.forest
+    private var lastCue: [Cue: TimeInterval] = [:]
+
+    private var theme: String {
+        switch world {
+        case .stars, .clouds: return "music_dream"
+        case .castle: return "music_workshop"
+        default: return "music_garden"
+        }
+    }
+    private var musicLevel: Float {
+        Float(settings.musicLevel) * (speech.isSpeaking ? 0.07 : 0.32)
+    }
 
     func configure(_ settings: GameSettings) {
         self.settings = settings
@@ -23,70 +36,109 @@ final class SoundService {
     }
     func setActive(_ value: Bool) {
         active = value
-        if !value { effects.forEach { $0.stop() }; stopSpeech() }
+        if !value {
+            effects.forEach { $0.stop() }; effects.removeAll()
+            stopSpeech()
+        }
         updateMusic()
     }
     func setWorld(_ value: World) {
-        guard world != value else { return }
+        let previous = theme
         world = value
-        let outgoing = music
-        outgoing?.setVolume(0, fadeDuration: 0.3)
+        guard previous != theme else { return }
+        if let outgoing = music {
+            fadingMusic.append(outgoing)
+            outgoing.setVolume(0, fadeDuration: 0.8)
+            Task { [weak self] in
+                try? await Task.sleep(nanoseconds: 850_000_000)
+                outgoing.stop()
+                self?.fadingMusic.removeAll { $0 === outgoing }
+            }
+        }
         music = nil
         updateMusic()
-        if settings.music && active && !performing { music?.volume = 0; music?.setVolume(speech.isSpeaking ? 0.025 : 0.11, fadeDuration: 0.4) }
-        Task {
-            try? await Task.sleep(nanoseconds: 350_000_000)
-            outgoing?.stop()
-        }
     }
     func setPerformance(_ value: Bool) { performing = value; updateMusic() }
+    private static func audioURL(_ name: String) -> URL? {
+        #if SWIFT_PACKAGE
+        let bundle = Bundle.module
+        #else
+        let bundle = Bundle.main
+        #endif
+        return bundle.url(forResource: name, withExtension: "wav")
+            ?? bundle.url(forResource: name, withExtension: "wav", subdirectory: "Audio")
+    }
     private func updateMusic() {
-        guard settings.music && active && !performing else { music?.pause(); return }
-        if music == nil {
-            let root: Double = world == .stars ? 220 : world == .castle ? 293.66 : 261.63
-            let notes = [1.0, 1.25, 1.5, 0, 1.125, 1.3333, 1.5, 0].map { $0 * root }
-            music = try? AVAudioPlayer(data: Self.wave(notes: notes, noteDuration: 0.55, timbre: world.rawValue % 3))
-            music?.numberOfLoops = -1
+        guard settings.music && active && !performing else {
+            music?.pause()
+            fadingMusic.forEach { $0.stop() }; fadingMusic.removeAll()
+            return
         }
-        music?.volume = speech.isSpeaking ? 0.025 : 0.11
+        if music == nil {
+            if let url = Self.audioURL(theme) { music = try? AVAudioPlayer(contentsOf: url) }
+            if music == nil {
+                music = try? AVAudioPlayer(data: Self.wave(notes: [261.63, 329.63, 392, 0, 329.63, 293.66, 261.63, 0], noteDuration: 0.65, timbre: 0))
+            }
+            music?.numberOfLoops = -1
+            music?.volume = 0
+            music?.prepareToPlay()
+        }
         try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
-        music?.play()
+        if music?.isPlaying == false { music?.play() }
+        music?.setVolume(musicLevel, fadeDuration: 0.7)
     }
     func play(_ cue: Cue) {
-        let notes: [Double]
+        guard settings.sound && active else { return }
+        let now = ProcessInfo.processInfo.systemUptime
+        let interval = cue == .click ? 0.075 : 0.18
+        if let previous = lastCue[cue], now - previous < interval { return }
+        lastCue[cue] = now
+        let name: String
         switch cue {
-        case .click: notes = [660]
-        case .reaction: notes = [[523.25, 659.25], [659.25, 783.99], [392, 523.25]][Int.random(in: 0..<3)]
-        case .complete: notes = [523.25, 659.25, 783.99, 1046.5]
+        case .click: name = ["kenney_click_001", "kenney_click_002", "kenney_click_003"].randomElement()!
+        case .reaction: name = ["kenney_pluck_001", "kenney_pluck_002", "kenney_drop_001"].randomElement()!
+        case .complete: name = "kenney_confirmation_001"
         }
-        playNotes(notes, duration: cue == .click ? 0.055 : 0.12, timbre: 0)
+        if let url = Self.audioURL(name), let player = try? AVAudioPlayer(contentsOf: url) {
+            startEffect(player, gain: cue == .click ? 0.28 : 0.55, varied: cue != .complete)
+        } else {
+            playNotes(cue == .click ? [660] : [523.25, 659.25, 783.99], duration: cue == .click ? 0.055 : 0.14, timbre: 0)
+        }
     }
     func react(voice: Int) {
         let root = [523.25, 880, 261.63][min(2, max(0, voice))]
         playNotes([root, root * [1.25, 1.5, 0.75].randomElement()!], duration: 0.13, timbre: voice)
     }
-    func instrument(_ row:Int,beat:Int,voice:Int = 0) {
-        guard settings.sound && active else {return}
-        let key="instrument-\(min(2,max(0,row)))-\(beat%8)-\(min(2,max(0,voice)))"
-        let data:Data
-        if let existing=cache[key] {data=existing}
+    func instrument(_ row: Int, beat: Int, voice: Int = 0) {
+        guard settings.sound && active else { return }
+        let key = "instrument-\(min(2,max(0,row)))-\(beat%8)-\(min(2,max(0,voice)))"
+        let data: Data
+        if let existing = cache[key] { data = existing }
         else {
-            data=InstrumentSynth.render(row:row,beat:beat,voice:voice)
-            if cache.count<64 {cache[key]=data}
+            data = InstrumentSynth.render(row: row, beat: beat, voice: voice)
+            if cache.count < 64 { cache[key] = data }
         }
         playData(data)
     }
-    private func playData(_ data:Data) {
-        guard settings.sound && active else {return}
-        effects.removeAll {!$0.isPlaying}
-        guard effects.count<12,let player=try? AVAudioPlayer(data:data) else {return}
-        try? AVAudioSession.sharedInstance().setCategory(.ambient,mode:.default)
-        player.volume=0.25;effects.append(player);player.play()
+    private func startEffect(_ player: AVAudioPlayer, gain: Float, varied: Bool = false) {
+        guard settings.sound && active else { return }
+        effects.removeAll { !$0.isPlaying }
+        guard effects.count < 8 else { return }
+        try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
+        player.volume = Float(settings.effectsLevel) * gain
+        if varied {
+            player.enableRate = true
+            player.rate = Float.random(in: 0.96...1.04)
+        }
+        effects.append(player)
+        player.play()
+    }
+    private func playData(_ data: Data) {
+        guard settings.sound && active, let player = try? AVAudioPlayer(data: data) else { return }
+        startEffect(player, gain: 0.55)
     }
     private func playNotes(_ notes: [Double], duration: Double, timbre: Int) {
         guard settings.sound && active else { return }
-        effects.removeAll { !$0.isPlaying }
-        guard effects.count < 12 else { return }
         let key = "\(notes)-\(duration)-\(timbre)"
         let data: Data
         if let stored = cache[key] { data = stored }
@@ -102,7 +154,7 @@ final class SoundService {
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = AVSpeechSynthesisVoice(language: language == .da ? "da-DK" : "en-GB")
         utterance.rate = 0.43; utterance.volume = 0.7
-        music?.volume = 0.025
+        music?.setVolume(Float(settings.musicLevel) * 0.07, fadeDuration: 0.15)
         speech.speak(utterance)
         speechTask = Task { [weak self] in
             do {
@@ -117,7 +169,7 @@ final class SoundService {
     func stopSpeech() {
         speechTask?.cancel(); speechTask = nil
         speech.stopSpeaking(at: .immediate)
-        music?.volume = 0.11
+        if settings.music && active && !performing { music?.setVolume(musicLevel, fadeDuration: 0.4) }
     }
     private static func wave(notes: [Double], noteDuration: Double, timbre: Int) -> Data {
         let sampleRate = 22050

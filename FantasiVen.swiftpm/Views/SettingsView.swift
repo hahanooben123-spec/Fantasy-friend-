@@ -20,6 +20,14 @@ struct SettingsView: View {
                                     Text(store.t("sound")).font(.system(.headline, design: .rounded))
                                 }
                             }
+                            volumeControl("effectsVolume", value: Binding(get: { store.settings.effectsLevel }, set: { value in store.updateSettings { $0.effectsVolume = value } }), enabled: store.settings.sound)
+                            Button {
+                                SoundService.shared.play(.reaction)
+                            } label: {
+                                Label(store.t("previewSound"), systemImage: "speaker.wave.2.fill")
+                                    .font(.system(.subheadline, design: .rounded).weight(.bold))
+                                    .frame(maxWidth: .infinity, minHeight: 48)
+                            }.buttonStyle(SquishStyle()).disabled(!store.settings.sound)
                             Divider().opacity(0.3)
                             Toggle(isOn: Binding(get: { store.settings.music }, set: { value in store.updateSettings { $0.music = value } })) {
                                 HStack(spacing: 14) {
@@ -27,6 +35,8 @@ struct SettingsView: View {
                                     Text(store.t("music")).font(.system(.headline, design: .rounded))
                                 }
                             }
+                            volumeControl("musicVolume", value: Binding(get: { store.settings.musicLevel }, set: { value in store.updateSettings { $0.musicVolume = value } }), enabled: store.settings.music)
+                            Text(store.t("musicAtmosphere")).font(.system(.caption, design: .rounded)).foregroundColor(GameStyle.ink.opacity(0.65))
                         }.toggleStyle(SwitchToggleStyle(tint: GameStyle.purple)).padding(22).background(RoundedRectangle(cornerRadius: 32).fill(.white.opacity(0.9)))
                         VStack(spacing: 14) {
                             Toggle(store.t("speech"), isOn: Binding(get: { store.settings.speechEnabled }, set: { value in store.updateSettings { $0.speech = value } }))
@@ -56,6 +66,21 @@ struct SettingsView: View {
                 }
             }
         }.foregroundColor(GameStyle.ink).navigationBarHidden(true)
+    }
+
+
+    private func volumeControl(_ key: String, value: Binding<Double>, enabled: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(store.t(key)).font(.system(.subheadline, design: .rounded))
+                Spacer()
+                Text("\(Int(value.wrappedValue * 100))%").font(.system(.caption, design: .rounded).monospacedDigit())
+            }
+            Slider(value: value, in: 0...1)
+                .tint(GameStyle.purple)
+                .accessibilityLabel(store.t(key))
+                .frame(minHeight: 44)
+        }.disabled(!enabled).opacity(enabled ? 1 : 0.4)
     }
 
     private func languageCard(_ language: Language, title: String, flag: String) -> some View {
