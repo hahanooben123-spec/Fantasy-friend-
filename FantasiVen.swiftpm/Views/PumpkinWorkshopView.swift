@@ -179,7 +179,11 @@ struct PumpkinWorkshopView:View {
                     .padding(.horizontal,18).accessibilityLabel(words.t("lanternBrightness"))
             }
         }.padding(.vertical,12).frame(maxWidth:.infinity,maxHeight:.infinity)
-            .background(RoundedRectangle(cornerRadius:26).fill(PumpkinLook.cream.opacity(0.98)))
+            .background(RoundedRectangle(cornerRadius:26).fill(LinearGradient(colors:[
+                Color(red:1,green:0.98,blue:0.87),PumpkinLook.cream,Color(red:1,green:0.84,blue:0.53)],
+                startPoint:.topLeading,endPoint:.bottomTrailing)))
+            .overlay(RoundedRectangle(cornerRadius:26).stroke(Color.white.opacity(0.7),lineWidth:2).allowsHitTesting(false))
+            .shadow(color:PumpkinLook.ink.opacity(0.22),radius:12,x:0,y:6)
     }
     private var reveal:some View {
         GeometryReader {proxy in

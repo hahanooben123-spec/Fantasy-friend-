@@ -47,35 +47,22 @@ struct PumpkinIllustration:View {
             var floor=context;floor.addFilter(.blur(radius:12))
             floor.fill(Path(ellipseIn:CGRect(x:r.minX-14,y:277,width:r.width+28,height:35)),with:.color(glow.opacity(power*night*0.48)))
         }
+        lightSpill(context,rect:r,glow:glow,power:power)
         var hollow=context;hollow.clip(to:shape)
         for cut in lantern.cuts {
             let path=PumpkinGeometry.cut(cut,form:lantern.form)
-            hollow.fill(path,with:.linearGradient(Gradient(colors:[Color(red:0.20,green:0.08,blue:0.05),GameStyle.mixed(Color(red:0.12,green:0.05,blue:0.04),with:glow,amount:power)]),
-                startPoint:CGPoint(x:150,y:r.minY),endPoint:CGPoint(x:150,y:r.maxY)))
+            interior(hollow,path:path,glow:glow,power:power)
         }
         context.drawLayer {layer in
-            layer.fill(shape,with:.linearGradient(Gradient(colors:[
-                GameStyle.mixed(skin,with:.white,amount:0.27),skin,GameStyle.mixed(skin,with:PumpkinLook.ink,amount:0.38)]),
-                startPoint:CGPoint(x:r.minX,y:r.minY),endPoint:CGPoint(x:r.maxX,y:r.maxY)))
-            layer.stroke(shape,with:.color(GameStyle.mixed(skin,with:PumpkinLook.ink,amount:0.7)),lineWidth:3)
-            var ribs=layer;ribs.clip(to:shape)
-            for i in 0..<5 {
-                let shift=CGFloat(i-2)*r.width*0.14
-                var line=Path();line.move(to:CGPoint(x:r.midX+shift*0.45,y:r.minY))
-                line.addCurve(to:CGPoint(x:r.midX+shift*0.65,y:r.maxY+5),
-                    control1:CGPoint(x:r.midX+shift*1.6,y:r.minY+r.height*0.25),
-                    control2:CGPoint(x:r.midX+shift*1.6,y:r.minY+r.height*0.8))
-                ribs.stroke(line,with:.color(PumpkinLook.ink.opacity(lantern.form == .bumpy ? 0.22 : 0.13)),style:StrokeStyle(lineWidth:4,lineCap:.round))
-            }
-            ribs.fill(Path(ellipseIn:CGRect(x:r.minX+r.width*0.12,y:r.minY+r.height*0.19,width:r.width*0.10,height:r.height*0.3)),with:.color(.white.opacity(0.28)))
-            ribs.fill(Path(ellipseIn:CGRect(x:r.minX+r.width*0.24,y:r.minY+r.height*0.13,width:8,height:12)),with:.color(.white.opacity(0.5)))
+            surface(layer,rect:r,shape:shape,skin:skin)
             var punch=layer;punch.clip(to:shape);punch.blendMode = .destinationOut
             for cut in lantern.cuts {punch.fill(PumpkinGeometry.cut(cut,form:lantern.form),with:.color(.white))}
         }
         var edges=context;edges.clip(to:shape)
         for cut in lantern.cuts {
             let path=PumpkinGeometry.cut(cut,form:lantern.form)
-            edges.stroke(path,with:.color(Color(red:0.44,green:0.20,blue:0.06)),style:StrokeStyle(lineWidth:5,lineJoin:.round))
+            edges.stroke(path,with:.linearGradient(Gradient(colors:[Color(red:0.42,green:0.17,blue:0.045),Color(red:1,green:0.62,blue:0.16)]),
+                startPoint:CGPoint(x:0,y:r.minY),endPoint:CGPoint(x:0,y:r.maxY)),style:StrokeStyle(lineWidth:6,lineJoin:.round))
             edges.stroke(path,with:.color(Color(red:1,green:0.72,blue:0.3).opacity(0.8)),lineWidth:1.3)
             if power>0 {
                 var bloom=edges;bloom.addFilter(.blur(radius:5))
@@ -115,6 +102,78 @@ struct PumpkinIllustration:View {
         var leaf=Path();leaf.move(to:CGPoint(x:r.midX+4,y:r.minY-4))
         leaf.addQuadCurve(to:CGPoint(x:r.midX+47,y:r.minY-15),control:CGPoint(x:r.midX+31,y:r.minY-44))
         leaf.addQuadCurve(to:CGPoint(x:r.midX+4,y:r.minY-4),control:CGPoint(x:r.midX+36,y:r.minY+4))
-        lid.fill(leaf,with:.color(Color(red:0.39,green:0.65,blue:0.16)))
+        lid.fill(leaf,with:.linearGradient(Gradient(colors:[Color(red:0.67,green:0.81,blue:0.22),Color(red:0.19,green:0.43,blue:0.17)]),
+            startPoint:CGPoint(x:r.midX,y:r.minY-30),endPoint:CGPoint(x:r.midX+38,y:r.minY)))
+        var vein=Path();vein.move(to:CGPoint(x:r.midX+8,y:r.minY-5));vein.addQuadCurve(to:CGPoint(x:r.midX+42,y:r.minY-16),control:CGPoint(x:r.midX+27,y:r.minY-20))
+        lid.stroke(vein,with:.color(PumpkinLook.cream.opacity(0.35)),lineWidth:1.5)
+        var curl=Path();curl.move(to:CGPoint(x:r.midX-4,y:r.minY-7))
+        curl.addCurve(to:CGPoint(x:r.midX-41,y:r.minY-12),control1:CGPoint(x:r.midX-38,y:r.minY-40),control2:CGPoint(x:r.midX-61,y:r.minY+1))
+        curl.addCurve(to:CGPoint(x:r.midX-31,y:r.minY-16),control1:CGPoint(x:r.midX-20,y:r.minY-27),control2:CGPoint(x:r.midX-26,y:r.minY-4))
+        lid.stroke(curl,with:.color(Color(red:0.42,green:0.62,blue:0.19)),style:StrokeStyle(lineWidth:2.5,lineCap:.round))
+    }
+
+    private func surface(_ context:GraphicsContext,rect r:CGRect,shape:Path,skin:Color) {
+        context.fill(shape,with:.color(GameStyle.mixed(skin,with:PumpkinLook.ink,amount:0.32)))
+        var c=context;c.clip(to:shape)
+        // Back lobes first, then the central lobe, for a rounded toy-like volume.
+        for index in [-2,2,-1,1,0] {
+            let offset=CGFloat(index)*r.width*0.165
+            let squash=CGFloat(abs(index))*r.height*0.022
+            let lobe=CGRect(x:r.midX+offset-r.width*0.19,y:r.minY+squash,
+                            width:r.width*0.38,height:r.height-squash*0.7)
+            let colors=[
+                GameStyle.mixed(skin,with:PumpkinLook.ink,amount:0.28),
+                GameStyle.mixed(skin,with:Color(red:1,green:0.91,blue:0.62),amount:0.23),
+                skin,GameStyle.mixed(skin,with:PumpkinLook.ink,amount:0.38)]
+            c.fill(Path(ellipseIn:lobe),with:.linearGradient(Gradient(stops:[
+                .init(color:colors[0],location:0),.init(color:colors[1],location:0.32),
+                .init(color:colors[2],location:0.58),.init(color:colors[3],location:1)]),
+                startPoint:CGPoint(x:lobe.minX,y:lobe.minY),endPoint:CGPoint(x:lobe.maxX,y:lobe.maxY*0.92)))
+        }
+        let key=CGPoint(x:r.minX+r.width*0.3,y:r.minY+r.height*0.23)
+        c.fill(shape,with:.radialGradient(Gradient(colors:[Color.white.opacity(0.15),.clear,PumpkinLook.ink.opacity(0.24)]),
+            center:key,startRadius:0,endRadius:r.width*0.84))
+        for i in 0..<36 {
+            let x=r.minX+CGFloat((i*61+13)%229)/229*r.width
+            let y=r.minY+CGFloat((i*43+23)%193)/193*r.height
+            let dot=CGRect(x:x,y:y,width:i%3 == 0 ? 1.7 : 0.9,height:1.3)
+            c.fill(Path(ellipseIn:dot),with:.color(i%2 == 0 ? .white.opacity(0.11) : PumpkinLook.ink.opacity(0.07)))
+        }
+        var shine=Path()
+        shine.move(to:CGPoint(x:r.minX+r.width*0.23,y:r.minY+r.height*0.22))
+        shine.addQuadCurve(to:CGPoint(x:r.minX+r.width*0.17,y:r.minY+r.height*0.48),
+            control:CGPoint(x:r.minX+r.width*0.13,y:r.minY+r.height*0.27))
+        c.stroke(shine,with:.color(.white.opacity(0.24)),style:StrokeStyle(lineWidth:7,lineCap:.round))
+        context.stroke(shape,with:.color(GameStyle.mixed(skin,with:PumpkinLook.ink,amount:0.66)),lineWidth:2.5)
+    }
+    private func interior(_ c:GraphicsContext,path:Path,glow:Color,power:Double) {
+        let r=path.boundingRect
+        let center=CGPoint(x:r.midX,y:r.minY+r.height*0.74)
+        let dark=Color(red:0.12,green:0.045,blue:0.035)
+        let hot=GameStyle.mixed(dark,with:PumpkinLook.cream,amount:power)
+        let lit=GameStyle.mixed(dark,with:glow,amount:power*0.96)
+        let edge=GameStyle.mixed(dark,with:glow,amount:power*0.45)
+        c.fill(path,with:.radialGradient(Gradient(colors:[hot,lit,edge]),center:center,
+            startRadius:0,endRadius:max(8,max(r.width,r.height)*0.72)))
+        var inset=c;inset.clip(to:path)
+        inset.stroke(path.applying(CGAffineTransform(translationX:0,y:3)),with:.color(.black.opacity(0.25)),lineWidth:5)
+    }
+    private func lightSpill(_ c:GraphicsContext,rect r:CGRect,glow:Color,power:Double) {
+        guard power>0,lantern.darkness>0.05,!lantern.cuts.isEmpty else {return}
+        let strength=power*lantern.darkness
+        let floor=CGRect(x:r.minX-10,y:276,width:r.width+20,height:32)
+        c.fill(Path(ellipseIn:floor),with:.radialGradient(Gradient(colors:[glow.opacity(strength*0.55),.clear]),
+            center:CGPoint(x:150,y:292),startRadius:0,endRadius:r.width*0.58))
+        for cut in lantern.cuts.prefix(10) {
+            let bounds=PumpkinGeometry.cut(cut,form:lantern.form).boundingRect
+            let center=CGPoint(x:bounds.midX,y:bounds.midY)
+            let endX=150+(center.x-150)*1.45
+            var ray=Path();ray.move(to:center)
+            ray.addLine(to:CGPoint(x:endX-18,y:306))
+            ray.addQuadCurve(to:CGPoint(x:endX+18,y:306),control:CGPoint(x:endX,y:313))
+            ray.closeSubpath()
+            c.fill(ray,with:.linearGradient(Gradient(colors:[glow.opacity(strength*0.035),glow.opacity(strength*0.08),.clear]),
+                startPoint:center,endPoint:CGPoint(x:endX,y:310)))
+        }
     }
 }
