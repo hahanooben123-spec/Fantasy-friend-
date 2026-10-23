@@ -184,3 +184,7 @@ Original Canvas-grafik viser skål, dej, træbræt, ingredienser, krydderiglas o
 Implementeret uden kompilering, tests eller visuel kontrol efter brugerens ønske.
 
 Trin 3 er nu Pynt din pizza: en illustreret toppingbakke med ost, pepperoni, skinke, champignon, peberfrugt, oliven og ananas. Tryk placerer et stykke, og træk lægger flere stykker langs fingerens spor. Krydderier har en separat fane med oregano, basilikum og salt. Toppings er frit valgfrie, følger med gennem ovn og servering, og handlingerne kan fortrydes. Ost og øvrigt fyld får en varmere, bagt finish i ovnen. Ingen ny kompilering eller kontrolrunde kørt.
+
+Pizzaværkstedets bakke har nu direkte træk-og-slip uden langt tryk: ingredienser og krydderiglas følger fingeren, og toppings trækkes fra syv synlige porcelænsskåle over på pizzaen. Modtageren får en lysende kant, når placeringen er gyldig. Slip udenfor ændrer ikke pizzaen. Hver gyldig placering er ét fortryd-trin. Toppings lander med en kort fjederbevægelse og et lille lysglimt; Reducer bevægelse respekteres. Trykvalg og hjælpeknappen findes fortsat.
+
+Den visuelle opdatering giver skålene porcelænsglans, brættet kantprofil og træstruktur, pizzaen kontaktsskygge og tydeligere skorpe, og køkkenet varme lys og mere samlet belysning. Ingen kompilering, tests eller visuel kontrol kørt for denne ændring.

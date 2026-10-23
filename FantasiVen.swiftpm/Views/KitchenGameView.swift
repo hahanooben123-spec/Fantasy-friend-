@@ -17,6 +17,12 @@ struct KitchenGameView:View {
     @State private var eaten=0
     @State private var signal=0
     @State private var ovenDrag=CGSize.zero
+    @State private var dragItem:PizzaDragItem?
+    @State private var dragPoint=CGPoint.zero
+    @State private var surfaceFrame=CGRect.zero
+    @State private var landingID:UUID?
+    @State private var landingPoint=CGPoint.zero
+    @State private var landingRevision=0
     private var canContinue:Bool {step == 0 ? recipe.readyForSauce : step == 1 ? !recipe.sauce.isEmpty : true}
     var body:some View {
         AdventureGameShell(kind:.kitchen) {active in
@@ -33,10 +39,19 @@ struct KitchenGameView:View {
                             }
                         } else {
                             stage.frame(maxWidth:.infinity,maxHeight:.infinity)
-                            controls.frame(height:step == 0 || (step == 3 && !inserted) ? 205 : step == 2 ? 255 : 175)
+                            controls.frame(height:step == 0 || (step == 3 && !inserted) ? 205 : step == 2 ? (herbs ? 255 : 320) : 175)
                         }
                     }.padding(.top,77).padding(.horizontal,12).padding(.bottom,12)
-                }
+                    dragOverlay
+                }.coordinateSpace(name:"pizzaWorkshop")
+                    .onPreferenceChange(PizzaSurfaceFrameKey.self) {surfaceFrame=$0}
+                    .onChange(of:active) {if !$0 {dragItem=nil}}
+                    .onChange(of:step) {_ in dragItem=nil;landingID=nil}
+                    .task(id:landingID) {
+                        guard landingID != nil else {return}
+                        do {try await Task.sleep(nanoseconds:520_000_000)} catch {return}
+                        landingID=nil
+                    }
             }
             .task(id:active && inserted && baked<1 && !served) {
                 guard active,inserted,baked<1,!served else {return}
@@ -63,7 +78,7 @@ struct KitchenGameView:View {
     }
     @ViewBuilder private var stage:some View {
         if step<3 {
-            PizzaWorkSurface(recipe:$recipe,step:step,spice:spice,topping:topping,herbs:herbs,onBegin:begin,onEnd:finish)
+            PizzaWorkSurface(recipe:$recipe,step:step,spice:spice,topping:topping,herbs:herbs,landingID:landingID,targeted:validDropHover,onBegin:begin,onEnd:finish)
                 .accessibilityElement(children:.ignore).accessibilityLabel(store.t(instruction))
                 .accessibilityAction {assist()}
         } else if served {
@@ -121,6 +136,7 @@ struct KitchenGameView:View {
                             }.frame(maxWidth:.infinity,minHeight:44)
                                 .background(CandySurface(color:recipe.ingredients.contains(index) ? GameStyle.palette[11] : .white,cornerRadius:15))
                         }.buttonStyle(SquishStyle()).disabled(recipe.ingredients.contains(index))
+                            .highPriorityGesture(dragGesture(.ingredient(index)))
                     }
                 }
                 ProgressView(value:recipe.readyToShape ? recipe.formed : recipe.mixed).tint(.orange)
@@ -180,25 +196,78 @@ struct KitchenGameView:View {
                                 Text(store.t("pizzaSpice\(index)")).font(.system(size:10,weight:.bold,design:.rounded))
                             }.frame(maxWidth:.infinity,minHeight:60)
                                 .background(CandySurface(color:spice == index ? WorkshopLook.yellow : .white,cornerRadius:16))
-                        }.buttonStyle(SquishStyle())
+                        }.buttonStyle(SquishStyle()).highPriorityGesture(dragGesture(.herb(index)))
                     }
                 }
             } else {
-                ScrollView(.horizontal,showsIndicators:false) {
-                    HStack(spacing:8) {
-                        ForEach(PizzaToppingKind.allCases,id:\.rawValue) {kind in
-                            Button {topping=kind;SoundService.shared.play(.click)} label:{
-                                VStack(spacing:2) {
-                                    PizzaToppingArt(kind:kind).frame(width:36,height:34)
-                                    Text(store.t(kind.key)).font(.system(size:10,weight:.heavy,design:.rounded)).lineLimit(1).minimumScaleFactor(0.75)
-                                }.frame(width:69,height:60)
-                                    .background(CandySurface(color:topping == kind ? WorkshopLook.yellow : .white,cornerRadius:16))
-                            }.buttonStyle(SquishStyle()).accessibilityLabel(store.t(kind.key))
-                                .accessibilityAddTraits(topping == kind ? .isSelected : [])
-                        }
-                    }.padding(.bottom,5).padding(.horizontal,2)
-                }.frame(height:67)
+                LazyVGrid(columns:Array(repeating:GridItem(.flexible(),spacing:6),count:4),spacing:9) {
+                    ForEach(PizzaToppingKind.allCases,id:\.rawValue) {kind in
+                        Button {topping=kind;SoundService.shared.play(.click)} label:{
+                            VStack(spacing:2) {
+                                ZStack {
+                                    PizzaServingDish()
+                                    PizzaToppingArt(kind:kind).padding(7)
+                                }.frame(height:42)
+                                Text(store.t(kind.key)).font(.system(size:10,weight:.heavy,design:.rounded))
+                                    .lineLimit(1).minimumScaleFactor(0.65)
+                            }.padding(.horizontal,3).frame(maxWidth:.infinity,minHeight:64)
+                                .background(RoundedRectangle(cornerRadius:17).fill(topping == kind ? WorkshopLook.yellow.opacity(0.7) : .white.opacity(0.35)))
+                                .overlay(RoundedRectangle(cornerRadius:17).stroke(topping == kind ? Color.orange : .white.opacity(0.55),lineWidth:1.5))
+                        }.buttonStyle(SquishStyle()).accessibilityLabel(store.t(kind.key))
+                            .accessibilityAddTraits(topping == kind ? .isSelected : [])
+                            .highPriorityGesture(dragGesture(.topping(kind)))
+                    }
+                }
             }
+        }
+    }
+
+    private var validDropHover:Bool {
+        guard let item=dragItem,surfaceFrame.width>0,surfaceFrame.height>0,
+              surfaceFrame.contains(dragPoint) else {return false}
+        if case .ingredient = item {return step == 0}
+        let point=PizzaPoint(x:Double((dragPoint.x-surfaceFrame.minX)/surfaceFrame.width),
+                             y:Double((dragPoint.y-surfaceFrame.minY)/surfaceFrame.height))
+        return step == 2 && point.onDough
+    }
+    private func dragGesture(_ item:PizzaDragItem)->some Gesture {
+        DragGesture(minimumDistance:6,coordinateSpace:.named("pizzaWorkshop"))
+            .onChanged {value in
+                if dragItem == nil {finish();SoundService.shared.play(.click)}
+                dragItem=item;dragPoint=value.location
+            }.onEnded {value in
+                drop(item,at:value.location);dragItem=nil
+            }
+    }
+    private func drop(_ item:PizzaDragItem,at location:CGPoint) {
+        guard surfaceFrame.width>0,surfaceFrame.height>0,surfaceFrame.contains(location) else {return}
+        let point=PizzaPoint(x:Double((location.x-surfaceFrame.minX)/surfaceFrame.width),
+                             y:Double((location.y-surfaceFrame.minY)/surfaceFrame.height))
+        switch item {
+        case .ingredient(let index):
+            guard step == 0,!recipe.ingredients.contains(index) else {return}
+            change {$0.ingredients.insert(index)}
+        case .topping(let kind):
+            guard step == 2,point.onDough,recipe.toppings.count<120 else {return}
+            topping=kind;change {$0.place(kind,at:point)}
+            landingID=recipe.toppings.last?.id
+        case .herb(let index):
+            guard step == 2,point.onDough else {return}
+            spice=index;change {$0.sprinkle(index,at:point)}
+        }
+        landingPoint=location;landingRevision+=1
+    }
+    @ViewBuilder private var dragOverlay:some View {
+        if let item=dragItem {
+            PizzaDragArtwork(item:item)
+                .frame(width:68,height:72)
+                .rotationEffect(.degrees(reduced ? 0 : -9))
+                .shadow(color:GameStyle.ink.opacity(0.3),radius:9,x:0,y:12)
+                .position(dragPoint).allowsHitTesting(false)
+        }
+        if landingRevision>0 {
+            PizzaLandingSpark(revision:landingRevision,reduced:reduced)
+                .frame(width:75,height:75).position(landingPoint).allowsHitTesting(false)
         }
     }
     private func begin() {if before == nil {before=recipe}}
@@ -239,6 +308,8 @@ private struct PizzaWorkSurface:View {
     let spice:Int
     let topping:PizzaToppingKind
     let herbs:Bool
+    let landingID:UUID?
+    let targeted:Bool
     let onBegin:()->Void
     let onEnd:()->Void
     @State private var last:CGPoint?
@@ -251,8 +322,19 @@ private struct PizzaWorkSurface:View {
             let size=CGSize(width:width,height:width*320/300)
             Group {
                 if step == 0 && !recipe.readyToShape {PizzaMixingBowl(recipe:recipe,turn:turn)}
-                else {PizzaIllustration(recipe:recipe)}
+                else {PizzaIllustration(recipe:recipe,landingID:landingID)}
             }.frame(width:size.width,height:size.height).contentShape(Rectangle())
+                .background(GeometryReader {frame in
+                    Color.clear.preference(key:PizzaSurfaceFrameKey.self,value:frame.frame(in:.named("pizzaWorkshop")))
+                })
+                .overlay {
+                    if targeted {
+                        Ellipse().stroke(.white.opacity(0.9),style:StrokeStyle(lineWidth:3,dash:[7,4]))
+                            .frame(width:size.width*0.77,height:size.height*(step == 0 && !recipe.readyToShape ? 0.26 : 0.72))
+                            .shadow(color:Color.yellow.opacity(0.8),radius:7)
+                            .position(x:size.width*0.5,y:size.height*0.48).allowsHitTesting(false)
+                    }
+                }
                 .gesture(DragGesture(minimumDistance:0).onChanged {drag($0,size:size)}.onEnded {_ in
                     last=nil;strokeID=nil;sprinkleTravel=0;onEnd()
                 })

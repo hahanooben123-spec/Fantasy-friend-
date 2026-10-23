@@ -39,6 +39,16 @@ struct PizzaKitchenBackdrop:View {
                 }
             }
             c.fill(Path(CGRect(x:0,y:counter,width:s.width,height:8)),with:.color(Color(red:1,green:0.84,blue:0.54)))
+            let key=CGPoint(x:s.width*0.7,y:s.height*0.22)
+            c.fill(Path(CGRect(origin:.zero,size:s)),with:.radialGradient(Gradient(colors:[
+                Color(red:1,green:0.88,blue:0.56).opacity(0.18),.clear,GameStyle.ink.opacity(0.12)]),
+                center:key,startRadius:0,endRadius:max(s.width,s.height)))
+            for i in 0..<8 {
+                let x=CGFloat(i+1)*s.width/9,y=s.height*0.10+sin(Double(i)*0.5)*14
+                c.fill(Path(ellipseIn:CGRect(x:x-15,y:y-15,width:30,height:30)),with:.radialGradient(
+                    Gradient(colors:[Color.yellow.opacity(0.3),.clear]),center:CGPoint(x:x,y:y),startRadius:0,endRadius:15))
+                c.fill(Path(ellipseIn:CGRect(x:x-3,y:y-3,width:6,height:8)),with:.color(Color(red:1,green:0.91,blue:0.54)))
+            }
         }.ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
     }
 }
@@ -47,12 +57,20 @@ struct PizzaIllustration:View {
     var baked=0.0
     var board=true
     var eaten=0
+    var landingID:UUID?
     var body:some View {
         Canvas {c,size in
             c.scaleBy(x:size.width/300,y:size.height/320)
             if board {
                 let wood=Path(roundedRect:CGRect(x:8,y:15,width:284,height:289),cornerRadius:38)
+                var shadow=c;shadow.addFilter(.blur(radius:7))
+                shadow.fill(wood.applying(CGAffineTransform(translationX:0,y:6)),with:.color(GameStyle.ink.opacity(0.24)))
                 ToyFinish.paint(c,path:wood,color:Color(red:0.84,green:0.61,blue:0.36),edge:2)
+                c.stroke(Path(roundedRect:CGRect(x:13,y:20,width:274,height:279),cornerRadius:34),with:.color(Color(red:1,green:0.86,blue:0.58).opacity(0.65)),lineWidth:2)
+                for knot in 0..<3 {
+                    let x=CGFloat(knot)*93+36,y=CGFloat(knot%2)*245+36
+                    c.stroke(Path(ellipseIn:CGRect(x:x,y:y,width:22,height:7)),with:.color(Color(red:0.49,green:0.26,blue:0.15).opacity(0.15)),lineWidth:1)
+                }
                 for i in 0..<8 {
                     let y=CGFloat(i)*33+31
                     var grain=Path();grain.move(to:CGPoint(x:22,y:y));grain.addQuadCurve(to:CGPoint(x:278,y:y+7),control:CGPoint(x:130,y:y-8))
@@ -83,6 +101,15 @@ struct PizzaIllustration:View {
                     c.stroke(steam,with:.color(.white.opacity(0.4)),style:StrokeStyle(lineWidth:3,lineCap:.round))
                 }
             }
+        }.overlay {
+            GeometryReader {frame in
+                if let id=landingID,let item=recipe.toppings.first(where:{$0.id == id}) {
+                    PizzaLandingSprite(kind:item.kind)
+                        .frame(width:frame.size.width*29/300,height:frame.size.height*29/320)
+                        .rotationEffect(.degrees(item.angle))
+                        .position(x:item.point.x*frame.size.width,y:item.point.y*frame.size.height)
+                }
+            }.allowsHitTesting(false)
         }.aspectRatio(300.0/320,contentMode:.fit).accessibilityHidden(true)
     }
     private func draw(_ c:GraphicsContext) {
@@ -91,8 +118,11 @@ struct PizzaIllustration:View {
         let center=CGPoint(x:150,y:154)
         let dough=Path(ellipseIn:CGRect(x:150-radius,y:154-radius*0.96,width:radius*2,height:radius*1.92))
         let crust=GameStyle.mixed(Color(red:1,green:0.88,blue:0.6),with:Color(red:0.8,green:0.39,blue:0.12),amount:baked*0.7)
+        var cast=c;cast.addFilter(.blur(radius:4))
+        cast.fill(dough.applying(CGAffineTransform(translationX:1,y:5)),with:.color(Color(red:0.33,green:0.15,blue:0.08).opacity(0.3)))
         ToyFinish.paint(c,path:dough,color:crust,edge:1.8)
         let inside=Path(ellipseIn:CGRect(x:150-radius+13,y:154-radius*0.96+13,width:radius*2-26,height:radius*1.92-26))
+        c.stroke(inside,with:.color(Color(red:0.76,green:0.42,blue:0.15).opacity(0.23)),lineWidth:2)
         var topping=c;topping.clip(to:inside)
         for stroke in recipe.sauce {
             guard let first=stroke.points.first else {continue}
@@ -103,8 +133,10 @@ struct PizzaIllustration:View {
                 Color(red:0.97,green:0.24,blue:0.12),Color(red:0.65,green:0.08,blue:0.06)]),
                 startPoint:CGPoint(x:70,y:80),endPoint:CGPoint(x:230,y:250)),
                 style:StrokeStyle(lineWidth:32,lineCap:.round,lineJoin:.round))
+            topping.stroke(path,with:.color(Color(red:1,green:0.62,blue:0.25).opacity(0.1)),
+                style:StrokeStyle(lineWidth:1.2,lineCap:.round,lineJoin:.round))
         }
-        for item in recipe.toppings {
+        for item in recipe.toppings where item.id != landingID {
             var piece=topping
             piece.translateBy(x:item.point.x*300,y:item.point.y*320)
             piece.rotate(by:.degrees(item.angle))
@@ -317,5 +349,82 @@ enum PizzaToppingPainter {
                 c.stroke(fibre,with:.color(cream.opacity(0.5)),lineWidth:0.8)
             }
         }
+    }
+}
+
+
+enum PizzaDragItem:Equatable {
+    case ingredient(Int),topping(PizzaToppingKind),herb(Int)
+}
+struct PizzaSurfaceFrameKey:PreferenceKey {
+    static let defaultValue=CGRect.zero
+    static func reduce(value:inout CGRect,nextValue:()->CGRect) {
+        let next=nextValue()
+        if next.width>0 && next.height>0 {value=next}
+    }
+}
+struct PizzaDragArtwork:View {
+    let item:PizzaDragItem
+    var body:some View {
+        Group {
+            switch item {
+            case .ingredient(let index):PizzaIngredientArt(kind:index)
+            case .topping(let kind):PizzaToppingArt(kind:kind)
+            case .herb(let index):PizzaIngredientArt(kind:index,spice:true)
+            }
+        }
+    }
+}
+struct PizzaServingDish:View {
+    var body:some View {
+        GeometryReader {proxy in
+            ZStack {
+                Ellipse().fill(Color(red:0.41,green:0.25,blue:0.19).opacity(0.18)).offset(y:4).blur(radius:2)
+                Ellipse().fill(LinearGradient(colors:[.white,Color(red:0.88,green:0.93,blue:0.91)],
+                    startPoint:.topLeading,endPoint:.bottomTrailing))
+                    .overlay(Ellipse().stroke(.white,lineWidth:2))
+                Ellipse().fill(RadialGradient(colors:[Color(red:0.82,green:0.87,blue:0.83),.white],
+                    center:.center,startRadius:0,endRadius:proxy.size.width*0.4)).padding(5)
+                    .overlay(Ellipse().stroke(Color(red:0.18,green:0.57,blue:0.58).opacity(0.4),lineWidth:1).padding(4))
+            }
+        }.allowsHitTesting(false)
+    }
+}
+struct PizzaLandingSprite:View {
+    let kind:PizzaToppingKind
+    @Environment(\.accessibilityReduceMotion) private var reduced
+    @State private var landed=false
+    var body:some View {
+        PizzaToppingArt(kind:kind)
+            .scaleEffect(reduced || landed ? 1 : 1.35)
+            .offset(y:reduced || landed ? 0 : -16)
+            .task {
+                await Task.yield()
+                withAnimation(reduced ? nil : .spring(response:0.34,dampingFraction:0.48)) {landed=true}
+            }
+    }
+}
+struct PizzaLandingSpark:View {
+    let revision:Int
+    let reduced:Bool
+    @State private var finished=false
+    var body:some View {
+        Canvas {c,s in
+            for i in 0..<6 {
+                let angle=Double(i)*Double.pi/3
+                let center=CGPoint(x:s.width/2+CGFloat(cos(angle))*s.width*0.27,
+                    y:s.height/2+CGFloat(sin(angle))*s.height*0.27)
+                var ray=Path();ray.move(to:center)
+                ray.addLine(to:CGPoint(x:center.x+CGFloat(cos(angle))*6,y:center.y+CGFloat(sin(angle))*6))
+                c.stroke(ray,with:.color(i%2 == 0 ? .white : Color(red:1,green:0.83,blue:0.25)),
+                    style:StrokeStyle(lineWidth:2.5,lineCap:.round))
+            }
+        }.scaleEffect(reduced ? 1 : finished ? 1.3 : 0.55)
+            .opacity(finished ? 0 : 0.9)
+            .task(id:revision) {
+                finished=false
+                await Task.yield()
+                withAnimation(.easeOut(duration:reduced ? 0.2 : 0.48)) {finished=true}
+            }
     }
 }
