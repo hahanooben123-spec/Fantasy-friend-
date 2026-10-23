@@ -21,7 +21,9 @@ struct SharedToyYardView:View {
                 PlayHUD(title:store.t("sharedYard"),hint:store.t("yardHint"),paused:$paused)
                 HStack {
                     Spacer()
-                    RoundButton(icon:"person.badge.plus",label:store.t("addFriend")) {choosing=true}.disabled(physics.friendCount>=4 || !active)
+                    if !store.friends.isEmpty {
+                        RoundButton(icon:"person.badge.plus",label:store.t("addFriend")) {choosing=true}.disabled(physics.friendCount>=4 || !active)
+                    }
                     RoundButton(icon:"arrow.up",label:store.t("jump")) {physics.jump()}.disabled(!active)
                     RoundButton(icon:"arrow.counterclockwise",label:store.t("restartGame"),action:reset)
                 }.padding(.horizontal,16)

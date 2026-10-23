@@ -15,6 +15,13 @@ struct MiniGameSessionView: View {
     @State private var bubbleOffsets:[Int:CGSize]=[:]
     @State private var bubbleOrigins:[Int:CGPoint]=[:]
     @State private var giantColor=Color.cyan
+    @State private var giantSize=1.0
+    @State private var mergedSlots:Set<Int>=[]
+    @State private var bubbleSizes:[Int:Double]=[:]
+    @State private var pinchBases:[Int:Double]=[:]
+    @State private var heldBubble:Int?
+    @State private var heldUntil=0.0
+    @State private var paletteOffset=0
     @State private var celebration = 0
     @State private var lastGolden = 0
     @State private var surprises:[BubbleSurprise] = []
@@ -71,12 +78,21 @@ struct MiniGameSessionView: View {
                         .accessibilityValue("\(count)")
                     Spacer()
                     if kind == .apples {
-                        Text(store.t(apples.weather.key)).font(.system(size:12,weight:.heavy,design:.rounded))
-                            .padding(10).background(Capsule().fill(.white.opacity(0.92)))
+                        Button {apples.chooseNextWeather();SoundService.shared.play(.reaction)} label:{
+                            HStack(spacing:6) {
+                                Image(systemName:["leaf.fill","wind","cloud.sun.fill"][apples.weather.rawValue])
+                                Text(store.t(apples.weather.key))
+                            }.font(.system(size:12,weight:.heavy,design:.rounded))
+                                .padding(12).frame(minHeight:48).background(Capsule().fill(.white.opacity(0.92)))
+                        }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("changeFruitWeather")).disabled(paused || picnic)
                     }
                 }.padding(.horizontal,18)
                 Spacer().allowsHitTesting(false)
                 if !interacted {Text(store.t(kind == .apples ? "appleHelp" : kind == .hide ? "hideHelp" : "bubbleSwipe")).font(.system(.subheadline,design:.rounded).weight(.bold)).padding(10).background(Capsule().fill(.white.opacity(0.9)))}
+                if kind == .apples && apples.fruitBasket.count>=6 && !picnic {
+                    Text(store.t("picnicReady")).font(.system(size:14,weight:.heavy,design:.rounded))
+                        .padding(10).background(Capsule().fill(WorkshopLook.yellow))
+                }
                 PlayDock {
                     RoundButton(icon:"arrow.counterclockwise",label:store.t("restartGame"),action:restart)
                     if kind == .apples {
@@ -87,9 +103,13 @@ struct MiniGameSessionView: View {
                         movementButton(direction:1)
                     } else if kind == .bubbles {
                         PlayToken(symbol:"🫧",label:store.t("bubbleGrow")) {bubbleScale = bubbleScale >= 1.3 ? 1 : bubbleScale+0.1}
+                        Button {paletteOffset=(paletteOffset+3)%16;SoundService.shared.play(.click)} label:{
+                            Circle().fill(AngularGradient(colors:[.pink,.yellow,.cyan,.purple,.pink],center:.center))
+                                .frame(width:38,height:38).padding(8).background(Circle().fill(.white))
+                        }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("bubblePalette"))
                         Spacer(minLength:0)
                         PlayToken(symbol:"🌈",label:store.t(giantBubble ? "releaseBubble" : "bubbleMerge"),selected:giantBubble) {
-                            if giantBubble {release()} else {giantColor = .cyan;giantBubble=true}
+                            if giantBubble {release()} else {makeGiantBubble()}
                         }
                     } else {
                         Spacer()
@@ -109,8 +129,8 @@ struct MiniGameSessionView: View {
         }.foregroundColor(GameStyle.ink).navigationBarHidden(true).statusBar(hidden:true)
             .onAppear {visible=true;lastTick=nil;if kind == .apples || kind == .bubbles {store.visit(kind == .apples ? .apples : .bubbles,friendID:friend.id)}}
             .onDisappear {visible=false;lastTick=nil;SoundService.shared.stopSpeech()}
-            .onChange(of:scenePhase) {_ in lastTick=nil;bubbleOffsets=[:];bubbleOrigins=[:]}
-            .onChange(of:paused) {_ in lastTick=nil;bubbleOffsets=[:];bubbleOrigins=[:]}
+            .onChange(of:scenePhase) {_ in lastTick=nil;bubbleOffsets=[:];bubbleOrigins=[:];pinchBases=[:];heldBubble=nil]}
+            .onChange(of:paused) {_ in lastTick=nil;bubbleOffsets=[:];bubbleOrigins=[:];pinchBases=[:];heldBubble=nil]}
             .onReceive(clock) {date in tick(date)}
     }
 
@@ -149,11 +169,15 @@ struct MiniGameSessionView: View {
         SoundService.shared.play(.munch)
     }
 
+    private var orchardGaze:CGPoint {
+        guard let fruit=apples.drops.max(by:{$0.y<$1.y}) else {return .zero}
+        return CGPoint(x:min(1,max(-1,(fruit.x-apples.playerX)*4)),y:-0.7)
+    }
     private var appleField: some View {
         GeometryReader { proxy in
             let size = proxy.size
             ZStack {
-                VStack {FruitCanopy(weather:apples.weather);Spacer()}.allowsHitTesting(false)
+                VStack {ShakingFruitCanopy(weather:apples.weather,onShake:{guard !paused && !picnic else {return};interacted=true;apples.shake();SoundService.shared.play(.bounce)}).padding(.top,65);Spacer().allowsHitTesting(false)}
                 Ellipse().fill(Color.green.opacity(0.16)).frame(width: size.width * 1.5, height: 120).position(x: size.width / 2, y: size.height * 0.99)
                 ForEach(Array(apples.flowers.enumerated()), id: \.offset) { index, x in
                     FlowerArtwork(index:index).frame(width:32,height:38)
@@ -165,12 +189,21 @@ struct MiniGameSessionView: View {
                         .position(x: apple.x * size.width, y: apple.y * size.height)
                         .accessibilityHidden(true)
                 }
-                CharacterView(friend: friend, happy: elapsed < cheerUntil)
+                CharacterView(friend:friend,happy:elapsed<cheerUntil,gaze:orchardGaze)
+                    .scaleEffect(x:elapsed<cheerUntil ? 1.035 : 1,y:elapsed<cheerUntil ? 0.97 : 1,anchor:.bottom)
+                    .animation(reducedMotion ? nil : .spring(response:0.3,dampingFraction:0.5),value:elapsed<cheerUntil)
                     .frame(width: min(210,size.width*0.34), height:min(225,size.width*0.37))
                     .position(x: apples.playerX * size.width, y: size.height * 0.83)
                     .allowsHitTesting(false)
                 BasketToy().position(x: apples.playerX * size.width, y: size.height * 0.75)
                     .allowsHitTesting(false)
+                HStack(spacing:-3) {
+                    ForEach(Array(apples.fruitBasket.suffix(3).enumerated()),id:\.offset) {_,fruit in
+                        FruitArtwork(kind:fruit).frame(width:23,height:23)
+                    }
+                }.position(x:apples.playerX*size.width,y:size.height*0.74).allowsHitTesting(false)
+                OrchardCatchBurst(revision:apples.caught,fruit:apples.lastFruit)
+                    .frame(width:140,height:140).position(x:apples.playerX*size.width,y:size.height*0.72)
                 if elapsed < cheerUntil {
                     FruitArtwork(kind:apples.lastFruit).frame(width:47,height:47)
                         .position(x: apples.playerX * size.width, y: size.height * 0.57)
@@ -178,7 +211,7 @@ struct MiniGameSessionView: View {
                 }
             }.frame(width: size.width, height: size.height)
                 .contentShape(Rectangle())
-                .gesture(DragGesture(minimumDistance: 0).onChanged { value in
+                .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { value in
                     guard !paused && !picnic else { return }
                     interacted = true
                     apples.move(to: value.location.x / max(1, size.width))
@@ -198,21 +231,21 @@ struct MiniGameSessionView: View {
     private var bubbleField: some View {
         GeometryReader { proxy in
             ZStack {
-                CharacterView(friend:blowingFriend,happy:elapsed<cheerUntil && !blowing)
+                CharacterView(friend:blowingFriend,blink:elapsed.truncatingRemainder(dividingBy:4)<0.13,happy:elapsed<cheerUntil && !blowing,gaze:CGPoint(x:sin(elapsed*0.5)*0.35,y:elapsed<flyUntil ? 0.5 : -0.6),expression:elapsed<flyUntil ? .wonder : .normal)
                     .frame(width:180,height:192)
                     .position(x:proxy.size.width/2,y:proxy.size.height*(elapsed<flyUntil ? 0.25 : 0.81))
-                    .animation(reducedMotion ? nil : .easeInOut(duration:0.6),value:flyUntil)
+                    .animation(reducedMotion ? nil : .easeInOut(duration:0.6),value:elapsed<flyUntil)
                     .allowsHitTesting(false)
                 BubbleWand().frame(width:55,height:70)
                     .position(x:proxy.size.width/2+48,y:proxy.size.height*0.83).allowsHitTesting(false)
                 ForEach(0..<6) { slot in
                     let generation = bubbles.generations[slot]
-                    let diameter = min(170, max(70, proxy.size.width * 0.22)) * bubbleScale
+                    let diameter = min(170, max(70, proxy.size.width * 0.22)) * bubbleScale * (bubbleSizes[slot] ?? 1)
                     let base=bubbleOrigins[slot] ?? bubbleCenter(slot,generation:generation,size:proxy.size)
                     let offset=bubbleOffsets[slot] ?? .zero
                     let center=CGPoint(x:base.x+offset.width,y:base.y+offset.height)
                     Button { pop(slot, generation: generation) } label: {
-                        BubbleToy(color: GameStyle.palette[(slot * 2 + generation) % GameStyle.palette.count])
+                        BubbleToy(color:bubbleColor(slot,generation:generation))
                             .overlay {
                                 if bubbleFlash == slot {
                                     Text("✦").font(.system(size: 36, weight: .bold)).foregroundColor(.white)
@@ -225,11 +258,18 @@ struct MiniGameSessionView: View {
                     }.buttonStyle(SquishStyle())
                         .scaleEffect(elapsed-(popTimes[slot] ?? -10)<0.22 ? 0.1 : 1,anchor:.center)
                         .position(center)
+                        .onLongPressGesture(minimumDuration:0.35) {growBubble(slot)}
                         .simultaneousGesture(bubbleDrag(slot,generation:generation,size:proxy.size))
+                        .simultaneousGesture(MagnificationGesture().onChanged {scale in
+                            guard !paused,!mergedSlots.contains(slot) else {return}
+                            if pinchBases[slot] == nil {pinchBases[slot]=bubbleSizes[slot] ?? 1}
+                            heldBubble=slot;heldUntil=elapsed+0.45;interacted=true
+                            bubbleSizes[slot]=min(1.9,max(0.7,(pinchBases[slot] ?? 1)*Double(scale)))
+                        }.onEnded {_ in pinchBases[slot]=nil})
                         .animation(reducedMotion ? nil : .spring(response:0.35,dampingFraction:0.6),value:elapsed-(popTimes[slot] ?? -10)<0.22)
                         .accessibilityLabel(store.t("popBubble"))
-                        .disabled(paused || giantBubble)
-                        .opacity(giantBubble ? 0 : 1)
+                        .disabled(paused || mergedSlots.contains(slot))
+                        .opacity(mergedSlots.contains(slot) ? 0 : 1)
                 }
                 ForEach(surprises) {surprise in
                     let age=max(0,elapsed-surprise.born)
@@ -242,7 +282,9 @@ struct MiniGameSessionView: View {
                     Button(action: release) {
                         BubbleToy(color:giantColor).overlay(CharacterView(friend: friend).padding(30))
                             .frame(width: min(260, proxy.size.width * 0.8), height: min(260, proxy.size.width * 0.8))
-                    }.buttonStyle(SquishStyle()).position(x: proxy.size.width / 2, y: proxy.size.height * 0.45)
+                    }.buttonStyle(SquishStyle()).scaleEffect(giantSize)
+                        .animation(reducedMotion ? nil : .spring(response:0.35,dampingFraction:0.6),value:giantSize)
+                        .position(x: proxy.size.width / 2, y: proxy.size.height * 0.45)
                         .accessibilityLabel(store.t("releaseBubble")).disabled(paused || picnic)
                 }
             }.frame(width:proxy.size.width,height:proxy.size.height)
@@ -251,28 +293,60 @@ struct MiniGameSessionView: View {
         }
     }
 
+
+    private func bubbleColor(_ slot:Int,generation:Int)->Color {
+        GameStyle.palette[(slot*2+generation+paletteOffset)%GameStyle.palette.count]
+    }
+    private func growBubble(_ slot:Int) {
+        guard !paused,!mergedSlots.contains(slot) else {return}
+        heldBubble=slot;heldUntil=elapsed+0.45;interacted=true
+        withAnimation(reducedMotion ? nil : .spring(response:0.4,dampingFraction:0.65)) {
+            bubbleSizes[slot]=min(1.9,(bubbleSizes[slot] ?? 1)+0.25)
+        }
+        SoundService.shared.play(.bubble)
+    }
+    private func makeGiantBubble() {
+        var color=bubbleColor(0,generation:bubbles.generations[0])
+        for slot in 1..<6 {color=GameStyle.mixed(color,with:bubbleColor(slot,generation:bubbles.generations[slot]),amount:1/Double(slot+1))}
+        giantColor=color;giantSize=1.25;mergedSlots=Set(0..<6)
+        for slot in 0..<6 {_=bubbles.pop(slot:slot,generation:bubbles.generations[slot])}
+        withAnimation(reducedMotion ? nil : .spring(response:0.4,dampingFraction:0.65)) {giantBubble=true}
+        interacted=true;SoundService.shared.play(.bubble)
+    }
     private func bubbleDrag(_ slot:Int,generation:Int,size:CGSize)->some Gesture {
         DragGesture(minimumDistance:10,coordinateSpace:.named("bubbleGarden")).onChanged {value in
-            guard !paused,!giantBubble else {return}
+            guard !paused,!mergedSlots.contains(slot),bubbles.generations[slot] == generation else {return}
             interacted=true
             if bubbleOrigins[slot] == nil {bubbleOrigins[slot]=bubbleCenter(slot,generation:generation,size:size)}
             bubbleOffsets[slot]=value.translation
         }.onEnded {value in
             defer {bubbleOffsets[slot]=nil;bubbleOrigins[slot]=nil}
-            guard !paused,!giantBubble else {return}
+            guard !paused,!mergedSlots.contains(slot),bubbles.generations[slot] == generation else {return}
             let origin=bubbleOrigins[slot] ?? bubbleCenter(slot,generation:generation,size:size)
             let end=CGPoint(x:origin.x+value.translation.width,y:origin.y+value.translation.height)
-            let radius=min(170,max(70,size.width*0.22))*bubbleScale*0.55
-            if let other=(0..<6).filter({$0 != slot}).min(by:{
+            let sourceColor=bubbleColor(slot,generation:generation)
+            if giantBubble {
+                let radius=min(260,size.width*0.8)*giantSize*0.55
+                if hypot(end.x-size.width*0.5,end.y-size.height*0.45)<radius {
+                    giantColor=GameStyle.mixed(giantColor,with:sourceColor,amount:1/Double(mergedSlots.count+1))
+                    mergedSlots.insert(slot)
+                    giantSize=min(1.45,1+Double(mergedSlots.count)*0.07)
+                    _=bubbles.pop(slot:slot,generation:generation)
+                    SoundService.shared.play(.bubble)
+                }
+                return
+            }
+            let diameter=min(170,max(70,size.width*0.22))*bubbleScale
+            if let other=(0..<6).filter({$0 != slot && !mergedSlots.contains($0)}).min(by:{
                 let a=bubbleCenter($0,generation:bubbles.generations[$0],size:size)
                 let b=bubbleCenter($1,generation:bubbles.generations[$1],size:size)
                 return hypot(a.x-end.x,a.y-end.y)<hypot(b.x-end.x,b.y-end.y)
             }) {
                 let target=bubbleCenter(other,generation:bubbles.generations[other],size:size)
+                let radius=diameter*((bubbleSizes[slot] ?? 1)+(bubbleSizes[other] ?? 1))*0.32
                 if hypot(target.x-end.x,target.y-end.y)<radius {
-                    let first=GameStyle.palette[(slot*2+generation)%16]
-                    let second=GameStyle.palette[(other*2+bubbles.generations[other])%16]
-                    giantColor=GameStyle.mixed(first,with:second,amount:0.5)
+                    giantColor=GameStyle.mixed(sourceColor,with:bubbleColor(other,generation:bubbles.generations[other]),amount:0.5)
+                    mergedSlots=[slot,other];giantSize=1
                     _=bubbles.pop(slot:slot,generation:generation)
                     _=bubbles.pop(slot:other,generation:bubbles.generations[other])
                     withAnimation(reducedMotion ? nil : .spring(response:0.45,dampingFraction:0.65)) {giantBubble=true}
@@ -366,12 +440,14 @@ struct MiniGameSessionView: View {
     }
 
     private func pop(_ slot: Int, generation: Int) {
-        guard !paused,!picnic,elapsed-(popTimes[slot] ?? -10)>0.28,bubbles.pop(slot:slot,generation:generation) else {return}
+        guard !paused,!picnic,!mergedSlots.contains(slot),
+              !(heldBubble == slot && elapsed<heldUntil),
+              elapsed-(popTimes[slot] ?? -10)>0.28,bubbles.pop(slot:slot,generation:generation) else {return}
         let point=bubbleCenter(slot,generation:generation,size:CGSize(width:1,height:1))
         let kind=BubbleSurpriseKind(rawValue:(slot+generation)%4) ?? .music
         surprises.append(BubbleSurprise(kind:kind,x:point.x,y:point.y,born:elapsed))
         if surprises.count>8 {surprises.removeFirst()}
-        popTimes[slot]=elapsed
+        popTimes[slot]=elapsed;bubbleSizes[slot]=nil
         if kind == .music {SoundService.shared.instrument(1,beat:slot,voice:friend.voice?.rawValue ?? 0)}
         if bubbles.popped.isMultiple(of:6) {celebration += 1}
         interacted = true
@@ -382,12 +458,19 @@ struct MiniGameSessionView: View {
     private func release() {
         guard !paused else { return }
         giantBubble = false; flyUntil = elapsed + 2; celebration += 1
-        for slot in 0..<6 { _ = bubbles.pop(slot: slot, generation: bubbles.generations[slot]) }
+        for slot in 0..<6 where !mergedSlots.contains(slot) {_=bubbles.pop(slot:slot,generation:bubbles.generations[slot])}
+        for slot in 0..<6 {popTimes[slot]=elapsed}
+        for i in 0..<4 {
+            surprises.append(BubbleSurprise(kind:i.isMultiple(of:2) ? .butterfly : .paint,x:0.29+Double(i)*0.14,y:0.44,born:elapsed))
+        }
+        if surprises.count>12 {surprises.removeFirst(surprises.count-12)}
+        mergedSlots=[];bubbleSizes=[:];giantSize=1
         SoundService.shared.react(voice: friend.voice?.rawValue ?? 0)
     }
     private func restart() {
         apples = AppleRain(); bubbles = BubbleGarden(); seek = HideAndSeek()
         picnicShared=[];picnicSignal=0;picnicFruit=nil;bubbleOffsets=[:];bubbleOrigins=[:]
+        mergedSlots=[];bubbleSizes=[:];pinchBases=[:];heldBubble=nil;giantSize=1
         interacted = false; popTimes=[:]; surprises=[]; lastGolden=0
         picnic = false; giantBubble = false; bubbleScale = 1; clueSpot = nil; flyUntil = 0
         elapsed = 0; cheerUntil = 0; bubbleFlash = nil; lastTick = nil

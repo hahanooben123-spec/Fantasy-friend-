@@ -28,6 +28,18 @@ Genoptagelse af frugtfangst, bobler og fysisk leg åbner aktiviteten igen; midle
 
 Denne samlede ændring er ikke bygget, afprøvet visuelt eller lydmæssigt eller testet på Apple-enheder. Projektgeneratoren er kun kørt for at registrere nye Swift-kilder og ressourcer.
 
+## Levende venner, velkomst og minispil
+
+Forsiden er nu en lys, illustreret have med en interaktiv ven og to primære indgange: Skab en ven og Leg og spil. Samling/værelse og pizza/græskar ligger i mindre indgange. Layoutet bruger en delt opbygning på liggende iPad og en kompakt stak på stående skærme. Genoptagelse fylder mindre, og overflødig bundtekst er fjernet.
+
+Vennen følger fingerens placering med øjnene, ser sig diskret omkring, blinker i varieret tempo og reagerer forskelligt med arme, kropsbevægelse, overraskelse, blink med ét øje og tygning. Udtrykkene ændrer ikke barnets gemte figur. Figurværkstedet reagerer på nye dele med et kort hop og blik mod det ændrede område.
+
+Gemte venner præsenteres på en lille scene med gardiner, entré og navn. Barnet kan gå direkte til værelset eller leg. Tale og lyd følger indstillingerne; Reducer bevægelse viser præsentationen uden entréanimationen.
+
+Minispillenes vælger viser fire billedkort. Bimse gør det muligt at prøve spillene og fri leg uden først at gemme en figur. Frugttræet kan rystes, vejret kan skiftes, og fanget frugt vises i kurven med et kort fangstglimt. Bobler kan vokse ved langt tryk eller knib; flere bobler kan blandes ind i den store boble, og en farveknap skifter paletten. Orkestrets instrumenter kan stryges med fingeren, toner får visuel feedback, og den tidligere melodi kan gendannes efter en ny optagelse.
+
+Ingen build, tests, visuel afprøvning eller lydaflytning er udført for denne ændring.
+
 ## Åbn og kør
 
 1. Åbn **FantasiVen.xcodeproj** på en Mac med Xcode 16 eller nyere.

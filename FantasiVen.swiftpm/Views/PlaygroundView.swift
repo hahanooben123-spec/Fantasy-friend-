@@ -9,6 +9,7 @@ struct PlaygroundView: View {
     @EnvironmentObject private var store: FriendStore
     var initialID: UUID? = nil
     var onCreate: () -> Void
+    @State private var guest=FriendSeed.bimse.make()
     @State private var selectedID: UUID?
     @State private var action: PlayAction = .jump
     @State private var signal = 0
@@ -16,7 +17,7 @@ struct PlaygroundView: View {
     @State private var picker: PlayPicker?
     private let toys: [ToyKind] = [.feather, .berry, .jump, .music, .moon, .heart]
     private var friend: FantasyFriend? {
-        store.friends.first { $0.id == (selectedID ?? initialID) } ?? store.friends.first
+        store.friends.first { $0.id == (selectedID ?? initialID) } ?? store.friends.first ?? guest
     }
 
     var body: some View {
@@ -41,7 +42,7 @@ struct PlaygroundView: View {
                     }.padding(.horizontal,16)
                     Spacer().allowsHitTesting(false)
                     HStack(spacing:8) {
-                        Button {picker = .friends} label:{
+                        Button {if store.friends.isEmpty {onCreate()} else {picker = .friends}} label:{
                             CharacterView(friend:friend).frame(width:48,height:50)
                                 .background(Circle().fill(.white))
                         }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("chooseFriend"))
@@ -93,7 +94,9 @@ struct PlaygroundView: View {
                                 Button {
                                     guard var value = friend else { return }
                                     value.world = world
-                                    if store.save(value) { picker = nil; SoundService.shared.play(.click) }
+                                    if store.friends.contains(where:{$0.id == value.id}) {
+                                        if store.save(value) {picker=nil;SoundService.shared.play(.click)}
+                                    } else {guest=value;picker=nil;SoundService.shared.play(.click)}
                                 } label: {
                                     VStack(spacing: 9) {
                                         WorldBackdrop(world: world, immersive: false, animated: false).frame(height: 112).clipShape(RoundedRectangle(cornerRadius: 24))

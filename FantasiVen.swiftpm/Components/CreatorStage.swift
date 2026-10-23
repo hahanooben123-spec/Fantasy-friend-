@@ -23,6 +23,9 @@ struct CreatorStage: View {
     @State private var breathing=false
     @State private var delighted=false
     @State private var interactionRevision=0
+    @State private var reactionLift:CGFloat=0
+    @State private var reactionSquash:CGFloat=1
+    @State private var expression=CreatureExpression.normal
     private let zoom: CGFloat = 1.1
 
     var body: some View {
@@ -33,9 +36,11 @@ struct CreatorStage: View {
             ZStack {
                 Ellipse().fill(WorkshopLook.sea.opacity(0.18)).frame(width:width*0.57,height:height*0.055)
                     .position(x:width/2,y:height*0.94)
-                CharacterView(friend:displayed,blink:blink,happy:delighted,gaze:gaze,zoom:zoom)
+                CharacterView(friend:displayed,blink:blink,happy:delighted && expression != .wink,gaze:gaze,zoom:zoom,expression:expression)
                     .scaleEffect(x:breathing && origin == nil && !reduced ? 1.006 : 1,
                                  y:breathing && origin == nil && !reduced ? 1.015 : 1,anchor:.bottom)
+                    .scaleEffect(x:reactionSquash,y:1/reactionSquash,anchor:.bottom)
+                    .offset(y:reactionLift)
                     .rotationEffect(.degrees(reduced ? 0 : lean),anchor:.bottom)
                     .animation(reduced ? nil : .spring(response:0.32,dampingFraction:0.65),value:lean)
                     .allowsHitTesting(false)
@@ -94,9 +99,19 @@ struct CreatorStage: View {
         }
         .task(id:revision) {
             guard revision>0 else {return}
-            delighted=true
-            do {try await Task.sleep(nanoseconds:480_000_000)} catch {delighted=false;return}
-            delighted=false
+            delighted=false;reactionLift=0;reactionSquash=1
+            expression=part == .extras || part == .color ? .wonder : .wink
+            gaze=part == .legs ? CGPoint(x:0,y:0.7) : part == .extras ? CGPoint(x:0,y:-0.7) : .zero
+            do {
+                if !reduced {
+                    withAnimation(.spring(response:0.24,dampingFraction:0.55)) {reactionSquash=0.92;reactionLift = -12}
+                }
+                try await Task.sleep(nanoseconds:270_000_000)
+                expression = .normal;delighted=true
+                withAnimation(reduced ? nil : .spring(response:0.4,dampingFraction:0.55)) {reactionSquash=1;reactionLift=0}
+                try await Task.sleep(nanoseconds:420_000_000)
+                delighted=false;gaze = .zero
+            } catch {delighted=false;reactionLift=0;reactionSquash=1;expression = .normal}
         }
         .task(id:phase) {
             guard phase == .active else { return }

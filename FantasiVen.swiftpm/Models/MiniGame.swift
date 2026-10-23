@@ -30,7 +30,19 @@ struct AppleRain {
     private(set) var fruitBasket: [Int] = []
     private var spawnSequence = 0
     private(set) var time = 0.0
-    var weather:FruitWeather {FruitWeather(rawValue:Int(time/14)%3) ?? .orchard}
+    private var weatherChoice:FruitWeather?
+    var weather:FruitWeather {weatherChoice ?? FruitWeather(rawValue:Int(time/14)%3) ?? .orchard}
+    mutating func chooseNextWeather() {
+        weatherChoice=FruitWeather(rawValue:(weather.rawValue+1)%3) ?? .orchard
+    }
+    mutating func shake() {
+        for i in 0..<3 where drops.count<5 {
+            let x=min(0.85,max(0.15,playerX+Double(i-1)*0.15))
+            drops.append(AppleDrop(x:x,y:0.14-Double(i)*0.06,fruit:spawnSequence%3,
+                golden:spawnSequence%7 == 6,anchorX:x,born:time,drifting:weather == .breeze))
+            spawnSequence+=1
+        }
+    }
     private(set) var lastFruit = 0
     private(set) var playerX = 0.5
     private var spawnClock = 1.3

@@ -1,5 +1,7 @@
 import SwiftUI
 
+enum CreatureExpression:Equatable {case normal,wink,wonder,chew}
+
 struct CharacterView: View {
     let friend: FantasyFriend
     var blink = false
@@ -9,6 +11,7 @@ struct CharacterView: View {
     var detail: Part? = nil
     var gaze = CGPoint.zero
     var zoom: CGFloat = 1
+    var expression=CreatureExpression.normal
 
     var body: some View {
         Canvas { context, size in
@@ -31,7 +34,7 @@ struct CharacterView: View {
             } else {
                 context.translateBy(x: size.width * (1 - zoom) / 2, y: size.height * (1 - zoom) / 2)
                 context.scaleBy(x: size.width / 300 * zoom, y: size.height / 320 * zoom)
-                CreaturePainter(context: context, friend: friend, gaze: gaze).draw(blink: blink, happy: happy, asleep: asleep)
+                CreaturePainter(context: context, friend: friend, gaze: gaze,expression:expression).draw(blink: blink, happy: happy, asleep: asleep)
             }
         }
         .aspectRatio(300.0 / 320, contentMode: .fit)
@@ -44,6 +47,7 @@ private struct CreaturePainter {
     let friend: FantasyFriend
     var gaze = CGPoint.zero
     var singleEye = false
+    var expression=CreatureExpression.normal
     var primary: Color { GameStyle.palette[friend.color % 16] }
     var accent: Color { GameStyle.palette[friend.accent % 16] }
     var ink: Color { GameStyle.ink }
@@ -150,7 +154,7 @@ private struct CreaturePainter {
         bodyContext.translateBy(x: 150, y: 175)
         bodyContext.scaleBy(x: CGFloat(friend.widthFactor), y: CGFloat(friend.heightFactor))
         bodyContext.translateBy(x: -150, y: -175)
-        CreaturePainter(context: bodyContext, friend: friend, gaze: gaze).drawBaseBody(blink: blink, happy: happy, asleep: asleep)
+        CreaturePainter(context: bodyContext, friend: friend, gaze: gaze,expression:expression).drawBaseBody(blink: blink, happy: happy, asleep: asleep)
     }
 
     func drawBaseBody(blink: Bool, happy: Bool, asleep: Bool) {
@@ -424,7 +428,7 @@ private struct CreaturePainter {
         context.stroke(shape,with:.color(GameStyle.mixed(primary,with:ink,amount:0.56)),lineWidth:1.7)
     }
     func drawEyes(closed: Bool, happy: Bool) {
-        CreaturePainter(context: facialContext("eyes", center: CGPoint(x: 150, y: 157)), friend: friend, gaze: gaze, singleEye: singleEye).drawEyesArtwork(closed: closed, happy: happy)
+        CreaturePainter(context: facialContext("eyes", center: CGPoint(x: 150, y: 157)), friend: friend, gaze: gaze, singleEye: singleEye,expression:expression).drawEyesArtwork(closed: closed, happy: happy)
     }
     func drawEyesArtwork(closed: Bool, happy: Bool) {
         let ink = friend.partColors?["eyes"].map { GameStyle.palette[$0] } ?? self.ink
@@ -433,7 +437,7 @@ private struct CreaturePainter {
         let radius: CGFloat = kind == 1 ? 13 : (kind == 5 ? 35 : (kind == 6 && !singleEye ? 17 : 28))
         for x in centers {
             let y: CGFloat = 157
-            if closed || kind == 3 || happy {
+            if closed || kind == 3 || happy || (expression == .wink && x == centers[0]) {
                 curve(CGPoint(x: x - radius * 0.65, y: y), CGPoint(x: x + radius * 0.65, y: y), CGPoint(x: x, y: y + (closed ? 9 : -13)), ink, 5)
                 continue
             }
@@ -471,10 +475,16 @@ private struct CreaturePainter {
     }
 
     func drawMouth(happy: Bool, asleep: Bool) {
-        CreaturePainter(context: facialContext("mouth", center: CGPoint(x: 151, y: 207)), friend: friend).drawMouthArtwork(happy: happy, asleep: asleep)
+        CreaturePainter(context: facialContext("mouth", center: CGPoint(x: 151, y: 207)), friend: friend,expression:expression).drawMouthArtwork(happy: happy, asleep: asleep)
     }
     func drawMouthArtwork(happy: Bool, asleep: Bool) {
         let ink = friend.partColors?["mouth"].map { GameStyle.palette[$0] } ?? self.ink
+        if expression == .wonder && !asleep {
+            ellipse(136,191,30,31,ink);ellipse(144,196,10,5,.white.opacity(0.5));return
+        }
+        if expression == .chew && !asleep {
+            ellipse(137,203,28,8,ink);return
+        }
         let kind = happy ? 1 : friend.mouth
         if asleep || kind == 3 { ellipse(142, 192, 17, 23, ink); ellipse(146, 196, 7, 5, .white.opacity(0.45)); return }
         if kind == 0 || kind == 2 || kind == 6 || kind == 9 {

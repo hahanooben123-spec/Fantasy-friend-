@@ -129,21 +129,31 @@ struct PlayableInstrument:View {
     let signal:Int
     var strike:(Int)->Void
     @Environment(\.accessibilityReduceMotion) private var reduced
+    @State private var lastNote:Int?
+    @State private var lastStroke=0.0
     var body:some View {
-        ZStack {
-            InstrumentArtwork(row:row,lit:!signal.isMultiple(of:2))
-                .scaleEffect(reduced || signal.isMultiple(of:2) ? 1 : 1.045)
-                .animation(reduced ? nil : .spring(response:0.2,dampingFraction:0.5),value:signal)
-                .allowsHitTesting(false)
-            HStack(spacing:0) {
-                ForEach(0..<(row == 1 ? 5 : 1),id:\.self) {note in
-                    Button {strike(note)} label:{
-                        Color.clear.frame(maxWidth:.infinity,maxHeight:.infinity).contentShape(Rectangle())
-                    }.buttonStyle(.plain)
-                        .accessibilityLabel(store.t("instrument_\(row)")+" \(note+1)")
+        GeometryReader {proxy in
+            ZStack {
+                InstrumentArtwork(row:row,lit:!signal.isMultiple(of:2))
+                    .scaleEffect(reduced || signal.isMultiple(of:2) ? 1 : 1.045)
+                    .animation(reduced ? nil : .spring(response:0.2,dampingFraction:0.5),value:signal)
+                    .allowsHitTesting(false)
+                HStack(spacing:0) {
+                    ForEach(0..<(row == 1 ? 5 : 1),id:\.self) {note in
+                        Button {strike(note)} label:{
+                            Color.clear.frame(maxWidth:.infinity,maxHeight:.infinity).contentShape(Rectangle())
+                        }.buttonStyle(.plain)
+                            .accessibilityLabel(store.t("instrument_\(row)")+" \(note+1)")
+                    }
                 }
-            }
-        }.frame(height:140).contentShape(Rectangle())
+            }.contentShape(Rectangle())
+                .simultaneousGesture(DragGesture(minimumDistance:7).onChanged {value in
+                    let now=ProcessInfo.processInfo.systemUptime
+                    let note=min(4,max(0,Int(value.location.x/max(1,proxy.size.width)*5)))
+                    guard now-lastStroke>0.09,(row == 0 || note != lastNote) else {return}
+                    lastStroke=now;lastNote=note;strike(row == 0 ? 0 : note)
+                }.onEnded {_ in lastNote=nil})
+        }.frame(height:140)
     }
 }
 struct PicnicBlanket:View {

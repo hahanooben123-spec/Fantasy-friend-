@@ -89,7 +89,7 @@ struct BuilderView: View {
             .sheet(isPresented:$moreTools) {advancedTools}
             .sheet(isPresented:$naming) {
                 NamingView(friend:$friend) {
-                    if store.save(friend) { naming=false;celebration=true;store.clearEditorDraft(friend.id);SoundService.shared.play(.complete) }
+                    if store.save(friend) { naming=false;celebration=true;store.clearEditorDraft(friend.id) }
                 }.environmentObject(store)
             }
             .sheet(isPresented:$personality) {
@@ -474,15 +474,8 @@ struct BuilderView: View {
         };selection = .body
     }
     private var celebrationView:some View {
-        ZStack {
-            WorkshopLook.cream.ignoresSafeArea()
-            VStack(spacing:22) {
-                LivingFriend(friend:friend,action:.hug,signal:1).frame(height:290)
-                Text(store.t(existing ? "updated" : "created")).font(.system(.title,design:.rounded).weight(.heavy)).multilineTextAlignment(.center)
-                Text(friend.name).font(.system(.title2,design:.rounded).weight(.bold))
-                CandyButton(title:store.t("continue"),icon:"checkmark") { presentation.wrappedValue.dismiss() }
-            }.padding(28).frame(maxWidth:500)
-        }
+        FriendRevealView(friend:friend,updated:existing,onFinish:{presentation.wrappedValue.dismiss()})
+            .environmentObject(store)
     }
 }
 

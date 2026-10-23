@@ -19,26 +19,25 @@ struct HomeView:View {
                 let tablet=proxy.size.width>=700
                 let landscape=proxy.size.width>=900 && proxy.size.width>proxy.size.height
                 ZStack {
-                    WorldBackdrop(world:.castle)
+                    WelcomeGardenBackdrop()
                     ScrollView(showsIndicators:false) {
-                        VStack(spacing:tablet ? 24 : 18) {
+                        VStack(spacing:tablet ? 18 : 12) {
                             header(tablet:tablet)
                             NavigationLink(destination:resumeDestination,isActive:$resumeNavigation) {EmptyView()}.hidden()
-                            if recent != nil {resumeCard}
                             if landscape {
-                                HStack(alignment:.top,spacing:28) {
-                                    welcome(height:max(310,min(470,proxy.size.height-215)))
-                                        .frame(width:min(440,proxy.size.width*0.38))
-                                    menu(height:max(145,min(185,(proxy.size.height-250)/2)))
+                                HStack(alignment:.center,spacing:28) {
+                                    VStack(spacing:14) {
+                                        welcome(height:min(410,max(270,proxy.size.height-280)))
+                                        if recent != nil {resumeCard}
+                                    }.frame(width:proxy.size.width*0.39)
+                                    menu(height:min(230,max(165,proxy.size.height*0.29)))
                                         .frame(maxWidth:.infinity)
                                 }
                             } else {
-                                welcome(height:tablet ? min(300,proxy.size.height*0.28) : 205)
-                                menu(height:tablet ? 174 : 151)
+                                welcome(height:tablet ? 235 : 155)
+                                if recent != nil {resumeCard}
+                                menu(height:tablet ? 183 : 145)
                             }
-                            Text(store.t("homeFooter")).font(.system(size:11,weight:.semibold,design:.rounded))
-                                .multilineTextAlignment(.center).foregroundColor(GameStyle.ink.opacity(0.8))
-                                .padding(.top,3)
                         }.padding(.horizontal,tablet ? 28 : 16).padding(.top,16).padding(.bottom,28)
                             .frame(maxWidth:1280).frame(maxWidth:.infinity)
                     }
@@ -64,8 +63,8 @@ struct HomeView:View {
         HStack(alignment:.center,spacing:12) {
             VStack(alignment:.leading,spacing:6) {
                 BrandTitle(size:tablet ? 43 : 33)
-                Text(store.t("homeWelcome")).font(.system(size:tablet ? 16 : 13,weight:.bold,design:.rounded))
-                    .foregroundColor(.white).shadow(color:GameStyle.ink.opacity(0.25),radius:2,y:1)
+                Text(store.t("homeInvitation")).font(.system(size:tablet ? 16 : 13,weight:.bold,design:.rounded))
+                    .foregroundColor(WorkshopLook.sea)
             }
             Spacer(minLength:0)
             NavigationLink(destination:SettingsView()) {
@@ -76,38 +75,47 @@ struct HomeView:View {
         }
     }
     private func welcome(height:CGFloat)->some View {
-        VStack(spacing:13) {
-            HomeWelcomeScene(friend:mascot).frame(height:height)
-            if let friend=store.friends.first {
-                NavigationLink(destination:FriendRoomView(friendID:friend.id)) {
-                    HStack(spacing:10) {
-                        Image(systemName:"house.fill").font(.system(size:20,weight:.bold)).foregroundColor(GameStyle.purple)
-                        VStack(alignment:.leading,spacing:1) {
-                            Text(store.t("homeVisitRoom")).font(.system(size:14,weight:.heavy,design:.rounded))
-                            Text(friend.name).font(.system(size:12,weight:.semibold,design:.rounded)).lineLimit(1)
-                        }
-                        Spacer(minLength:0)
-                        Image(systemName:"chevron.right").font(.system(size:13,weight:.heavy))
-                    }.padding(.horizontal,17).frame(height:57)
-                        .background(CandySurface(color:WorkshopLook.cream,cornerRadius:23))
-                }.buttonStyle(SquishStyle())
-            }
-        }
+        WelcomeCompanion(friend:mascot).frame(height:height)
     }
     private func menu(height:CGFloat)->some View {
-        VStack(alignment:.leading,spacing:17) {
-            FantasyMapView(onCreate:create,onEdit:openEditor,cardHeight:height)
-            Text(store.t("homeWorkshops")).font(.system(size:16,weight:.heavy,design:.rounded))
-                .padding(.leading,5).padding(.top,5)
-            HStack(spacing:16) {
-                NavigationLink(destination:KitchenGameView(friend:mascot)) {
-                    workshop(title:store.t("game_kitchen"),pumpkin:false)
+        VStack(spacing:14) {
+            HStack(spacing:14) {
+                Button(action:create) {
+                    WelcomeActionCard(kind:.studio,title:store.t("create"),subtitle:store.t("homeCreateHint"),
+                        color:Color(red:1,green:0.68,blue:0.22),height:height)
                 }
-                NavigationLink(destination:PumpkinGameView()) {
-                    workshop(title:store.t("pumpkinTitle"),pumpkin:true)
+                NavigationLink(destination:MiniGamesView(onCreate:create)) {
+                    WelcomeActionCard(kind:.games,title:store.t("homePlayGames"),subtitle:store.t("homePlayHint"),
+                        color:Color(red:0.20,green:0.70,blue:0.86),height:height)
                 }
             }.buttonStyle(SquishStyle())
+            HStack(spacing:12) {
+                NavigationLink(destination:GalleryView(onEdit:openEditor)) {
+                    littleDoor(title:store.t("homeCollection"),kind:.village)
+                }
+                if let friend=store.friends.first {
+                    NavigationLink(destination:FriendRoomView(friendID:friend.id)) {
+                        littleDoor(title:store.t("myRoom"),kind:.studio)
+                    }
+                } else {
+                    NavigationLink(destination:PlaygroundView(onCreate:create)) {
+                        littleDoor(title:store.t("homePlay"),kind:.playground)
+                    }
+                }
+            }.buttonStyle(SquishStyle())
+            HStack(spacing:12) {
+                NavigationLink(destination:KitchenGameView(friend:mascot)) {workshop(title:store.t("game_kitchen"),pumpkin:false)}
+                NavigationLink(destination:PumpkinGameView()) {workshop(title:store.t("pumpkinTitle"),pumpkin:true)}
+            }.buttonStyle(SquishStyle())
         }
+    }
+    private func littleDoor(title:String,kind:HomeDestination)->some View {
+        HStack(spacing:7) {
+            HomeDestinationArt(kind:kind).frame(width:54,height:52)
+            Text(title).font(.system(size:15,weight:.heavy,design:.rounded)).lineLimit(2)
+                .frame(maxWidth:.infinity,alignment:.leading)
+        }.padding(.horizontal,10).frame(maxWidth:.infinity,minHeight:65)
+            .background(CandySurface(color:WorkshopLook.cream,cornerRadius:23))
     }
     private func workshop(title:String,pumpkin:Bool)->some View {
         HStack(spacing:7) {
@@ -117,7 +125,7 @@ struct HomeView:View {
             }.frame(width:49,height:61).accessibilityHidden(true)
             Text(title).font(.system(size:15,weight:.heavy,design:.rounded))
                 .lineLimit(2).minimumScaleFactor(0.72).frame(maxWidth:.infinity,alignment:.leading)
-        }.padding(.horizontal,10).frame(maxWidth:.infinity).frame(height:86)
+        }.padding(.horizontal,10).frame(maxWidth:.infinity).frame(height:72)
             .background(CandySurface(color:pumpkin ? Color(red:0.47,green:0.29,blue:0.62) : Color(red:1,green:0.76,blue:0.39),cornerRadius:25))
             .foregroundColor(pumpkin ? WorkshopLook.cream : GameStyle.ink)
     }
@@ -144,16 +152,16 @@ struct HomeView:View {
                     case .pumpkin:PumpkinIllustration(lantern:pumpkins.draft ?? pumpkins.lanterns.first ?? PumpkinDoor.sample,animated:false)
                     default:CharacterView(friend:recentFriend)
                     }
-                }.frame(width:72,height:78).accessibilityHidden(true)
+                }.frame(width:48,height:51).accessibilityHidden(true)
                 VStack(alignment:.leading,spacing:5) {
-                    Text(store.t("resumePlay")).font(.system(size:20,weight:.heavy,design:.rounded))
+                    Text(store.t("resumePlay")).font(.system(size:17,weight:.heavy,design:.rounded))
                     Text(store.t("resume_"+(recent?.kind.rawValue ?? "creator")))
                         .font(.system(size:14,weight:.bold,design:.rounded))
                 }
                 Spacer(minLength:0)
                 Image(systemName:"play.fill").font(.system(size:25,weight:.bold))
-                    .frame(width:54,height:54).background(Circle().fill(.white.opacity(0.7)))
-            }.padding(14).foregroundColor(GameStyle.ink)
+                    .frame(width:42,height:42).background(Circle().fill(.white.opacity(0.7)))
+            }.padding(10).foregroundColor(GameStyle.ink)
                 .background(CandySurface(color:WorkshopLook.yellow,cornerRadius:28))
         }.buttonStyle(SquishStyle())
     }
