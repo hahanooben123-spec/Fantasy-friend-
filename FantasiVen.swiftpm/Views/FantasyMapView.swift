@@ -1,24 +1,46 @@
 import SwiftUI
 
-struct FantasyMapView: View {
-    @EnvironmentObject private var store: FriendStore
-    let onCreate: () -> Void
-    let onEdit: (FantasyFriend, Bool) -> Void
-    var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 145, maximum: 260), spacing: 18)], spacing: 25) {
-            Button(action: onCreate) { door("create", color: StudioStyle.colors[0]) { DestinationArt(kind: .studio) } }
-            NavigationLink(destination: GalleryView(onEdit: onEdit)) { door("friendVillage", color: StudioStyle.colors[1]) { DestinationArt(kind: .village) } }
-            NavigationLink(destination: PlaygroundView(onCreate: onCreate)) { door("playRoom", color: StudioStyle.colors[2]) { DestinationArt(kind: .playground) } }
-            NavigationLink(destination: MiniGamesView(onCreate: onCreate)) { door("adventureTree", color: StudioStyle.colors[6]) { AdventureTreeArt() } }
-        }.buttonStyle(SquishStyle()).padding(.vertical, 12)
+struct FantasyMapView:View {
+    @EnvironmentObject private var store:FriendStore
+    let onCreate:()->Void
+    let onEdit:(FantasyFriend,Bool)->Void
+    var cardHeight:CGFloat=172
+    var body:some View {
+        LazyVGrid(columns:[GridItem(.flexible(),spacing:16),GridItem(.flexible(),spacing:16)],spacing:18) {
+            Button(action:onCreate) {
+                HomeMenuCard(kind:.studio,title:store.t("create"),color:GameStyle.palette[3],height:cardHeight)
+            }
+            NavigationLink(destination:GalleryView(onEdit:onEdit)) {
+                HomeMenuCard(kind:.village,title:store.t("homeCollection"),color:GameStyle.palette[1],height:cardHeight)
+            }
+            NavigationLink(destination:PlaygroundView(onCreate:onCreate)) {
+                HomeMenuCard(kind:.playground,title:store.t("homePlay"),color:GameStyle.palette[11],height:cardHeight)
+            }
+            NavigationLink(destination:MiniGamesView(onCreate:onCreate)) {
+                HomeMenuCard(kind:.games,title:store.t("homeGames"),color:GameStyle.palette[6],height:cardHeight)
+            }
+        }.buttonStyle(SquishStyle())
     }
-    private func door<Art: View>(_ key: String, color: Color, @ViewBuilder art: () -> Art) -> some View {
-        VStack(spacing: -4) {
-            art().frame(height: 120)
-            Text(store.t(key)).font(.system(size: 18, weight: .heavy, design: .rounded)).lineLimit(2).minimumScaleFactor(0.75)
-                .frame(maxWidth: .infinity, minHeight: 49).padding(.horizontal, 7)
-                .background(CandySurface(color: color, cornerRadius: 22))
-        }.foregroundColor(GameStyle.ink).contentShape(Rectangle())
+}
+struct HomeMenuCard:View {
+    let kind:HomeDestination
+    let title:String
+    let color:Color
+    let height:CGFloat
+    var body:some View {
+        VStack(spacing:0) {
+            HomeDestinationArt(kind:kind).frame(height:height-55).frame(maxWidth:.infinity).padding(.horizontal,8)
+            HStack(spacing:6) {
+                Text(title).font(.system(size:height<160 ? 17 : 21,weight:.heavy,design:.rounded))
+                    .lineLimit(2).minimumScaleFactor(0.7)
+                Spacer(minLength:0)
+                Image(systemName:"arrow.right").font(.system(size:12,weight:.heavy))
+                    .frame(width:25,height:25).background(Circle().fill(.white.opacity(0.55)))
+            }.padding(.horizontal,14).frame(height:49)
+        }.frame(maxWidth:.infinity).frame(height:height)
+            .background(CandySurface(color:GameStyle.mixed(color,with:.white,amount:0.53),cornerRadius:30))
+            .overlay(RoundedRectangle(cornerRadius:30).stroke(.white.opacity(0.7),lineWidth:1.5))
+            .foregroundColor(GameStyle.ink).contentShape(RoundedRectangle(cornerRadius:30))
     }
 }
 

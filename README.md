@@ -188,3 +188,11 @@ Trin 3 er nu Pynt din pizza: en illustreret toppingbakke med ost, pepperoni, ski
 Pizzaværkstedets bakke har nu direkte træk-og-slip uden langt tryk: ingredienser og krydderiglas følger fingeren, og toppings trækkes fra syv synlige porcelænsskåle over på pizzaen. Modtageren får en lysende kant, når placeringen er gyldig. Slip udenfor ændrer ikke pizzaen. Hver gyldig placering er ét fortryd-trin. Toppings lander med en kort fjederbevægelse og et lille lysglimt; Reducer bevægelse respekteres. Trykvalg og hjælpeknappen findes fortsat.
 
 Den visuelle opdatering giver skålene porcelænsglans, brættet kantprofil og træstruktur, pizzaen kontaktsskygge og tydeligere skorpe, og køkkenet varme lys og mere samlet belysning. Ingen kompilering, tests eller visuel kontrol kørt for denne ændring.
+
+## Ny forside og iPad-menu
+
+Forsiden har en samlet velkomstscene med den gemte ven, to startvenner, modelleret grøn platform og varmt lys. Fire hovedindgange ligger i et fast gitter med to kolonner: Skab en ven, Mine venner, Legeplads og Minispil. Menuillustrationerne er gentegnet med detaljerede huse, rutsjebane og spilobjekter. Pizza og Græskargløden ligger i en separat værkstedsrække, og en gemt vens værelse har en direkte indgang.
+
+På brede iPad-landskabsvinduer står velkomstscene og menu ved siden af hinanden. På iPad i portræt og smalle vinduer ligger scenen over menuen. Menukort har fælles højde og faste afstande; adaptive kolonneantal og den tidligere særskilte store græskarbjælke er fjernet fra forsiden. Indholdet kan rulles på små skærme og i delte vinduer.
+
+Ingen kompilering, tests eller visuel kontrol kørt efter brugerens ønske.
