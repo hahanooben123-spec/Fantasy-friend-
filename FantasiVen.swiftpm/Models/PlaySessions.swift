@@ -20,11 +20,12 @@ struct PizzaDraft:Codable,Equatable {
     var baked:Double
     var served:Bool
     var eaten:Int
+    var workTool:Int?
     var isValid:Bool {
         companion.isValid && recipe.isValid && (0...3).contains(step) &&
         (0...2).contains(spice) && baked.isFinite && (0...1).contains(baked) &&
         (0...8).contains(eaten) && (!served || (inserted && baked>=1)) &&
-        (!inserted || step == 3)
+        (!inserted || step == 3) && (workTool.map {(0...3).contains($0)} ?? true)
     }
 }
 struct PlaySessions:Codable,Equatable {

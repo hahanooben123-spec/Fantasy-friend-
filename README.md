@@ -2,6 +2,16 @@
 
 Et originalt, lokalt iPhone-spil til børn på 3–8 år. Swift 6, SwiftUI og iOS 15+. Ingen tredjepartspakker, login, netværkskald eller køb.
 
+## Pizza: friere leg og færre knapper
+
+Bland ingredienserne, og rør kort med fingeren: dejen kommer automatisk på bordet. Form dejen frit med træk, fingertryk og knib, eller vælg rund, hjerte, stjerne, sky, oval og firkant. Dejen, skorpen, sovsen og fyldet følger samme form. Den første vejledning skifter til sovs og derefter fyld efter en kort pause, når barnet har prøvet handlingen; alle værktøjer er stadig frit tilgængelige.
+
+Der er ingen videre-knapper. Barnet bestemmer selv, hvornår pizzaen er klar, med **Bag pizza**. Ovnen bager og serverer automatisk. Den kompakte fyldbakke giver mere plads til pizzaen. De tidligere mængdestop for fyld og urter er fjernet fra både input, model og kladdevalidering. Ostens forbindelser bruger et lokalt gitter i stedet for at sammenligne alle ostestykker parvist.
+
+På den færdige pizza fjerner tryk og fingertræk små bidder præcis ved fingeren med ujævne bidekanter og krummer. En mundfuld af den aktuelle pizza bevæger sig hen til vennen. De gamle otte faste skiver bruges kun til at åbne ældre kladder korrekt. De nye dejformer, stræk, fingertryk, værktøjsvalg og bidder gemmes i kladden. VoiceOver har en handling til at tage næste bid.
+
+Ingen build, tests eller visuel kontrol er kørt for denne ændring.
+
 ## Samlet forbedring af spiloplevelsen
 
 - En personlig **Fortsæt din leg**-indgang viser den aktuelle figur-, pizza- eller græskarkreation. Den fører også tilbage til værelset eller det seneste minispil.

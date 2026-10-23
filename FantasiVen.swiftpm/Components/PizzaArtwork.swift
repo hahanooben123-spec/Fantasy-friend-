@@ -59,8 +59,9 @@ struct PizzaIllustration:View {
     var eaten=0
     var landingID:UUID?
     var sliceIndex:Int?
+    var fragment:PizzaBite?
     var body:some View {
-        Canvas {c,size in
+        Canvas(rendersAsynchronously:true) {c,size in
             c.scaleBy(x:size.width/300,y:size.height/320)
             if board {
                 let wood=Path(roundedRect:CGRect(x:8,y:15,width:284,height:289),cornerRadius:38)
@@ -83,6 +84,16 @@ struct PizzaIllustration:View {
                 }
             }
             var pizza=c
+            if let fragment=fragment {
+                pizza.translateBy(x:150-fragment.point.x*300,y:160-fragment.point.y*320)
+                pizza.clip(to:PizzaGeometry.bite(fragment))
+            }
+            if let bites=recipe.bites,!bites.isEmpty {
+                var holes=Path()
+                for bite in bites {holes.addPath(PizzaGeometry.bite(bite))}
+                pizza.clip(to:holes,options:.inverse)
+            }
+            let eaten=max(self.eaten,recipe.legacySlices ?? 0)
             if let index=sliceIndex {
                 pizza.translateBy(x:-43,y:53)
                 pizza.translateBy(x:150,y:154)
@@ -104,7 +115,7 @@ struct PizzaIllustration:View {
                 pizza.clip(to:remaining)
             }
             draw(pizza)
-            if baked>=1 && eaten<8 && sliceIndex == nil {
+            if baked>=1 && eaten<8 && sliceIndex == nil && fragment == nil && (recipe.bites?.isEmpty ?? true) {
                 for i in 0..<4 {
                     let x=CGFloat(i)*33+95
                     var steam=Path();steam.move(to:CGPoint(x:x,y:54))
@@ -124,17 +135,14 @@ struct PizzaIllustration:View {
         }.aspectRatio(300.0/320,contentMode:.fit).accessibilityHidden(true)
     }
     private func draw(_ c:GraphicsContext) {
-        let spread=0.63+recipe.formed*0.37
-        let radius=CGFloat(115*spread)
-        let center=CGPoint(x:150,y:154)
-        let dough=Path(ellipseIn:CGRect(x:150-radius,y:154-radius*0.96,width:radius*2,height:radius*1.92))
+        let dough=PizzaGeometry.outline(recipe)
         let crust=GameStyle.mixed(Color(red:1,green:0.88,blue:0.6),with:Color(red:0.8,green:0.39,blue:0.12),amount:baked*0.7)
         var cast=c;cast.addFilter(.blur(radius:4))
         cast.fill(dough.applying(CGAffineTransform(translationX:1,y:5)),with:.color(Color(red:0.33,green:0.15,blue:0.08).opacity(0.3)))
         ToyFinish.paint(c,path:dough,color:crust,edge:1.8)
-        let inside=Path(ellipseIn:CGRect(x:150-radius+13,y:154-radius*0.96+13,width:radius*2-26,height:radius*1.92-26))
+        let inside=PizzaGeometry.outline(recipe,inset:0.89)
         c.stroke(inside,with:.color(Color(red:0.76,green:0.42,blue:0.15).opacity(0.23)),lineWidth:2)
-        var topping=c;topping.clip(to:inside)
+        var topping=c;topping.clip(to:PizzaGeometry.outline(recipe,inset:0.97))
         for stroke in recipe.sauce {
             guard let first=stroke.points.first else {continue}
             var path=Path();path.move(to:CGPoint(x:first.x*300,y:first.y*320))
@@ -147,19 +155,27 @@ struct PizzaIllustration:View {
             topping.stroke(path,with:.color(Color(red:1,green:0.62,blue:0.25).opacity(0.1)),
                 style:StrokeStyle(lineWidth:1.2,lineCap:.round,lineJoin:.round))
         }
-        // Cheese pools grow and connect only where the child placed cheese.
+        // A small spatial neighbourhood keeps cheese connections linear as toppings grow.
         if baked>0 {
-            let cheeses=recipe.toppings.filter {$0.kind == .cheese}
+            var cells:[Int:[CGPoint]]=[:]
             let color=Color(red:1,green:0.88,blue:0.43).opacity(baked*0.9)
-            for (index,item) in cheeses.enumerated() {
-                let a=CGPoint(x:item.point.x*300,y:item.point.y*320)
-                for other in cheeses.dropFirst(index+1) {
-                    let b=CGPoint(x:other.point.x*300,y:other.point.y*320)
-                    if hypot(a.x-b.x,a.y-b.y)<36*baked {
-                        var bridge=Path();bridge.move(to:a);bridge.addLine(to:b)
-                        topping.stroke(bridge,with:.color(color),style:StrokeStyle(lineWidth:15*baked,lineCap:.round))
+            for item in recipe.toppings where item.kind == .cheese {
+                let point=CGPoint(x:item.point.x*300,y:item.point.y*320)
+                let gx=Int(point.x/36),gy=Int(point.y/36)
+                for dx in -1...1 {
+                    for dy in -1...1 {
+                        for other in cells[(gx+dx)*1000+gy+dy] ?? [] {
+                            if hypot(point.x-other.x,point.y-other.y)<36*baked {
+                                var bridge=Path();bridge.move(to:point);bridge.addLine(to:other)
+                                topping.stroke(bridge,with:.color(color),style:StrokeStyle(lineWidth:15*baked,lineCap:.round))
+                            }
+                        }
                     }
                 }
+                let key=gx*1000+gy
+                var neighbours=cells[key] ?? []
+                if neighbours.count>=6 {neighbours.removeFirst()}
+                neighbours.append(point);cells[key]=neighbours
             }
         }
         for item in recipe.toppings where item.id != landingID {
@@ -183,11 +199,19 @@ struct PizzaIllustration:View {
                 sprinkle.fill(leaf,with:.color(item.kind == 0 ? Color(red:0.2,green:0.39,blue:0.12) : Color(red:0.19,green:0.61,blue:0.23)))
             }
         }
-        for i in 0..<27 {
-            let a=Double(i)*Double.pi*2/27
-            let p=CGPoint(x:center.x+CGFloat(cos(a))*(radius-6),y:center.y+CGFloat(sin(a))*(radius*0.96-6))
-            let r=CGFloat(1.5+Double(i%3))
-            c.fill(Path(ellipseIn:CGRect(x:p.x,y:p.y,width:r*2,height:r)),with:.color(Color(red:0.58,green:0.26,blue:0.08).opacity(0.12+baked*0.35)))
+        var crustContext=c;crustContext.clip(to:dough)
+        let edgePoints=recipe.outline(inset:0.97)
+        for i in stride(from:0,to:edgePoints.count,by:2) {
+            let point=edgePoints[i],r=CGFloat(1.5+Double(i%3))
+            crustContext.fill(Path(ellipseIn:CGRect(x:point.x*300,y:point.y*320,width:r*2,height:r)),
+                with:.color(Color(red:0.58,green:0.26,blue:0.08).opacity(0.12+baked*0.35)))
+        }
+        for point in recipe.dents ?? [] {
+            var dentContext=c;dentContext.clip(to:inside)
+            let rect=CGRect(x:point.x*300-7,y:point.y*320-5,width:14,height:10)
+            dentContext.fill(Path(ellipseIn:rect),with:.radialGradient(Gradient(colors:[
+                Color(red:0.68,green:0.38,blue:0.16).opacity(0.25*(1-baked)),.clear]),
+                center:CGPoint(x:rect.midX,y:rect.midY),startRadius:0,endRadius:8))
         }
     }
 }
@@ -607,6 +631,86 @@ struct PizzaBiteFlight:View {
             withAnimation(reduced ? nil : .easeInOut(duration:0.65)) {arrived=true}
             do {try await Task.sleep(nanoseconds:650_000_000)} catch {return}
             withAnimation(.easeOut(duration:0.15)) {visible=false}
+        }.accessibilityHidden(true)
+    }
+}
+
+
+enum PizzaGeometry {
+    static func outline(_ recipe:PizzaRecipe,inset:Double=1)->Path {
+        let points=recipe.outline(inset:inset).map {CGPoint(x:$0.x*300,y:$0.y*320)}
+        guard let first=points.first,let last=points.last else {return Path()}
+        var path=Path()
+        path.move(to:CGPoint(x:(first.x+last.x)/2,y:(first.y+last.y)/2))
+        for i in points.indices {
+            let current=points[i],next=points[(i+1)%points.count]
+            path.addQuadCurve(to:CGPoint(x:(current.x+next.x)/2,y:(current.y+next.y)/2),control:current)
+        }
+        path.closeSubpath();return path
+    }
+    static func bite(_ bite:PizzaBite)->Path {
+        var path=Path()
+        for i in 0..<72 {
+            let a=Double(i)*Double.pi/36
+            let radius=bite.radius*300*(1+0.065*cos(a*9))
+            let point=CGPoint(x:bite.point.x*300+cos(a)*radius,y:bite.point.y*320+sin(a)*radius)
+            if i == 0 {path.move(to:point)} else {path.addLine(to:point)}
+        }
+        path.closeSubpath();return path
+    }
+}
+struct PizzaDoughSwatch:View {
+    let form:PizzaDoughForm
+    var body:some View {
+        Canvas {c,s in
+            var recipe=PizzaRecipe();recipe.formed=1;recipe.doughForm=form
+            c.scaleBy(x:s.width/300,y:s.height/320)
+            ToyFinish.paint(c,path:PizzaGeometry.outline(recipe),color:Color(red:1,green:0.85,blue:0.48),edge:3)
+        }.accessibilityHidden(true)
+    }
+}
+struct PizzaMouthfulFlight:View {
+    let recipe:PizzaRecipe
+    let bite:PizzaBite
+    let revision:Int
+    let reduced:Bool
+    @State private var arrived=false
+    @State private var visible=true
+    private var fragmentRecipe:PizzaRecipe {
+        var value=recipe
+        value.bites=recipe.bites?.filter {$0.id != bite.id}
+        return value
+    }
+    var body:some View {
+        GeometryReader {proxy in
+            let width=min(proxy.size.width,proxy.size.height*300/320)
+            let height=width*320/300
+            let x=(proxy.size.width-width)/2+bite.point.x*width
+            let y=(proxy.size.height-height)/2+bite.point.y*height
+            ZStack {
+                Canvas {c,s in
+                    for i in 0..<9 {
+                        let a=Double(i)*Double.pi*2/9
+                        let distance:CGFloat=arrived ? 32 : 7
+                        let point=CGPoint(x:s.width/2+CGFloat(cos(a))*distance,y:s.height/2+CGFloat(sin(a))*distance)
+                        c.fill(Path(ellipseIn:CGRect(x:point.x,y:point.y,width:4,height:3)),
+                            with:.color(i%3 == 0 ? .white : Color(red:0.94,green:0.64,blue:0.23)))
+                    }
+                }.frame(width:80,height:80).position(x:x,y:y).opacity(arrived ? 0 : 1)
+                PizzaIllustration(recipe:fragmentRecipe,baked:1,board:false,fragment:bite)
+                    .frame(width:100,height:107)
+                    .scaleEffect(reduced ? 1.5 : arrived ? 0.4 : 2.6)
+                    .rotationEffect(.degrees(reduced ? 0 : arrived ? -12 : 8))
+                    .position(x:arrived ? 65 : x,y:arrived ? proxy.size.height-75 : y)
+                    .opacity(visible ? 1 : 0)
+            }
+        }.task(id:revision) {
+            var transaction=Transaction();transaction.disablesAnimations=true
+            withTransaction(transaction) {arrived=false;visible=true}
+            await Task.yield()
+            withAnimation(reduced ? nil : .easeInOut(duration:0.48)) {arrived=true}
+            do {try await Task.sleep(nanoseconds:480_000_000)} catch {return}
+            withAnimation(.easeOut(duration:0.1)) {visible=false}
         }.accessibilityHidden(true)
     }
 }
