@@ -58,9 +58,9 @@ struct PhysicsAdventureView:View {
                                     trail.follow(track)
                                 }
                         }
-                        CharacterView(friend:friend).frame(width:130,height:140).position(x:proxy.size.width*0.1,y:proxy.size.height*0.22)
+                        LivingFriend(friend:friend,audible:false,active:active).frame(width:130,height:140).position(x:proxy.size.width*0.1,y:proxy.size.height*0.22)
                     } else {
-                        CharacterView(friend:friend).frame(width:160,height:175).position(x:proxy.size.width*0.5,y:proxy.size.height*0.4)
+                        LivingFriend(friend:friend,audible:false,active:active).frame(width:160,height:175).position(x:proxy.size.width*0.5,y:proxy.size.height*0.4)
                         Capsule().fill(StudioStyle.colors[1]).frame(width:proxy.size.width*0.3,height:22)
                             .position(x:proxy.size.width*0.5,y:proxy.size.height*0.83)
                     }

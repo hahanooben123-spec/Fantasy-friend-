@@ -60,6 +60,7 @@ struct PizzaIllustration:View {
     var landingID:UUID?
     var sliceIndex:Int?
     var fragment:PizzaBite?
+    var elastic=0.0
     var body:some View {
         Canvas(rendersAsynchronously:true) {c,size in
             c.scaleBy(x:size.width/300,y:size.height/320)
@@ -84,6 +85,12 @@ struct PizzaIllustration:View {
                 }
             }
             var pizza=c
+            if elastic != 0 && fragment == nil {
+                pizza.translateBy(x:150,y:160)
+                pizza.scaleBy(x:1+elastic*0.045,y:1-elastic*0.035)
+                pizza.rotate(by:.degrees(elastic*0.7))
+                pizza.translateBy(x:-150,y:-160)
+            }
             if let fragment=fragment {
                 pizza.translateBy(x:150-fragment.point.x*300,y:160-fragment.point.y*320)
                 pizza.clip(to:PizzaGeometry.bite(fragment))
@@ -306,6 +313,7 @@ struct PizzaOvenArtwork:View {
 struct PizzaIngredientArt:View {
     let kind:Int
     var spice=false
+    var fillLevel=1.0
     var body:some View {
         Canvas {c,s in
             c.scaleBy(x:s.width/60,y:s.height/70)
@@ -333,7 +341,12 @@ struct PizzaIngredientArt:View {
                 ToyFinish.paint(c,path:body,color:Color(red:0.49,green:0.84,blue:0.95),edge:1.5)
                 c.stroke(Path(ellipseIn:CGRect(x:34,y:27,width:19,height:23)),with:.color(Color.cyan),lineWidth:5)
                 c.fill(Path(ellipseIn:CGRect(x:9,y:17,width:32,height:10)),with:.color(Color(red:0.16,green:0.59,blue:0.78)))
-                c.fill(Path(roundedRect:CGRect(x:14,y:38,width:20,height:12),cornerRadius:5),with:.color(Color.cyan.opacity(0.65)))
+                let level=min(1,max(0,fillLevel))
+                c.fill(Path(roundedRect:CGRect(x:14,y:58-level*20,width:20,height:max(0.1,level*20)),cornerRadius:4),
+                    with:.color(Color.cyan.opacity(0.72)))
+                var meniscus=Path();meniscus.move(to:CGPoint(x:14,y:58-level*20))
+                meniscus.addQuadCurve(to:CGPoint(x:34,y:58-level*20),control:CGPoint(x:24,y:55-level*20))
+                c.stroke(meniscus,with:.color(.white.opacity(level*0.75)),lineWidth:1.5)
             } else {
                 ToyFinish.paint(c,path:Path(roundedRect:CGRect(x:15,y:24,width:30,height:39),cornerRadius:10),color:Color(red:0.48,green:0.67,blue:0.22),edge:1.5)
                 ToyFinish.paint(c,path:Path(roundedRect:CGRect(x:23,y:9,width:14,height:23),cornerRadius:4),color:Color(red:0.35,green:0.53,blue:0.2),edge:1)
@@ -538,7 +551,7 @@ struct PizzaPourEffect:View {
                         let spout=CGPoint(x:s.width*0.48,y:s.height*0.30)
                         let bottom=s.height*0.80
                         let color:Color=kind == 0 ? Color(red:1,green:0.96,blue:0.81) : kind == 1 ? .cyan : Color(red:1,green:0.75,blue:0.12)
-                        if kind != 0 && time<0.88 {
+                        if kind != 0 && time>0.18 && time<0.82 {
                             var stream=Path();stream.move(to:spout)
                             stream.addQuadCurve(to:CGPoint(x:s.width*0.51,y:bottom),
                                 control:CGPoint(x:s.width*(0.46+sin(time*12)*0.025),y:s.height*0.56))
@@ -553,8 +566,19 @@ struct PizzaPourEffect:View {
                             let x=spout.x+CGFloat(sin(Double(i)*2.4)*spread*phase)
                             let y=spout.y+CGFloat(phase)*(bottom-spout.y)
                             let radius:CGFloat=kind == 0 ? CGFloat(2+i%4) : 2
-                            c.fill(Path(ellipseIn:CGRect(x:x,y:y,width:radius*2,height:kind == 0 ? radius*1.3 : 7)),
-                                with:.color(color.opacity(time>0.85 ? max(0,(1-time)*6) : 0.85)))
+                            if time>0.18 && time<0.89 {
+                                c.fill(Path(ellipseIn:CGRect(x:x,y:y,width:radius*2,height:kind == 0 ? radius*1.3 : 7)),
+                                    with:.color(color.opacity(time>0.8 ? max(0,(0.9-time)*8) : 0.85)))
+                            }
+                        }
+                        if kind != 0 && time>0.2 {
+                            for i in 0..<3 {
+                                let ripple=(time*3+Double(i)/3).truncatingRemainder(dividingBy:1)
+                                let radius=12+ripple*36
+                                c.stroke(Path(ellipseIn:CGRect(x:s.width*0.51-radius,y:bottom-radius*0.22,
+                                    width:radius*2,height:radius*0.44)),
+                                    with:.color(color.opacity((1-ripple)*max(0,1-time)*0.75)),lineWidth:1.5)
+                            }
                         }
                         for i in 0..<12 {
                             let a=Double(i)*Double.pi/6
@@ -565,9 +589,11 @@ struct PizzaPourEffect:View {
                                 with:.color(color.opacity((1-time)*0.65)))
                         }
                     }
-                    PizzaIngredientArt(kind:kind)
+                    PizzaIngredientArt(kind:kind,fillLevel:reduced ? 0.5 : max(0,1-(time-0.18)/0.62))
                         .frame(width:min(90,size.width*0.34),height:min(100,size.height*0.52))
-                        .rotationEffect(.degrees(reduced ? 35 : 25+min(1,time*4)*40))
+                        .rotationEffect(.degrees(reduced ? 60 : CreatureRig.key(time,[(0,0),(0.2,65),(0.72,65),(0.95,0)])
+                            +(kind == 0 && time>0.22 && time<0.72 ? sin(time*55)*5 : 0)),anchor:.bottomTrailing)
+                        .offset(y:reduced ? 0 : CreatureRig.key(time,[(0,18),(0.2,0),(0.75,0),(1,12)]))
                         .position(x:size.width*0.35,y:size.height*0.18)
                 }
             }

@@ -6,6 +6,7 @@ struct KitchenGameView:View {
     @Environment(\.scenePhase) private var phase
     let friend:FantasyFriend
     @State private var loaded=false
+    @State private var animationActive=true
     @State private var recipe=PizzaRecipe()
     @State private var step=0
     @State private var tool=PizzaWorkTool.shape
@@ -67,10 +68,11 @@ struct KitchenGameView:View {
                     }
                 }.coordinateSpace(name:"pizzaWorkshop")
                     .onPreferenceChange(PizzaSurfaceFrameKey.self) {surfaceFrame=$0}
-                    .onChange(of:active) {if !$0 {dragItem=nil;pouringIngredient=nil;touching=false}}
+                    .onAppear {animationActive=active}
+                    .onChange(of:active) {value in animationActive=value;if !value {dragItem=nil;pouringIngredient=nil;touching=false}}
                     .task(id:pourRevision) {
                         guard let ingredient=pouringIngredient else {return}
-                        do {try await Task.sleep(nanoseconds:850_000_000)} catch {return}
+                        do {try await Task.sleep(nanoseconds:1_000_000_000)} catch {return}
                         guard active,step == 0,pouringIngredient == ingredient else {return}
                         change {$0.ingredients.insert(ingredient)}
                         pouringIngredient=nil
@@ -194,7 +196,7 @@ struct KitchenGameView:View {
         } else if served {
             ZStack(alignment:.bottomLeading) {
                 PizzaEatingSurface(recipe:recipe,onBite:bite)
-                LivingFriend(friend:friend,action:.feed,signal:signal,feedingFood:nil)
+                LivingFriend(friend:friend,action:.feed,signal:signal,feedingFood:nil,active:animationActive)
                     .frame(width:135,height:145).allowsHitTesting(false)
                 if let fragment=mouthful {
                     PizzaMouthfulFlight(recipe:recipe,bite:fragment,revision:biteRevision,reduced:reduced)
@@ -435,6 +437,7 @@ struct KitchenGameView:View {
 
 private struct PizzaWorkSurface:View {
     @Environment(\.scenePhase) private var phase
+    @Environment(\.accessibilityReduceMotion) private var reduced
     @Binding var recipe:PizzaRecipe
     let mixing:Bool
     let tool:PizzaWorkTool
@@ -444,6 +447,8 @@ private struct PizzaWorkSurface:View {
     let targeted:Bool
     let onBegin:()->Void
     let onEnd:()->Void
+    @State private var released=Date.distantPast
+    @State private var settling=false
     @State private var last:CGPoint?
     @State private var strokeID:UUID?
     @State private var turn=0.0
@@ -457,7 +462,13 @@ private struct PizzaWorkSurface:View {
             let size=CGSize(width:width,height:width*320/300)
             Group {
                 if mixing {PizzaMixingBowl(recipe:recipe,turn:turn)}
-                else {PizzaIllustration(recipe:recipe,landingID:landingID)}
+                else {
+                    TimelineView(.animation(minimumInterval:1.0/30,paused:reduced || !settling || phase != .active)) {frame in
+                        let t=max(0,frame.date.timeIntervalSince(released))
+                        let rebound=settling && !reduced ? sin(t*21)*exp(-t*5) : 0
+                        PizzaIllustration(recipe:recipe,landingID:landingID,elastic:rebound)
+                    }
+                }
             }.frame(width:size.width,height:size.height).contentShape(Rectangle())
                 .background(GeometryReader {frame in
                     Color.clear.preference(key:PizzaSurfaceFrameKey.self,value:frame.frame(in:.named("pizzaWorkshop")))
@@ -480,6 +491,7 @@ private struct PizzaWorkSurface:View {
                         let end=PizzaPoint(x:Double(last.x/size.width),y:Double(last.y/size.height))
                         if hypot(start.x-end.x,start.y-end.y)<0.015 {recipe.press(at:end)}
                     }
+                    if !mixing && tool == .shape && !reduced {released=Date();settling=true}
                     last=nil;strokeID=nil;travel=0;shapingBase=nil;shapingStart=nil;onEnd()
                 })
                 .simultaneousGesture(MagnificationGesture().onChanged {scale in
@@ -488,12 +500,19 @@ private struct PizzaWorkSurface:View {
                     recipe.formed=min(1,max(0.35,(pinchBase ?? recipe.formed)*Double(scale)))
                 }.onEnded {_ in
                     guard pinchBase != nil else {return}
-                    pinchBase=nil;onEnd()
+                    pinchBase=nil
+                    if !reduced {released=Date();settling=true}
+                    onEnd()
                 })
                 .position(x:proxy.size.width/2,y:proxy.size.height/2)
-        }.onChange(of:tool) {_ in last=nil;strokeID=nil;shapingBase=nil;shapingStart=nil}
+        }.task(id:released) {
+                guard settling else {return}
+                do {try await Task.sleep(nanoseconds:1_100_000_000)} catch {return}
+                settling=false
+            }.onChange(of:tool) {_ in last=nil;strokeID=nil;shapingBase=nil;shapingStart=nil}
             .onChange(of:phase) {value in
                 if value != .active {
+                    settling=false
                     let held=last != nil || pinchBase != nil
                     last=nil;strokeID=nil;shapingBase=nil;shapingStart=nil;pinchBase=nil;travel=0
                     if held {onEnd()}

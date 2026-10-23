@@ -7,6 +7,7 @@ struct PhysicsFriendFrame: Identifiable {
     var x: CGFloat
     var y: CGFloat
     var angle: Double
+    var pose=CreaturePose()
 }
 struct PhysicsToyFrame: Identifiable {
     let id: UUID
@@ -188,13 +189,13 @@ final class PlayPhysics: ObservableObject {
     func setActive(_ active: Bool) { scene.isPaused = !active; if !active { endDrag() } }
 
     func refresh() {
+        let now=Date.timeIntervalSinceReferenceDate
         for actor in actors {
             let body = actor.node
             if !reduced && held !== body {
                 switch mode {
                 case .slide: body.physicsBody?.applyForce(CGVector(dx: 40, dy: 0))
                 case .trampoline:
-                    let now = Date.timeIntervalSinceReferenceDate
                     if abs(body.position.x - trampoline.position.x) < 88 && body.position.y < 150 &&
                         body.physicsBody!.velocity.dy < 0 && now > bounceCooldown {
                         body.physicsBody?.velocity = CGVector(dx: (body.position.x - trampoline.position.x) * 3, dy: 360)
@@ -225,7 +226,22 @@ final class PlayPhysics: ObservableObject {
                 pose.rotation = -Double(limb.zRotation - actor.node.zRotation) * 180 / .pi
                 value.setPlacement(pose, for: attachment)
             }
-            return PhysicsFriendFrame(id: value.id, friend: value, x: actor.node.position.x, y: actor.node.position.y, angle: -Double(actor.node.zRotation) * 180 / .pi)
+            let speed=Double(actor.node.physicsBody?.velocity.dy ?? 0)
+            var rig=CreatureRig.sample(.idle,time:0,clock:now,reduced:reduced)
+            // SpriteKit already owns these limbs; add facial and accessory inertia only.
+            for part in [Attachment.leftArm,.rightArm,.leftLeg,.rightLeg] {rig.joints.removeValue(forKey:part)}
+            if !reduced {
+                rig.headTilt=min(7,max(-7,Double(actor.node.physicsBody?.angularVelocity ?? 0)*2))
+                rig.brow=min(7,abs(speed)*0.015)
+                rig.expression=abs(speed)>120 ? .wonder : .normal
+                for part in [Attachment.ears,.antennae,.tail,.hat,.crown] {
+                    var joint=rig.joint(part)
+                    joint.angle += min(15,max(-15,speed*0.035))
+                    rig.joints[part]=joint
+                }
+            }
+            return PhysicsFriendFrame(id: value.id, friend: value, x: actor.node.position.x, y: actor.node.position.y,
+                angle: -Double(actor.node.zRotation) * 180 / .pi,pose:rig)
         }
         toys = objects.map { PhysicsToyFrame(id: $0.id, kind: $0.kind, x: $0.node.position.x, y: $0.node.position.y, angle: -Double($0.node.zRotation) * 180 / .pi) }
     }

@@ -12,6 +12,7 @@ struct CharacterView: View {
     var gaze = CGPoint.zero
     var zoom: CGFloat = 1
     var expression=CreatureExpression.normal
+    var pose=CreaturePose()
 
     var body: some View {
         Canvas { context, size in
@@ -34,7 +35,7 @@ struct CharacterView: View {
             } else {
                 context.translateBy(x: size.width * (1 - zoom) / 2, y: size.height * (1 - zoom) / 2)
                 context.scaleBy(x: size.width / 300 * zoom, y: size.height / 320 * zoom)
-                CreaturePainter(context: context, friend: friend, gaze: gaze,expression:expression).draw(blink: blink, happy: happy, asleep: asleep)
+                CreaturePainter(context: context, friend: friend, gaze: gaze,expression:expression,pose:pose).draw(blink: blink, happy: happy, asleep: asleep)
             }
         }
         .aspectRatio(300.0 / 320, contentMode: .fit)
@@ -48,6 +49,7 @@ private struct CreaturePainter {
     var gaze = CGPoint.zero
     var singleEye = false
     var expression=CreatureExpression.normal
+    var pose=CreaturePose()
     var primary: Color { GameStyle.palette[friend.color % 16] }
     var accent: Color { GameStyle.palette[friend.accent % 16] }
     var ink: Color { GameStyle.ink }
@@ -98,10 +100,26 @@ private struct CreaturePainter {
         transformed.rotate(by: .degrees(pose.rotation))
         transformed.scaleBy(x: CGFloat(pose.scale) * ((friend.mirroredParts?.contains(attachment.rawValue) ?? false) ? -1 : 1), y: CGFloat(pose.scale))
         transformed.translateBy(x: -rect.midX, y: -rect.midY)
-        return CreaturePainter(context: transformed, friend: friend)
+        let joint = self.pose.joint(attachment)
+        let pivot = CreatureRig.pivot(attachment,friend:friend)
+        transformed.translateBy(x:pivot.x+joint.offset.x,y:pivot.y+joint.offset.y)
+        let headParts:[Attachment]=[.ears,.antennae,.horns,.hat,.crown,.glasses,.bow]
+        transformed.rotate(by:.degrees(joint.angle+(headParts.contains(attachment) ? self.pose.headTilt*0.65 : 0)))
+        transformed.translateBy(x:-pivot.x,y:-pivot.y)
+        return CreaturePainter(context:transformed,friend:friend,gaze:gaze,expression:expression,pose:self.pose)
     }
 
     func draw(blink: Bool, happy: Bool, asleep: Bool) {
+        var root=context
+        root.translateBy(x:150+pose.x,y:275+pose.y)
+        root.rotate(by:.degrees(pose.roll))
+        root.scaleBy(x:pose.scaleX,y:pose.scaleY)
+        root.translateBy(x:-150,y:-275)
+        CreaturePainter(context:root,friend:friend,gaze:gaze,expression:expression,pose:pose)
+            .drawArtwork(blink:blink,happy:happy || pose.happy,asleep:asleep || pose.asleep)
+    }
+
+    private func drawArtwork(blink: Bool, happy: Bool, asleep: Bool) {
         for attachment in [Attachment.tail, .wings, .spikes] {
             if let index = attachment.extraIndex, friend.accessories.contains(index), friend.placement(for: attachment) == PartPlacement() { placed(for: attachment).drawPiece(attachment) }
         }
@@ -137,10 +155,17 @@ private struct CreaturePainter {
         var canvas = context
         canvas.translateBy(x: preview ? 150 : piece.x * 300, y: preview ? 160 : piece.y * 320)
         canvas.rotate(by: .degrees(piece.rotation))
+        let joint = preview ? CreatureJoint() : pose.creativeJoint(piece)
+        // Creative pieces follow their own saved anchor, including duplicates.
+        let pivot = piece.kind == .arm ? CGPoint(x:rect.maxX-8,y:179) :
+            piece.kind == .leg ? CGPoint(x:rect.midX,y:237) : CGPoint(x:rect.midX,y:rect.maxY)
         let scale = preview ? min(210 / rect.width, 250 / rect.height) : CGFloat(piece.scale)
         canvas.scaleBy(x: (piece.mirrored ? -1 : 1) * scale, y: scale)
         canvas.translateBy(x: -rect.midX, y: -rect.midY)
-        let painter = CreaturePainter(context: canvas, friend: sample, singleEye: true)
+        canvas.translateBy(x:pivot.x+joint.offset.x,y:pivot.y+joint.offset.y)
+        canvas.rotate(by:.degrees(joint.angle))
+        canvas.translateBy(x:-pivot.x,y:-pivot.y)
+        let painter = CreaturePainter(context: canvas, friend: sample, singleEye: true,expression:expression,pose:pose)
         switch piece.kind {
         case .eye: painter.drawEyes(closed: false, happy: false)
         case .arm: painter.drawArm(side: 0)
@@ -154,7 +179,7 @@ private struct CreaturePainter {
         bodyContext.translateBy(x: 150, y: 175)
         bodyContext.scaleBy(x: CGFloat(friend.widthFactor), y: CGFloat(friend.heightFactor))
         bodyContext.translateBy(x: -150, y: -175)
-        CreaturePainter(context: bodyContext, friend: friend, gaze: gaze,expression:expression).drawBaseBody(blink: blink, happy: happy, asleep: asleep)
+        CreaturePainter(context: bodyContext, friend: friend, gaze: gaze,expression:expression,pose:pose).drawBaseBody(blink: blink, happy: happy, asleep: asleep)
     }
 
     func drawBaseBody(blink: Bool, happy: Bool, asleep: Bool) {
@@ -229,7 +254,8 @@ private struct CreaturePainter {
         let start=CGPoint(x:side == 0 ? shoulder+6 : 294-shoulder,y:179)
         let reach=CGFloat(20+friend.arms*3)
         let hand=CGPoint(x:start.x+sign*reach,y:208-CGFloat(friend.arms%4)*16)
-        let bend=CGPoint(x:hand.x,y:start.y-CGFloat(friend.arms%3)*15)
+        let joint=pose.joint(side == 0 ? .leftArm : .rightArm)
+        let bend=CGPoint(x:hand.x+joint.bend*sign,y:start.y-CGFloat(friend.arms%3)*15-joint.bend)
         let thickness=CGFloat(15+friend.arms%3*3)
         var arm=Path();arm.move(to:CGPoint(x:start.x,y:start.y-thickness/2))
         arm.addQuadCurve(to:CGPoint(x:hand.x,y:hand.y-8),control:CGPoint(x:bend.x,y:bend.y-thickness/2))
@@ -265,7 +291,8 @@ private struct CreaturePainter {
         let footX:CGFloat=side == 0 ? 110 : 180
         let footY=CGFloat(265+friend.legs%4*4)
         curve(CGPoint(x:footX,y:237),CGPoint(x:footX+sign*CGFloat(friend.legs*2),y:footY),
-              CGPoint(x:footX+sign*10,y:257),primary,CGFloat(16-friend.legs%3*2))
+              CGPoint(x:footX+sign*(10+pose.joint(side == 0 ? .leftLeg : .rightLeg).bend),y:257),
+              primary,CGFloat(16-friend.legs%3*2))
         let x=footX-19+sign*CGFloat(friend.legs*2)
         let width=CGFloat(32+friend.legs%3*5)
         var foot=Path();foot.move(to:CGPoint(x:x,y:footY+7))
@@ -300,15 +327,19 @@ private struct CreaturePainter {
         case 1:
             for (i,x) in [CGFloat(101),CGFloat(171)].enumerated() {
                 let lean:CGFloat=i == 0 ? -12 : 10
+                var earCanvas=context
+                earCanvas.translateBy(x:x+15,y:97)
+                earCanvas.rotate(by:.degrees(pose.joint(.ears).angle*(i == 0 ? 0.45 : -0.35)))
+                earCanvas.translateBy(x:-x-15,y:-97)
                 var ear=Path();ear.move(to:CGPoint(x:x+2,y:99))
                 ear.addCurve(to:CGPoint(x:x+12+lean,y:13),control1:CGPoint(x:x-11,y:66),control2:CGPoint(x:x-9+lean,y:10))
                 ear.addCurve(to:CGPoint(x:x+29,y:96),control1:CGPoint(x:x+39+lean,y:8),control2:CGPoint(x:x+38,y:70))
                 ear.addQuadCurve(to:CGPoint(x:x+2,y:99),control:CGPoint(x:x+16,y:109));ear.closeSubpath()
-                ToyFinish.paint(context,path:ear,color:primary,edge:2)
+                ToyFinish.paint(earCanvas,path:ear,color:primary,edge:2)
                 var inner=Path();inner.move(to:CGPoint(x:x+11,y:85))
                 inner.addQuadCurve(to:CGPoint(x:x+14+lean*0.7,y:29),control:CGPoint(x:x+lean,y:44))
                 inner.addQuadCurve(to:CGPoint(x:x+20,y:85),control:CGPoint(x:x+28+lean,y:39));inner.closeSubpath()
-                ToyFinish.paint(context,path:inner,color:accent,edge:0.8)
+                ToyFinish.paint(earCanvas,path:inner,color:accent,edge:0.8)
             }
 
         case 2:
@@ -410,8 +441,10 @@ private struct CreaturePainter {
     private func facialContext(_ key: String, center: CGPoint) -> GraphicsContext {
         let pose = friend.facePlacements?[key] ?? PartPlacement()
         var canvas = context
-        canvas.translateBy(x: center.x + pose.x * 300, y: center.y + pose.y * 320)
-        canvas.rotate(by: .degrees(pose.rotation))
+        canvas.translateBy(x: center.x + pose.x * 300, y: center.y + pose.y * 320 + self.pose.headY)
+        canvas.rotate(by: .degrees(pose.rotation+self.pose.headTilt))
+        if key == "eyes" {canvas.scaleBy(x:1,y:max(0.08,1-self.pose.eyelid*0.92))}
+        if key == "mouth" {canvas.scaleBy(x:1+self.pose.cheek*0.09,y:1-self.pose.cheek*0.12)}
         canvas.scaleBy(x: pose.scale * ((friend.mirroredParts?.contains(key) ?? false) ? -1 : 1), y: pose.scale)
         canvas.translateBy(x: -center.x, y: -center.y)
         return canvas
@@ -428,7 +461,7 @@ private struct CreaturePainter {
         context.stroke(shape,with:.color(GameStyle.mixed(primary,with:ink,amount:0.56)),lineWidth:1.7)
     }
     func drawEyes(closed: Bool, happy: Bool) {
-        CreaturePainter(context: facialContext("eyes", center: CGPoint(x: 150, y: 157)), friend: friend, gaze: gaze, singleEye: singleEye,expression:expression).drawEyesArtwork(closed: closed, happy: happy)
+        CreaturePainter(context: facialContext("eyes", center: CGPoint(x: 150, y: 157)), friend: friend, gaze: gaze, singleEye: singleEye,expression:expression,pose:pose).drawEyesArtwork(closed: closed, happy: happy)
     }
     func drawEyesArtwork(closed: Bool, happy: Bool) {
         let ink = friend.partColors?["eyes"].map { GameStyle.palette[$0] } ?? self.ink
@@ -443,8 +476,8 @@ private struct CreaturePainter {
             }
             eyeOrb(x:x,y:y,radius:radius)
             if radius>=24 {
-                curve(CGPoint(x:x-radius*0.55,y:y-radius-7),CGPoint(x:x+radius*0.4,y:y-radius-10),
-                    CGPoint(x:x-radius*0.1,y:y-radius-15),GameStyle.mixed(primary,with:ink,amount:0.4),3)
+                curve(CGPoint(x:x-radius*0.55,y:y-radius-7-pose.brow),CGPoint(x:x+radius*0.4,y:y-radius-10-pose.brow),
+                    CGPoint(x:x-radius*0.1,y:y-radius-15-pose.brow),GameStyle.mixed(primary,with:ink,amount:0.4),3)
             }
             if kind == 4 { star(x, y, radius * 0.64, ink) }
             else if kind == 10 {
@@ -475,10 +508,20 @@ private struct CreaturePainter {
     }
 
     func drawMouth(happy: Bool, asleep: Bool) {
-        CreaturePainter(context: facialContext("mouth", center: CGPoint(x: 151, y: 207)), friend: friend,expression:expression).drawMouthArtwork(happy: happy, asleep: asleep)
+        CreaturePainter(context: facialContext("mouth", center: CGPoint(x: 151, y: 207)), friend: friend,expression:expression,pose:pose).drawMouthArtwork(happy: happy, asleep: asleep)
     }
     func drawMouthArtwork(happy: Bool, asleep: Bool) {
         let ink = friend.partColors?["mouth"].map { GameStyle.palette[$0] } ?? self.ink
+        if pose.jaw>0.03 && !asleep {
+            let width=28+pose.jaw*22,height=6+pose.jaw*31
+            let mouth=Path(ellipseIn:CGRect(x:151-width/2,y:204-height/2,width:width,height:height))
+            context.fill(mouth,with:.color(ink))
+            var inner=context;inner.clip(to:mouth)
+            inner.fill(Path(ellipseIn:CGRect(x:136,y:208,width:34,height:17)),
+                with:.color(Color(red:1,green:0.38,blue:0.49)))
+            inner.fill(Path(roundedRect:CGRect(x:136,y:187,width:30,height:12),cornerRadius:4),with:.color(.white))
+            return
+        }
         if expression == .wonder && !asleep {
             ellipse(136,191,30,31,ink);ellipse(144,196,10,5,.white.opacity(0.5));return
         }
@@ -523,7 +566,7 @@ struct RagdollCharacterView: View {
             character.rotate(by: .radians(-frame.angle))
             character.scaleBy(x: RagdollSimulation.characterScale, y: RagdollSimulation.characterScale)
             character.translateBy(x: -150, y: -170)
-            CreaturePainter(context: character, friend: frame.friend).draw(blink: frame.blink, happy: frame.happy, asleep: frame.asleep)
+            CreaturePainter(context: character, friend: frame.friend,expression:frame.pose.expression,pose:frame.pose).draw(blink: frame.blink, happy: frame.happy, asleep: frame.asleep)
             if frame.happy {
                 for index in 0..<6 {
                     let angle = Double(index) * .pi / 3
@@ -532,7 +575,18 @@ struct RagdollCharacterView: View {
                 }
             }
             if frame.reaction == .feed {
-                context.draw(Text("🍓").font(.system(size: 32)), at: CGPoint(x: position.x, y: position.y + 20))
+                var food=context
+                let reach=CreatureRig.key(frame.reactionTime,[(0,0),(0.5,1),(0.9,1),(1.05,0)])
+                food.opacity=reach
+                food.translateBy(x:position.x-18,y:position.y+52-reach*35)
+                food.scaleBy(x:0.36,y:0.36)
+                // Same original berry artwork as the feeding tool.
+                let berry=Path(ellipseIn:CGRect(x:8,y:0,width:74,height:63))
+                ToyFinish.paint(food,path:berry,color:Color(red:0.97,green:0.24,blue:0.35),edge:2)
+                for i in 0..<5 {
+                    food.fill(Path(ellipseIn:CGRect(x:20+CGFloat(i%3)*17,y:15+CGFloat(i/3)*20,width:4,height:6)),
+                        with:.color(.yellow))
+                }
             }
             if frame.asleep {
                 context.draw(Text("z Z").font(.system(size: 24, weight: .bold, design: .rounded)).foregroundColor(GameStyle.purple), at: CGPoint(x: position.x + 85, y: position.y - 90))

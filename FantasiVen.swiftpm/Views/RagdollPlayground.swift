@@ -29,10 +29,14 @@ struct RagdollPlayground: View {
                     let wasDragging=simulation.isDragging
                     simulation.endDrag();attemptedDrag=false
                     if wasDragging && hypot(value.translation.width,value.translation.height)<6 {simulation.react(.tickle)}
+                    else if !wasDragging {simulation.walk(to:scenePoint(value.location,size:geometry.size))}
                 })
                 .accessibilityElement(children:.ignore).accessibilityLabel(friend.name)
                 .accessibilityHint(store.t("ragdollHint"))
                 .accessibilityAction(named:Text(store.t("jump"))) {simulation.react(.jump)}
+                .accessibilityAction(named:Text(store.t("walkHere"))) {
+                    simulation.walk(to:CGPoint(x:simulation.scene.size.width*0.7,y:150))
+                }
                 .accessibilityAction(named:Text(store.t("dance"))) {simulation.react(.dance)}
                 .onAppear {resize(geometry.size)}
                 .onChange(of:geometry.size) {resize($0)}

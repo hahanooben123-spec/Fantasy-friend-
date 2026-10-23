@@ -8,6 +8,8 @@ struct MiniGameSessionView: View {
     let kind: MiniGameKind
     let friend: FantasyFriend
     @Environment(\.presentationMode) private var presentation
+    @State private var orchardWalkUntil=0.0
+    @State private var orchardDirection=1.0
     @State private var picnic = false
     @State private var picnicSignal=0
     @State private var picnicFruit:Int?
@@ -139,7 +141,7 @@ struct MiniGameSessionView: View {
             Color.indigo.opacity(0.38).ignoresSafeArea()
             ScrollView(showsIndicators:false) {
             VStack(spacing:14) {
-                LivingFriend(friend:friend,action:.feed,signal:picnicSignal,feedingFood:nil)
+                LivingFriend(friend:friend,action:.feed,signal:picnicSignal,feedingFood:nil,active:!paused)
                     .frame(height:180).allowsHitTesting(false)
                 Text(store.t("picnic")).font(.system(.title2,design:.rounded).weight(.heavy))
                 Text(store.t("picnicShareHint")).font(.system(.subheadline,design:.rounded).weight(.bold)).multilineTextAlignment(.center)
@@ -189,7 +191,10 @@ struct MiniGameSessionView: View {
                         .position(x: apple.x * size.width, y: apple.y * size.height)
                         .accessibilityHidden(true)
                 }
-                CharacterView(friend:friend,happy:elapsed<cheerUntil,gaze:orchardGaze)
+                CharacterView(friend:friend,happy:elapsed<cheerUntil,gaze:orchardGaze,
+                    pose:CreatureRig.sample(elapsed<cheerUntil ? .laugh : elapsed<orchardWalkUntil ? .walk : .idle,
+                        time:elapsed<cheerUntil ? max(0,elapsed-cheerUntil+0.7) : elapsed,
+                        clock:elapsed,energy:orchardDirection,reduced:reducedMotion))
                     .scaleEffect(x:elapsed<cheerUntil ? 1.035 : 1,y:elapsed<cheerUntil ? 0.97 : 1,anchor:.bottom)
                     .animation(reducedMotion ? nil : .spring(response:0.3,dampingFraction:0.5),value:elapsed<cheerUntil)
                     .frame(width: min(210,size.width*0.34), height:min(225,size.width*0.37))
@@ -216,6 +221,10 @@ struct MiniGameSessionView: View {
                     interacted = true
                     apples.move(to: value.location.x / max(1, size.width))
                 })
+                .onChange(of:apples.playerX) {value in
+                    orchardWalkUntil=elapsed+0.24
+                    orchardDirection=orchardGaze.x<0 ? -1 : 1
+                }
                 .onAppear { catchRadius = max(0.09, min(0.22, 62 / max(1, size.width))) }
                 .onChange(of: size.width) { width in catchRadius = max(0.09, min(0.22, 62 / max(1, width))) }
                 .accessibilityElement(children: .ignore)

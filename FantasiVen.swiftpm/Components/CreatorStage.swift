@@ -17,6 +17,7 @@ struct CreatorStage: View {
     @State private var movingSelection: CreatorSelection?
     @State private var handleOrigin: FantasyFriend?
     @State private var draft: DoodleStroke?
+    @State private var rigStarted=Date.distantPast
     @State private var blink = false
     @State private var gaze = CGPoint.zero
     @State private var lean = 0.0
@@ -28,6 +29,15 @@ struct CreatorStage: View {
     @State private var expression=CreatureExpression.normal
     private let zoom: CGFloat = 1.1
 
+    private func editorPose(time:Double,clock:Double)->CreaturePose {
+        var rig=CreatureRig.sample(time<1.55 ? .jump : .idle,time:time,clock:clock,reduced:reduced)
+        // Hands and handles must coincide while a child positions a part.
+        if origin != nil || handleOrigin != nil || selection != nil {
+            rig.x=0;rig.y=0;rig.roll=0;rig.scaleX=1;rig.scaleY=1;rig.headTilt=0;rig.headY=0;rig.joints=[:]
+        }
+        return rig
+    }
+
     var body: some View {
         GeometryReader { geometry in
             let width = max(1,min(geometry.size.width - 12,geometry.size.height * 300 / 320))
@@ -36,7 +46,13 @@ struct CreatorStage: View {
             ZStack {
                 Ellipse().fill(WorkshopLook.sea.opacity(0.18)).frame(width:width*0.57,height:height*0.055)
                     .position(x:width/2,y:height*0.94)
-                CharacterView(friend:displayed,blink:blink,happy:delighted && expression != .wink,gaze:gaze,zoom:zoom,expression:expression)
+                TimelineView(.animation(minimumInterval:1.0/30,
+                    paused:reduced || phase != .active || origin != nil || handleOrigin != nil)) {frame in
+                    let time=max(0,frame.date.timeIntervalSince(rigStarted))
+                    let rig=editorPose(time:time,clock:frame.date.timeIntervalSinceReferenceDate)
+                    CharacterView(friend:displayed,blink:blink,happy:delighted && expression != .wink,
+                        gaze:gaze,zoom:zoom,expression:expression,pose:rig)
+                }
                     .scaleEffect(x:breathing && origin == nil && !reduced ? 1.006 : 1,
                                  y:breathing && origin == nil && !reduced ? 1.015 : 1,anchor:.bottom)
                     .scaleEffect(x:reactionSquash,y:1/reactionSquash,anchor:.bottom)
@@ -101,6 +117,7 @@ struct CreatorStage: View {
             guard revision>0 else {return}
             delighted=false;reactionLift=0;reactionSquash=1
             expression=part == .extras || part == .color ? .wonder : .wink
+            rigStarted=Date()
             gaze=part == .legs ? CGPoint(x:0,y:0.7) : part == .extras ? CGPoint(x:0,y:-0.7) : .zero
             do {
                 if !reduced {

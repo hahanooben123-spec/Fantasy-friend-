@@ -2,6 +2,18 @@
 
 Et originalt, lokalt iPhone-spil til børn på 3–8 år. Swift 6, SwiftUI og iOS 15+. Ingen tredjepartspakker, login, netværkskald eller køb.
 
+## Ledbaserede animationer og fysisk efterbevægelse
+
+`Animations/CreatureRig.swift` definerer et fælles 2D-skelet med skuldre, hofter, ansigt og tilbehørsankre. Tidsstyrede klip omfatter gang, hop, grin, spisning, dans, kram og søvn. Gangen skifter mellem plantet fod og svingben med knæbøjning og modsatrettede arme. Hop har forberedelse, afsæt, svævefase, landing og efterbevægelse. Spisning har række-bevægelse, åben mund, bid, tygning og et tilfreds smil. Blink, øjenbryn, hovedhældning, kæbe og kinder indgår i renderingen.
+
+Poser lægges oven på gemte placeringer ved tegning. Frie, duplikerede arme, ben og ekstra dele får også bevægelse; figurmodellen ændres ikke af animationerne. Redigeringsgreb og figurdele forbliver sammenfaldende, mens barnet placerer dele. Ører har individuelle hængselreaktioner.
+
+Legepladsens eksisterende SpriteKit-fysik har fået en gangfunktion: tryk på en tom del af gulvet, og vennen går mod punktet. Ledmotorer hjælper den med at rette sig op. Hale, ører og antenner kan også gribes og har fysiske led, når de findes på figuren. Hopimpulsen kommer efter forberedelsen. VoiceOver har en gå-handling. Rutsjebane, trampolin og fællesleg bruger ansigtsreaktioner og tilbehørsinerti fra samme rig.
+
+Levende venner, orkester, frugtfangst, værelser og pizza bruger systemet. Gentagne fingerbid afbryder ikke konstant tygningen. Hældning har løft, vip, rystning, retning tilbage, synkende vandniveau og ringe ved nedslaget. Dejen får en kort dæmpet elastisk efterbevægelse ved slip; bordet og opskriften deformeres ikke af denne effekt. Afsløringens gardiner har animeret stofkant og sammentrækning.
+
+Systemet bruger SwiftUI Canvas til tegning og den eksisterende SpriteKit-scene til fysik, uden nye pakker. Tidslinjer følger sceneaktivitet, og spilfigurer følger aktiviteternes pause. Reducer bevægelse giver rolige udtryk uden bevægelsesklip. Der er ikke kørt build, tests eller afprøvning på Apple-enheder for denne ændring.
+
 ## Fælles eventyrstil fra græskarværkstedet
 
 Appen bruger nu et fælles visuelt lag i `Components/StorybookStyle.swift`: cremefarvet emalje med gyldne kanter, varmt træ, blommefarvede konturer og skygger, sidebelysning og originale lyskæder. Græskarværkstedet og de øvrige værksteder deler selve lampetegningen. De farverige verdener beholder deres egne farver; figurernes gemte farveindekser er uændrede.

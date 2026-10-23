@@ -102,8 +102,9 @@ struct FriendRevealView:View {
                     .offset(x:entered ? 0 : -proxy.size.width*0.3,y:entered ? 0 : 35)
                     .opacity(entered ? 1 : 0)
                 ForEach(0..<2) {side in
-                    RevealCurtain()
+                    RevealCurtain(opening:curtainsOpen ? 1 : 0)
                         .frame(width:proxy.size.width*0.54,height:proxy.size.height)
+                        .scaleEffect(x:curtainsOpen ? 0.58 : 1,y:1,anchor:side == 0 ? .leading : .trailing)
                         .offset(x:(side == 0 ? -1 : 1)*(curtainsOpen ? proxy.size.width*0.73 : proxy.size.width*0.24))
                 }
                 Capsule().fill(WorkshopLook.yellow).frame(height:13).frame(maxHeight:.infinity,alignment:.top)
@@ -114,6 +115,7 @@ struct FriendRevealView:View {
     }
 }
 private struct RevealCurtain:View {
+    var opening:Double
     var body:some View {
         GeometryReader {proxy in
             ZStack {
@@ -125,7 +127,32 @@ private struct RevealCurtain:View {
                     }
                 }
                 Capsule().fill(WorkshopLook.yellow).frame(height:9).offset(y:proxy.size.height*0.28)
-            }
+            }.clipShape(CurtainFabric(opening:opening))
+                .overlay(CurtainFabric(opening:opening).stroke(StorybookStyle.plum.opacity(0.35),lineWidth:2))
+                .shadow(color:StorybookStyle.plum.opacity(0.3),radius:8,x:5,y:3)
         }.allowsHitTesting(false)
+    }
+}
+
+private struct CurtainFabric:Shape {
+    var opening:Double
+    var animatableData:Double {
+        get {opening}
+        set {opening=newValue}
+    }
+    func path(in rect:CGRect)->Path {
+        var path=Path()
+        path.move(to:.zero)
+        path.addLine(to:CGPoint(x:rect.width,y:0))
+        path.addQuadCurve(to:CGPoint(x:rect.width,y:rect.height*0.94),
+            control:CGPoint(x:rect.width*(1-opening*0.13),y:rect.height*0.5))
+        for i in stride(from:6,through:1,by:-1) {
+            let x=rect.width*CGFloat(i)/6
+            let next=rect.width*CGFloat(i-1)/6
+            path.addQuadCurve(to:CGPoint(x:next,y:rect.height*0.94),
+                control:CGPoint(x:(x+next)/2,y:rect.height*(1+opening*0.025)))
+        }
+        path.closeSubpath()
+        return path
     }
 }

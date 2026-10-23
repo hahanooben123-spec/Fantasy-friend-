@@ -9,6 +9,8 @@ struct RagdollFrame {
     var asleep = false
     var blink = false
     var reaction: PlayAction?
+    var pose=CreaturePose()
+    var reactionTime=0.0
     var canvasSize = CGSize(width:600,height:440)
 }
 
@@ -26,6 +28,11 @@ final class RagdollSimulation: ObservableObject {
     private var heldBody: SKPhysicsBody?
     private var gripOffset = CGVector.zero
     private var reactionUntil: TimeInterval = 0
+    private var motionStarted=Date.timeIntervalSinceReferenceDate
+    private var lastFrameTime=Date.timeIntervalSinceReferenceDate
+    private var takeoffAt:Double?
+    private var walkTarget:CGFloat?
+    private var strideStarted=Date.timeIntervalSinceReferenceDate
     private var asleep = false
     private var reaction: PlayAction?
     private var reducedMotion = false
@@ -51,7 +58,8 @@ final class RagdollSimulation: ObservableObject {
         limbs.removeAll()
         original = friend
         self.reducedMotion = reducedMotion
-        asleep = false; reaction = nil; reactionUntil = 0
+        asleep = false; reaction = nil; reactionUntil = 0;walkTarget=nil;takeoffAt=nil
+        motionStarted=Date.timeIntervalSinceReferenceDate;lastFrameTime=motionStarted
         scene.physicsWorld.gravity = reducedMotion ? .zero : CGVector(dx: 0, dy: -5)
         let floor = SKNode()
         floor.physicsBody = SKPhysicsBody(edgeLoopFrom: CGRect(x:8,y:90,width:scene.size.width-16,height:scene.size.height-165))
@@ -67,7 +75,11 @@ final class RagdollSimulation: ObservableObject {
         prepare(body.physicsBody, mass: 1.8, category: 1)
         scene.addChild(body)
 
-        for attachment in [Attachment.leftArm, .rightArm, .leftLeg, .rightLeg] {
+        let flexible=[Attachment.tail,.ears,.antennae].filter {part in
+            part.extraIndex.map {friend.accessories.contains($0)} ?? false
+        }
+        for attachment in [Attachment.leftArm, .rightArm, .leftLeg, .rightLeg]+flexible
+            where !friend.isHidden(attachment.rawValue) {
             let bounds = AttachmentLayout.bounds(for: attachment, friend: friend)
             let pose = friend.placement(for: attachment)
             let center = AttachmentLayout.center(for: attachment, friend: friend)
@@ -86,7 +98,8 @@ final class RagdollSimulation: ObservableObject {
             switch attachment {
             case .leftArm: localPin = CGPoint(x: bounds.maxX - 15, y: 179)
             case .rightArm: localPin = CGPoint(x: bounds.minX + 15, y: 179)
-            default: localPin = CGPoint(x: bounds.midX, y: 237)
+            case .leftLeg,.rightLeg: localPin = CGPoint(x: bounds.midX, y: 237)
+            default: localPin=CreatureRig.pivot(attachment,friend:friend)
             }
             let angle = CGFloat(pose.rotation) * .pi / 180
             let dx = (localPin.x - bounds.midX) * CGFloat(pose.scale)
@@ -129,7 +142,7 @@ final class RagdollSimulation: ObservableObject {
 
     func beginDrag(at point: CGPoint) {
         guard heldBody == nil else { return }
-        let ordered: [Attachment] = [.leftArm, .rightArm, .leftLeg, .rightLeg]
+        let ordered: [Attachment] = [.leftArm, .rightArm, .leftLeg, .rightLeg,.tail,.ears,.antennae]
         var candidates: [(SKNode, CGSize)] = ordered.compactMap { attachment in
             guard let node = limbs[attachment] else { return nil }
             let rect = AttachmentLayout.bounds(for: attachment, friend: original)
@@ -142,7 +155,7 @@ final class RagdollSimulation: ObservableObject {
             let width = max(76, size.width + 20), height = max(76, size.height + 20)
             return CGRect(x: -width / 2, y: -height / 2, width: width, height: height).contains(local)
         }), let physics = chosen.0.physicsBody else { return }
-        asleep = false
+        asleep = false;walkTarget=nil;takeoffAt=nil
         heldBody = physics
         gripOffset = CGVector(dx: point.x - body.position.x, dy: point.y - body.position.y)
         if !reducedMotion {
@@ -163,7 +176,8 @@ final class RagdollSimulation: ObservableObject {
             pointer = handle
         }
         reaction = .hug
-        reactionUntil = Date.timeIntervalSinceReferenceDate + 0.7
+        motionStarted=Date.timeIntervalSinceReferenceDate
+        reactionUntil = motionStarted + 0.7
         SoundService.shared.play(.reaction)
     }
 
@@ -188,18 +202,28 @@ final class RagdollSimulation: ObservableObject {
     }
 
     func setActive(_ active: Bool) {
-        if !active { endDrag() }
+        if !active {endDrag();takeoffAt=nil}
+        lastFrameTime=Date.timeIntervalSinceReferenceDate
         scene.isPaused = !active
     }
 
+    func walk(to point:CGPoint) {
+        guard !reducedMotion,!isDragging else {return}
+        asleep=false;reaction=nil;reactionUntil=0
+        walkTarget=min(scene.size.width-90,max(90,point.x))
+        strideStarted=Date.timeIntervalSinceReferenceDate
+    }
+
     func react(_ action: PlayAction) {
+        walkTarget=nil;takeoffAt=nil
         asleep = action == .sleep
         reaction = action
-        reactionUntil = Date.timeIntervalSinceReferenceDate + 1.4
+        motionStarted=Date.timeIntervalSinceReferenceDate
+        reactionUntil = motionStarted + CreatureMotion(action).duration
         SoundService.shared.play(action == .sleep ? .click : .reaction)
         guard !reducedMotion else { refresh(); return }
         switch action {
-        case .jump: body.physicsBody?.applyImpulse(CGVector(dx: 0, dy: 250))
+        case .jump: takeoffAt=motionStarted+0.23
         case .dance:
             body.physicsBody?.applyImpulse(CGVector(dx: 0, dy: 110))
             body.physicsBody?.angularVelocity = 1.8
@@ -217,6 +241,41 @@ final class RagdollSimulation: ObservableObject {
 
     func refresh() {
         let now = Date.timeIntervalSinceReferenceDate
+        let dt=min(0.05,max(0,now-lastFrameTime));lastFrameTime=now
+        if let launch=takeoffAt,now>=launch {
+            takeoffAt=nil
+            if !isDragging,!asleep {body.physicsBody?.applyImpulse(CGVector(dx:0,dy:250))}
+        }
+        let reactionTime=max(0,now-motionStarted)
+        var rig=CreatureRig.sample(asleep ? .sleep : now<reactionUntil ? CreatureMotion(reaction ?? .hug) :
+            walkTarget == nil ? .idle : .walk,
+            time:walkTarget == nil ? reactionTime : now-strideStarted,clock:now,reduced:reducedMotion)
+        if !reducedMotion,!isDragging,!asleep,let physics=body.physicsBody {
+            let grounded=body.position.y<235
+            if let target=walkTarget {
+                let dx=target-body.position.x
+                if abs(dx)<9 {walkTarget=nil;physics.velocity.dx *= 0.4}
+                else if grounded {physics.velocity.dx=min(85,max(-85,dx*2))}
+            }
+            // A gentle upright motor lets the puppet settle after being carried.
+            if grounded {
+                physics.angularVelocity += (-body.zRotation*7-physics.angularVelocity*2)*dt
+            }
+            for (part,node) in limbs {
+                guard let motor=node.physicsBody else {continue}
+                let joint=rig.joint(part)
+                let target=body.zRotation-CGFloat((original.placement(for:part).rotation+joint.angle)*Double.pi/180)
+                let difference=atan2(sin(target-node.zRotation),cos(target-node.zRotation))
+                motor.angularVelocity += (difference*18-motor.angularVelocity*3)*dt
+            }
+        }
+        // Physics owns body position and limb angles; facial and accessory clips still run.
+        if !reducedMotion,!asleep {
+            let blinkPhase=now.truncatingRemainder(dividingBy:4.3)
+            rig.eyelid=CreatureRig.key(blinkPhase,[(0,0),(3.92,0),(4.02,1),(4.10,1),(4.26,0)])
+        }
+        rig.x=0;rig.y=0;rig.roll=0
+        for part in limbs.keys {rig.joints.removeValue(forKey:part)}
         // Cap speed after abrupt finger movements to keep play gentle and stable.
         for node in [body] + Array(limbs.values) {
             guard let physics = node.physicsBody else { continue }
@@ -238,8 +297,8 @@ final class RagdollSimulation: ObservableObject {
             posed.setPlacement(pose, for: attachment)
         }
         frame = RagdollFrame(friend: posed, position: body.position, angle: Double(body.zRotation),
-            happy: !asleep && now < reactionUntil, asleep: asleep,
-            blink: now.truncatingRemainder(dividingBy: 4) < 0.14,
-            reaction: now < reactionUntil ? reaction : nil, canvasSize: scene.size)
+            happy: rig.happy, asleep: asleep,
+            blink: false,
+            reaction: now < reactionUntil ? reaction : nil, pose:rig,reactionTime:reactionTime,canvasSize: scene.size)
     }
 }

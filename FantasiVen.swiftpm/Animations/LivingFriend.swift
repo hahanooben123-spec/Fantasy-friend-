@@ -8,148 +8,143 @@ struct LivingFriend: View {
     var signal = 0
     var audible = true
     var feedingFood: String? = "🍓"
-    var onTouch:(()->Void)?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var onTouch: (() -> Void)?
+    var locomotion = 0.0
+    var active = true
+    @Environment(\.accessibilityReduceMotion) private var reduced
     @Environment(\.scenePhase) private var phase
-    @State private var lookingAtFinger=false
-    @State private var expression=CreatureExpression.normal
-    @State private var armSwing=0.0
-    @State private var lastReactionKey=""
-    @State private var blink = false
-    @State private var gaze = CGPoint.zero
-    @State private var breathe = false
-    @State private var happy = false
-    @State private var sleeping = false
-    @State private var lift: CGFloat = 0
-    @State private var tilt: Double = 0
-    @State private var squash: CGFloat = 1
-    @State private var sparkle = false
-    @State private var localSignal = 0
-    @State private var tappedAction = PlayAction.jump
-    @State private var currentAction = PlayAction.jump
     @Environment(\.locale) private var locale
+    @State private var started = Date()
+    @State private var epoch = Date()
+    @State private var pausedAt: Date?
+    @State private var motion = CreatureMotion.idle
+    @State private var localSignal = 0
+    @State private var touchedAction = PlayAction.jump
+    @State private var lastRequest = ""
+    @State private var finger: CGPoint?
 
-    var body:some View {
-        GeometryReader {proxy in
-            creatureContent
-                .simultaneousGesture(DragGesture(minimumDistance:0).onChanged {value in
-                    lookingAtFinger=true
-                    withAnimation(reduceMotion ? nil : .easeOut(duration:0.10)) {
-                        gaze=CGPoint(x:min(1,max(-1,(value.location.x/max(1,proxy.size.width)-0.5)*2.4)),
-                                     y:min(1,max(-1,(value.location.y/max(1,proxy.size.height)-0.46)*2.4)))
+    private var running: Bool { active && phase == .active }
+
+    var body: some View {
+        GeometryReader { proxy in
+            TimelineView(.animation(minimumInterval: 1.0/30, paused: !running || reduced)) { frame in
+                let date = pausedAt ?? frame.date
+                let elapsed = max(0,date.timeIntervalSince(started))
+                let clock = max(0,date.timeIntervalSince(epoch))
+                let playing = elapsed < motion.duration ? motion : .idle
+                let selected = abs(locomotion)>0.02 && playing == .idle ? CreatureMotion.walk : playing
+                let pose = animatedPose(selected, elapsed: elapsed, clock: clock)
+                ZStack {
+                    Ellipse().fill(GameStyle.ink.opacity(0.16))
+                        .frame(width: max(85,150+pose.y*0.65),height:17)
+                        .offset(y:128).opacity(max(0.3,1+pose.y/110))
+                    CharacterView(friend: friend, happy: pose.happy, asleep: pose.asleep,
+                                  gaze: gaze(at:clock), expression: pose.expression, pose: pose)
+                    if feedingFood != nil && selected == .eat {
+                        FruitArtwork(kind:0)
+                            .frame(width:38,height:42)
+                            .scaleEffect(CreatureRig.key(elapsed,[(0,0.8),(0.72,1),(1.02,0.1),(1.1,0)]))
+                            .offset(x:CreatureRig.key(elapsed,[(0,-80),(0.48,-16),(0.9,0),(1.1,0)]),
+                                    y:CreatureRig.key(elapsed,[(0,65),(0.48,42),(0.9,26),(1.1,26)]))
+                            .opacity(elapsed<1.1 ? 1 : 0)
                     }
-                }.onEnded {value in
-                    lookingAtFinger=false
-                    withAnimation(.easeOut(duration:0.3)) {gaze = .zero}
-                    if onTouch == nil && hypot(value.translation.width,value.translation.height)>12 {
-                        tappedAction = .tickle;localSignal+=1
+                    CreatureReactionParticles(motion:selected,time:elapsed,strength:pose.particle)
+                    if pose.asleep {
+                        Text("z Z").font(.system(size:24,weight:.bold,design:.rounded))
+                            .foregroundColor(GameStyle.purple)
+                            .offset(x:86+sin(clock)*4,y:-85-sin(clock*1.2)*7)
+                    }
+                }
+            }.contentShape(Rectangle())
+                .gesture(DragGesture(minimumDistance:0).onChanged { value in
+                    finger=CGPoint(x:min(1,max(-1,(value.location.x/max(1,proxy.size.width)-0.5)*2.4)),
+                                   y:min(1,max(-1,(value.location.y/max(1,proxy.size.height)-0.46)*2.4)))
+                }.onEnded { value in
+                    finger=nil
+                    if let onTouch=onTouch {onTouch()}
+                    else {
+                        touchedAction=hypot(value.translation.width,value.translation.height)>12 ? .tickle :
+                            [PlayAction.tickle,.jump,.hug,.dance].filter {$0 != touchedAction}.randomElement() ?? .jump
+                        localSignal += 1
                     }
                 })
         }.aspectRatio(300.0/320,contentMode:.fit)
+            .accessibilityElement(children:.ignore)
+            .accessibilityLabel(friend.name.isEmpty ? "FantasiVen" : friend.name)
+            .accessibilityHint(Words.text("tap",locale.identifier.hasPrefix("en") ? .en : .da))
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction {if let onTouch=onTouch {onTouch()} else {touchedAction = .hug;localSignal += 1}}
+            .onChange(of:signal) {value in localSignal=0;if value == 0 {motion = .idle;lastRequest=""}}
+            .onChange(of:running) { playing in
+                if !playing {pausedAt=Date();finger=nil}
+                else if let pause=pausedAt {
+                    let delay=Date().timeIntervalSince(pause)
+                    started=started.addingTimeInterval(delay);epoch=epoch.addingTimeInterval(delay)
+                    pausedAt=nil
+                }
+            }
+            .task(id:"\(signal)-\(localSignal)-\(running)") {
+                guard running,signal+localSignal>0 else {return}
+                let key="\(signal)-\(localSignal)"
+                guard key != lastRequest else {return}
+                lastRequest=key
+                let chosen=localSignal>0 ? touchedAction : action
+                // Continuous finger-eating must let the reach/bite/chew sequence finish.
+                if chosen == .feed,motion == .eat,Date().timeIntervalSince(started)<2.0 {return}
+                started=Date();motion=CreatureMotion(chosen)
+                if audible {
+                    if chosen == .sleep {SoundService.shared.play(.click)}
+                    else {SoundService.shared.react(voice:friend.voice?.rawValue ?? 0)}
+                }
+            }
     }
-    private var posingFriend:FantasyFriend {
-        var value=friend
-        guard !reduceMotion,armSwing != 0 else {return value}
-        for attachment in [Attachment.leftArm,.rightArm] {
-            var pose=value.placement(for:attachment)
-            pose.rotation=min(180,max(-180,pose.rotation+armSwing*(attachment == .leftArm ? 1 : -0.6)))
-            value.setPlacement(pose,for:attachment)
+
+    private func animatedPose(_ selected:CreatureMotion,elapsed:Double,clock:Double) -> CreaturePose {
+        var pose=CreatureRig.sample(selected,time:selected == .walk ? clock : elapsed,clock:clock,
+                                    energy:locomotion == 0 ? 1 : locomotion,reduced:reduced)
+        if !reduced && !pose.asleep {
+            let cycle=(clock+Double(friend.eyes)*0.17).truncatingRemainder(dividingBy:4.3)
+            pose.eyelid=CreatureRig.key(cycle,[(0,0),(3.92,0),(4.02,1),(4.10,1),(4.26,0)])
         }
-        if var pieces=value.pieces {
-            for i in pieces.indices where pieces[i].kind == .arm {
-                pieces[i].rotation=min(180,max(-180,pieces[i].rotation+armSwing*(i.isMultiple(of:2) ? 1 : -1)))
-            }
-            value.pieces=pieces
-        }
-        return value
+        return pose
     }
-    private var creatureContent: some View {
-        Button {
-            if let onTouch=onTouch {onTouch()}
-            else {
-                tappedAction = [PlayAction.tickle,.jump,.hug,.dance].filter {$0 != tappedAction}.randomElement() ?? .jump
-                localSignal += 1
+
+    private func gaze(at clock:Double) -> CGPoint {
+        if let finger=finger {return finger}
+        if reduced {return .zero}
+        return CGPoint(x:sin(clock*0.65)*0.32,y:sin(clock*0.37)*0.14)
+    }
+}
+
+struct CreatureReactionParticles:View {
+    let motion:CreatureMotion
+    let time:Double
+    let strength:Double
+    var body:some View {
+        Canvas {c,s in
+            guard strength>0.01 else {return}
+            for i in 0..<7 {
+                let angle=Double(i)*Double.pi*2/7
+                let radius=0.28+min(1,time)*0.12
+                let x=s.width*(0.5+cos(angle)*radius)
+                let y=s.height*(0.46+sin(angle)*radius)-time*5
+                let r=CGFloat(3+i%3*2)*strength
+                var shape=Path()
+                if motion == .hug {
+                    shape.move(to:CGPoint(x:x,y:y+r))
+                    shape.addCurve(to:CGPoint(x:x-r,y:y-r*0.25),control1:CGPoint(x:x-r*2,y:y),control2:CGPoint(x:x-r*2,y:y-r*2))
+                    shape.addCurve(to:CGPoint(x:x+r,y:y-r*0.25),control1:CGPoint(x:x,y:y-r*2),control2:CGPoint(x:x+r*2,y:y-r*2))
+                    shape.addCurve(to:CGPoint(x:x,y:y+r),control1:CGPoint(x:x+r*2,y:y),control2:CGPoint(x:x+r,y:y+r*0.5))
+                } else {
+                    for j in 0..<8 {
+                        let a=Double(j)*Double.pi/4
+                        let point=CGPoint(x:x+cos(a)*(j%2 == 0 ? r : r*0.3),y:y+sin(a)*(j%2 == 0 ? r : r*0.3))
+                        if j == 0 {shape.move(to:point)} else {shape.addLine(to:point)}
+                    }
+                }
+                shape.closeSubpath()
+                c.fill(shape,with:.color(GameStyle.palette[(i+2)%16].opacity(strength*0.8)))
             }
-        } label: {
-            ZStack {
-                Ellipse().fill(GameStyle.ink.opacity(0.09)).frame(width: 150, height: 17).offset(y: 128)
-                CharacterView(friend:posingFriend,blink:blink,happy:happy && expression != .wink,asleep:sleeping,gaze:gaze,expression:expression)
-                    .scaleEffect(x:squash*(lookingAtFinger && !reduceMotion ? 1.025 : 1),
-                                 y:(breathe ? 1.018 : 1)/squash/(lookingAtFinger && !reduceMotion ? 1.025 : 1),anchor:.bottom)
-                    .animation(reduceMotion ? nil : .spring(response:0.25,dampingFraction:0.65),value:lookingAtFinger)
-                    .rotationEffect(.degrees(tilt), anchor: .bottom)
-                    .offset(y: lift)
-                if sparkle {
-                    ForEach(0..<7) { index in
-                        Image(systemName: currentAction == .hug ? "heart.fill" : "sparkle")
-                            .font(.system(size: CGFloat(14 + index % 3 * 5), weight: .bold))
-                            .foregroundColor(GameStyle.palette[(index + 2) % 16])
-                            .offset(x: CGFloat(cos(Double(index) * .pi * 2 / 7)) * 115,
-                                    y: CGFloat(sin(Double(index) * .pi * 2 / 7)) * 110 - 20)
-                    }
-                }
-                if sleeping { Text("z Z").font(.system(size: 26, weight: .bold, design: .rounded)).foregroundColor(GameStyle.purple).offset(x: 90, y: -90) }
-                if happy && currentAction == .feed, let food = feedingFood { Text(food).font(.system(size: 42)).offset(y: 30) }
-            }.aspectRatio(300.0 / 320, contentMode: .fit).contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(friend.name.isEmpty ? "FantasiVen" : friend.name)
-        .accessibilityHint(Words.text("tap", locale.identifier.hasPrefix("en") ? .en : .da))
-        .onChange(of: signal) { _ in localSignal = 0 }
-        .task(id:"\(phase)-\(reduceMotion)") {
-            breathe=false
-            guard phase == .active else {return}
-            if !reduceMotion {withAnimation(.easeInOut(duration:2.4).repeatForever(autoreverses:true)) {breathe=true}}
-            do {
-                while !Task.isCancelled {
-                    try await Task.sleep(nanoseconds:UInt64.random(in:2_900_000_000...4_800_000_000))
-                    guard !Task.isCancelled else {return}
-                    blink=true
-                    try await Task.sleep(nanoseconds:130_000_000)
-                    blink=false
-                    if !lookingAtFinger && !sleeping && !happy && !reduceMotion {
-                        withAnimation(.easeInOut(duration:0.45)) {gaze=CGPoint(x:Double.random(in:-0.5...0.5),y:Double.random(in:-0.25...0.3))}
-                        try await Task.sleep(nanoseconds:700_000_000)
-                        if !lookingAtFinger {withAnimation(.easeInOut(duration:0.4)) {gaze = .zero}}
-                    }
-                }
-            } catch {blink=false}
-        }
-        .task(id: "\(signal)-\(localSignal)-\(phase)") {
-            guard phase == .active,signal + localSignal > 0 else {
-                lift=0;tilt=0;squash=1;armSwing=0;expression = .normal;sparkle=false;happy=false
-                return
-            }
-            let request="\(signal)-\(localSignal)"
-            guard request != lastReactionKey else {return}
-            lastReactionKey=request
-            let chosen = localSignal > 0 ? tappedAction : action
-            currentAction = chosen
-            sleeping = chosen == .sleep
-            happy = chosen != .sleep
-            lift = 0; tilt = 0; squash = 1; sparkle = false;armSwing=0;expression = .normal
-            if audible { if chosen == .sleep { SoundService.shared.play(.click) } else { SoundService.shared.react(voice: friend.voice?.rawValue ?? 0) } }
-            withAnimation(.easeOut(duration: 0.2)) { sparkle = chosen != .sleep }
-            do {
-                expression=chosen == .feed ? .chew : chosen == .jump ? .wonder : chosen == .hug ? .wink : .normal
-                if !reduceMotion {
-                    for step in 0..<(chosen == .dance || chosen == .tickle || chosen == .feed ? 6 : 4) {
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.55)) {
-                            switch chosen {
-                            case .jump: lift = step.isMultiple(of:2) ? -42 : 0;armSwing = step.isMultiple(of:2) ? 28 : 0
-                            case .dance: tilt = step.isMultiple(of: 2) ? -(friend.gait == .waddle ? 20 : 10) : (friend.gait == .waddle ? 20 : 10); lift = friend.gait == .glide ? -8 : (step.isMultiple(of: 2) ? -22 : 0)
-                            case .tickle: tilt = step.isMultiple(of: 2) ? -6 : 6;armSwing = step.isMultiple(of:2) ? 20 : -8
-                            case .hug: squash = step.isMultiple(of:2) ? 0.92 : 1;armSwing = step.isMultiple(of:2) ? 34 : 15
-                            case .feed: squash = step.isMultiple(of:2) ? 1.035 : 1;expression = step.isMultiple(of:2) ? .chew : .normal
-                            case .sleep: tilt = 7
-                            }
-                        }
-                        try await Task.sleep(nanoseconds: 230_000_000)
-                    }
-                }
-                try await Task.sleep(nanoseconds: 900_000_000)
-                withAnimation(.easeOut(duration: 0.3)) { happy = false; sparkle = false; lift = 0; squash = 1;armSwing=0;expression = .normal; if !sleeping { tilt = 0 } }
-            } catch { /* A newer reaction or navigation cancels this animation task. */ }
-        }
+        }.allowsHitTesting(false).accessibilityHidden(true)
     }
 }

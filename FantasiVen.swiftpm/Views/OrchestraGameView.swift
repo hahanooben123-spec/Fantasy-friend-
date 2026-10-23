@@ -29,7 +29,7 @@ struct OrchestraGameView:View {
                     HStack(alignment:.bottom,spacing:6) {
                         ForEach(0..<3) {row in
                             VStack(spacing:8) {
-                                LivingFriend(friend:performer(row),action:row == 0 ? .jump : row == 1 ? .dance : .tickle,signal:signals[row],audible:false,onTouch:{strike(row)})
+                                LivingFriend(friend:performer(row),action:row == 0 ? .jump : row == 1 ? .dance : .tickle,signal:signals[row],audible:false,onTouch:{strike(row)},active:active)
                                     .frame(height:proxy.size.height*0.37)
                                     .scaleEffect(reduced || signals[row].isMultiple(of:2) ? 1 : 1.04)
                                     .animation(reduced ? nil : .spring(response:0.3,dampingFraction:0.65),value:signals[row])

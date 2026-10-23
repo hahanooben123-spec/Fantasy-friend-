@@ -18,7 +18,7 @@ struct PhysicsPlayfield: View {
                         .allowsHitTesting(false)
                 }
                 ForEach(physics.friends) { actor in
-                    CharacterView(friend: actor.friend, happy: dragging)
+                    CharacterView(friend: actor.friend, happy: dragging,expression:actor.pose.expression,pose:actor.pose)
                         .frame(width:max(120,min(210,size.width*0.22)),height:max(128,min(224,size.width*0.235)))
                         .rotationEffect(.degrees(actor.angle))
                         .position(x: actor.x / 800 * size.width, y: (500 - actor.y) / 500 * size.height)

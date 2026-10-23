@@ -50,7 +50,7 @@ struct RoomScene:View {
     private func companion(_ size:CGSize)->some View {
         let point=friendPreview ?? CGPoint(x:layout.design.friendX,y:layout.design.friendY)
         let width=min(205,max(100,size.width*0.27))
-        return LivingFriend(friend:friend,action:action,signal:signal)
+        return LivingFriend(friend:friend,action:action,signal:signal,locomotion:friendPreview == nil ? 0 : 0.65)
             .frame(width:width,height:width*320/300)
             .position(x:point.x*size.width,y:point.y*size.height)
             .simultaneousGesture(DragGesture(minimumDistance:5,coordinateSpace:.named("friendRoomScene")).onChanged {value in
