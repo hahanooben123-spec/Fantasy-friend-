@@ -29,6 +29,7 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
     mutating func show(_ key: String) { hiddenParts?.remove(key) }
     mutating func hide(_ key: String) { var values = hiddenParts ?? []; values.insert(key); hiddenParts = values }
 
+    var bodySculpt:BodySculpt?
     var bodyWidth: Double?
     var bodyHeight: Double?
     var voice: VoiceKind?
@@ -45,7 +46,12 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
     }
 
     func placement(for attachment: Attachment) -> PartPlacement {
-        placements?[attachment.rawValue] ?? PartPlacement()
+        if let explicit=placements?[attachment.rawValue] {return explicit}
+        if let sculpt=bodySculpt {
+            let shift=sculpt.limbShift(attachment,friend:self)
+            return PartPlacement(x:shift.x/300,y:shift.y/320)
+        }
+        return PartPlacement()
     }
 
     mutating func setPlacement(_ placement: PartPlacement, for attachment: Attachment) {
@@ -83,6 +89,7 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
         (facePlacements ?? [:]).allSatisfy { ["eyes", "mouth"].contains($0.key) && $0.value.isValid } &&
         (pieces ?? []).count <= 64 && (pieces ?? []).allSatisfy(\.isValid) &&
         Set((pieces ?? []).map(\.id)).count == (pieces ?? []).count &&
+        (bodySculpt?.isValid ?? true) &&
         widthFactor.isFinite && heightFactor.isFinite &&
         (0.75...1.2).contains(widthFactor) && (0.75...1.2).contains(heightFactor) &&
         (roomDesign?.isValid ?? true) &&

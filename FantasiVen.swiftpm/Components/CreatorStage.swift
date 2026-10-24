@@ -2,6 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct CreatorStage: View {
+    @EnvironmentObject private var store:FriendStore
     @Environment(\.accessibilityReduceMotion) private var reduced
     @Environment(\.scenePhase) private var phase
     @Binding var friend: FantasyFriend
@@ -13,6 +14,8 @@ struct CreatorStage: View {
     let onBegin: () -> Void
     let onEnd: () -> Void
     let onDrop: (CreatorPick, CGPoint) -> Void
+    @State private var pinchOrigin:FantasyFriend?
+    @State private var reactingParts=false
     @State private var origin: FantasyFriend?
     @State private var movingSelection: CreatorSelection?
     @State private var handleOrigin: FantasyFriend?
@@ -21,18 +24,15 @@ struct CreatorStage: View {
     @State private var blink = false
     @State private var gaze = CGPoint.zero
     @State private var lean = 0.0
-    @State private var breathing=false
-    @State private var delighted=false
     @State private var interactionRevision=0
-    @State private var reactionLift:CGFloat=0
-    @State private var reactionSquash:CGFloat=1
     @State private var expression=CreatureExpression.normal
     private let zoom: CGFloat = 1.1
 
     private func editorPose(time:Double,clock:Double)->CreaturePose {
-        var rig=CreatureRig.sample(time<1.55 ? .jump : .idle,time:time,clock:clock,reduced:reduced)
+        let motion:CreatureMotion=part == .legs ? .walk : part == .arms ? .hug : .jump
+        var rig=CreatureRig.sample(reactingParts ? motion : .idle,time:time,clock:clock,reduced:reduced)
         // Hands and handles must coincide while a child positions a part.
-        if origin != nil || handleOrigin != nil || selection != nil {
+        if origin != nil || handleOrigin != nil || pinchOrigin != nil || (selection != nil && !reactingParts) {
             rig.x=0;rig.y=0;rig.roll=0;rig.scaleX=1;rig.scaleY=1;rig.headTilt=0;rig.headY=0;rig.joints=[:]
         }
         return rig
@@ -47,20 +47,16 @@ struct CreatorStage: View {
                 Ellipse().fill(WorkshopLook.sea.opacity(0.18)).frame(width:width*0.57,height:height*0.055)
                     .position(x:width/2,y:height*0.94)
                 TimelineView(.animation(minimumInterval:1.0/30,
-                    paused:reduced || phase != .active || origin != nil || handleOrigin != nil)) {frame in
+                    paused:reduced || phase != .active || origin != nil || handleOrigin != nil || pinchOrigin != nil)) {frame in
                     let time=max(0,frame.date.timeIntervalSince(rigStarted))
                     let rig=editorPose(time:time,clock:frame.date.timeIntervalSinceReferenceDate)
-                    CharacterView(friend:displayed,blink:blink,happy:delighted && expression != .wink,
+                    CharacterView(friend:displayed,blink:blink,happy:false,
                         gaze:gaze,zoom:zoom,expression:expression,pose:rig)
                 }
-                    .scaleEffect(x:breathing && origin == nil && !reduced ? 1.006 : 1,
-                                 y:breathing && origin == nil && !reduced ? 1.015 : 1,anchor:.bottom)
-                    .scaleEffect(x:reactionSquash,y:1/reactionSquash,anchor:.bottom)
-                    .offset(y:reactionLift)
                     .rotationEffect(.degrees(reduced ? 0 : lean),anchor:.bottom)
                     .animation(reduced ? nil : .spring(response:0.32,dampingFraction:0.65),value:lean)
                     .allowsHitTesting(false)
-                if brush == nil, let selected = selection {
+                if brush == nil && !reactingParts, let selected = selection {
                     selectionFrame(selected,size:size)
                 }
                 StudioBurst(revision:revision).allowsHitTesting(false)
@@ -75,6 +71,8 @@ struct CreatorStage: View {
                 }).coordinateSpace(name:"creatorStage").contentShape(Rectangle())
                 .gesture(DragGesture(minimumDistance:0,coordinateSpace:.named("creatorStage"))
                     .onChanged { value in
+                        guard pinchOrigin == nil else {return}
+                        reactingParts=false
                         let point = canonical(value.location,size:size)
                         gaze = CGPoint(x:min(1,max(-1,(point.x-150)/80)),y:min(1,max(-1,(point.y-157)/80)))
                         if let brush = brush {
@@ -83,52 +81,63 @@ struct CreatorStage: View {
                         }
                         if origin == nil {
                             origin=friend;interactionRevision+=1
-                            movingSelection=CreatorGeometry.hit(canonical(value.startLocation,size:size),friend:friend,margin:7,minimumTouchSize:48*300/width/zoom)
+                            let start=canonical(value.startLocation,size:size)
+                            movingSelection=part == .body && CreatorGeometry.bounds(.body,friend:friend).contains(start) ? .body :
+                                CreatorGeometry.hit(start,friend:friend,margin:7,minimumTouchSize:48*300/width/zoom)
                             selection=movingSelection
                             onBegin()
                         }
                         guard let source=origin,let selected=movingSelection else { return }
                         if selected == .body {
-                            lean = min(5,max(-5,Double(value.translation.width/35)))
+                            if part == .body {
+                                friend=CreatorClay.pull(source,from:canonical(value.startLocation,size:size),to:point)
+                            } else {lean=min(5,max(-5,Double(value.translation.width/35)))}
                         } else {
                             friend=CreatorGeometry.moved(selected,original:source,delta:CGSize(width:value.translation.width/width*300/zoom,height:value.translation.height/height*320/zoom))
                         }
                     }
                     .onEnded { _ in
+                        if pinchOrigin != nil {origin=nil;return}
                         if let stroke=draft,stroke.isValid {
                             var strokes=friend.doodles ?? [];strokes.append(stroke);friend.doodles=strokes
                         }
                         draft=nil;origin=nil;movingSelection=nil;lean=0;gaze = .zero
                         onEnd()
                     })
+                .simultaneousGesture(MagnificationGesture().onChanged {scale in
+                    guard part == .body,brush == nil else {return}
+                    reactingParts=false
+                    if pinchOrigin == nil {pinchOrigin=origin ?? friend;onBegin()}
+                    if let base=pinchOrigin {friend=CreatorClay.pinch(base,scale:Double(scale))}
+                }.onEnded {_ in
+                    guard pinchOrigin != nil else {return}
+                    pinchOrigin=nil;origin=nil;onEnd()
+                })
+                .accessibilityAction(named:Text(store.t("creatorMakeBigger"))) {
+                    onBegin();friend=CreatorClay.pinch(friend,scale:1.08);onEnd()
+                }
                 .onDrop(of:[UTType.text.identifier],isTargeted:nil) { _,point in
                     guard let choice=incoming else { return false }
                     onDrop(choice,canonical(point,size:size));incoming=nil;return true
                 }
                 .position(x:geometry.size.width/2,y:geometry.size.height/2)
         }
-        .onChange(of:part) { _ in draft=nil;origin=nil;handleOrigin=nil;lean=0 }
-        .task(id:"\(phase)-\(reduced)") {
-            breathing=false
-            guard phase == .active,!reduced else {return}
-            withAnimation(.easeInOut(duration:2.2).repeatForever(autoreverses:true)) {breathing=true}
+        .onChange(of:phase) {value in
+            guard value != .active else {return}
+            let held=origin != nil || handleOrigin != nil || pinchOrigin != nil
+            origin=nil;handleOrigin=nil;pinchOrigin=nil;draft=nil;reactingParts=false
+            if held {onEnd()}
         }
+        .onChange(of:part) { _ in draft=nil;origin=nil;handleOrigin=nil;pinchOrigin=nil;reactingParts=false;lean=0 }
         .task(id:revision) {
             guard revision>0 else {return}
-            delighted=false;reactionLift=0;reactionSquash=1
+            reactingParts=true;rigStarted=Date()
             expression=part == .extras || part == .color ? .wonder : .wink
-            rigStarted=Date()
             gaze=part == .legs ? CGPoint(x:0,y:0.7) : part == .extras ? CGPoint(x:0,y:-0.7) : .zero
             do {
-                if !reduced {
-                    withAnimation(.spring(response:0.24,dampingFraction:0.55)) {reactionSquash=0.92;reactionLift = -12}
-                }
-                try await Task.sleep(nanoseconds:270_000_000)
-                expression = .normal;delighted=true
-                withAnimation(reduced ? nil : .spring(response:0.4,dampingFraction:0.55)) {reactionSquash=1;reactionLift=0}
-                try await Task.sleep(nanoseconds:420_000_000)
-                delighted=false;gaze = .zero
-            } catch {delighted=false;reactionLift=0;reactionSquash=1;expression = .normal}
+                try await Task.sleep(nanoseconds:950_000_000)
+                reactingParts=false;expression = .normal;gaze = .zero
+            } catch {reactingParts=false;expression = .normal}
         }
         .task(id:phase) {
             guard phase == .active else { return }
@@ -139,7 +148,7 @@ struct CreatorStage: View {
                 }
             } catch { blink=false }
         }
-        .onDisappear { draft=nil;origin=nil;handleOrigin=nil }
+        .onDisappear {draft=nil;origin=nil;handleOrigin=nil;pinchOrigin=nil;reactingParts=false}
     }
     private var displayed: FantasyFriend {
         var copy=friend

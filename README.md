@@ -2,6 +2,20 @@
 
 Et originalt, lokalt iPhone-spil til børn på 3–8 år. Swift 6, SwiftUI og iOS 15+. Ingen tredjepartspakker, login, netværkskald eller køb.
 
+## Åbent figurværksted, formbar krop og prøvescene
+
+Figurværkstedet har en ny original malet studiebaggrund og mere plads omkring vennen: smallere sidebakke på iPad, lavere kategori-/deleområde på stående skærme og ingen obligatorisk starterskærm. Startere er stadig tilgængelige fra scenen. Farverige kategorier, store previews og detaljer som trædepuder, sømme og snørebånd gør delene lettere at skelne.
+
+I kropsværktøjet kan barnet trække i kroppens øvre, midterste eller nedre del for at forme silhuetten, trække i midten for at gøre den skæv og knibe med to fingre for at ændre størrelse. En gendanknap fjerner formningen. Formning og knib indgår i samme fortryd-/gentag-historik som andre ændringer. De nye formdata er et valgfrit Codable-felt og valideres ved indlæsning. Ældre venner kan stadig åbnes. Den samme silhuet bruges i renderingen og ved valg af kropsområdet. Standardarme og -ben følger kropsformningen; frit placerede dele beholder deres egne placeringer.
+
+**Prøv** åbner en separat fuldskærmsscene med den aktuelle, endnu ikke nødvendigvis gemte figur. Tryk på jorden for at gå, eller vælg gang, hop og dans. Tilbage vender direkte til samme værkstedsfigur. Ingen ekstra gemmehandling kræves. Bevægelse følger sceneaktivitet og Reducer bevægelse.
+
+Nye ben prøver en gangbevægelse, arme reagerer med et kram, og andre dele får en kort krops-/tilbehørsreaktion. Greb skjules kort under reaktionen og står stille, når barnet begynder at redigere. De eksisterende frie placeringer, kopiering, spejling, farvelægning og tegning bevares. Personlighed og gentag findes under Mere.
+
+Ved navngivning får en ven uden eksisterende værelse et indrettet hjem med farver fra figuren. Eksisterende indretninger bevares. Afsløringen viser hjemmets illustration og en direkte indgang til værelset.
+
+Illustrationen er genereret med det indbyggede image_gen-værktøj. Filplacering og endelig prompt findes i [Documentation/Art/Creator-Art.md](Documentation/Art/Creator-Art.md). Projektgeneratoren er kørt for den nye Swift-fil. Ingen build, tests eller afprøvning af den kørende app på iPad er kørt.
+
 ## Malet pizzabageri fra blanding til servering
 
 Pizzaspillet bruger nu otte nye originale illustrationer: køkken, melpose, vandkande, olieflaske, keramikskål, træske, stenovn og tallerken. Ingredienserne bruger samme grafik i bakke, under træk og under hældning. Vandstanden tegnes separat i kanden. Skålen har levende indhold mellem den malede bagkant og forkant, og skeen følger omrøringen.

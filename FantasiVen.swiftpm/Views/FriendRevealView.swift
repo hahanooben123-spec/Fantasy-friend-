@@ -32,7 +32,15 @@ struct FriendRevealView:View {
                             }.opacity(introduced ? 1 : 0)
                             VStack(spacing:12) {
                                 NavigationLink(destination:FriendRoomView(friendID:friend.id)) {
-                                    door("revealRoom","house.fill",color:WorkshopLook.yellow)
+                                    HStack(spacing:12) {
+                                        VillageBuilding(place:.homes,tint:RoomPalette.walls[friend.roomDesign?.wallpaper ?? 0])
+                                            .frame(width:88,height:88)
+                                        VStack(alignment:.leading,spacing:5) {
+                                            Text(store.t("creatorHomeReady")).font(.system(size:21,weight:.heavy,design:.rounded))
+                                            Text(store.t("creatorHomeHint")).font(.system(size:13,weight:.bold,design:.rounded))
+                                        }.frame(maxWidth:.infinity,alignment:.leading)
+                                        Image(systemName:"chevron.right").font(.headline)
+                                    }.padding(12).background(StorybookPanel(cornerRadius:28))
                                 }
                                 NavigationLink(destination:MiniGamesView(onCreate:{creating=true})) {
                                     door("revealPlay","play.fill",color:Color(red:0.22,green:0.72,blue:0.84))

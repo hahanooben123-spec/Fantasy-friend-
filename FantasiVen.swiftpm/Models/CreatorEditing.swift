@@ -20,7 +20,7 @@ enum CreatorGeometry {
     static func bounds(_ selection: CreatorSelection, friend: FantasyFriend) -> CGRect {
         switch selection {
         case .body:
-            let rect = CreatureShape(kind: friend.body).path(in: CGRect(x: 0, y: 0, width: 300, height: 320)).boundingRect
+            let rect = CreatureSilhouette.path(for:friend).boundingRect
             return stretch(rect, friend: friend)
         case .eyes, .mouth:
             let key = selection == .eyes ? "eyes" : "mouth"

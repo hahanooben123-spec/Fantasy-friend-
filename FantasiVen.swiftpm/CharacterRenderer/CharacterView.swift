@@ -183,7 +183,7 @@ private struct CreaturePainter {
     }
 
     func drawBaseBody(blink: Bool, happy: Bool, asleep: Bool) {
-        let silhouette = CreatureShape(kind: friend.body).path(in: CGRect(x: 0, y: 0, width: 300, height: 320))
+        let silhouette = CreatureSilhouette.path(for:friend)
         ToyFinish.paint(context,path:silhouette,color:primary,edge:2.6)
         var clipped = context; clipped.clip(to: silhouette)
         let tummy=Path(ellipseIn:CGRect(x:103,y:183,width:98,height:85))
@@ -281,6 +281,16 @@ private struct CreaturePainter {
         }
         mitten.addQuadCurve(to:CGPoint(x:-8,y:6),control:CGPoint(x:3,y:18));mitten.closeSubpath()
         ToyFinish.paint(palm,path:mitten,color:primary,edge:1.7)
+        if friend.arms == 2 || friend.arms == 7 {
+            for i in 0..<3 {
+                let dot=Path(ellipseIn:CGRect(x:CGFloat(i)*6-4,y:-7-CGFloat(i%2)*3,width:5,height:6))
+                ToyFinish.paint(palm,path:dot,color:accent,edge:0.6)
+            }
+            ToyFinish.paint(palm,path:Path(ellipseIn:CGRect(x:-1,y:0,width:13,height:10)),color:accent,edge:0.7)
+        } else if friend.arms == 3 {
+            var seam=Path();seam.move(to:CGPoint(x:-7,y:7));seam.addQuadCurve(to:CGPoint(x:14,y:7),control:CGPoint(x:3,y:12))
+            palm.stroke(seam,with:.color(accent.opacity(0.65)),style:StrokeStyle(lineWidth:2,lineCap:.round,dash:[2,3]))
+        }
         if friend.arms == 1 || friend.arms == 5 {
             palm.fill(Path(ellipseIn:CGRect(x:-1,y:-2,width:11,height:9)),with:.color(accent.opacity(0.55)))
         }
@@ -300,6 +310,16 @@ private struct CreaturePainter {
         foot.addCurve(to:CGPoint(x:x+width,y:footY+5),control1:CGPoint(x:x+width*0.78,y:footY-12),control2:CGPoint(x:x+width+5,y:footY-4))
         foot.addQuadCurve(to:CGPoint(x:x,y:footY+7),control:CGPoint(x:x+width*0.55,y:footY+18));foot.closeSubpath()
         ToyFinish.paint(context,path:foot,color:friend.legs>=4 ? accent : primary,edge:1.7)
+        if friend.legs == 2 || friend.legs == 7 {
+            let pad=Path(ellipseIn:CGRect(x:x+width*0.27,y:footY-3,width:width*0.48,height:8))
+            ToyFinish.paint(context,path:pad,color:friend.legs == 7 ? primary : accent,edge:0.7)
+        }
+        if friend.legs>=4 {
+            for i in 0..<2 {
+                let y=footY-4+CGFloat(i)*4
+                line([CGPoint(x:x+width*0.34,y:y),CGPoint(x:x+width*0.61,y:y+1)],StorybookStyle.cream.opacity(0.8),1.8)
+            }
+        }
         if friend.legs == 0 || friend.legs == 3 || friend.legs == 6 {
             for i in 0..<2 {
                 let toe=x+width*(0.3+CGFloat(i)*0.27)

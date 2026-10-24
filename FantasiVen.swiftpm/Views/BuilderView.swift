@@ -18,12 +18,14 @@ struct BuilderView: View {
     @State private var paintColor = 1
     @State private var brushWidth = 9.0
     @State private var secondary = false
+    @State private var trying=false
     @State private var naming = false
     @State private var starters = false
     @State private var personality = false
     @State private var celebration = false
     @State private var discard = false
     @State private var revision = 0
+    @State private var personalityAfterMore=false
     @State private var moreTools=false
     @State private var dragPick:CreatorPick?
     @State private var dragPoint=CGPoint.zero
@@ -45,12 +47,12 @@ struct BuilderView: View {
                         HStack(spacing:0) {
                             categoryRail(vertical:true).frame(width:84)
                             scene
-                            drawer(wide:true).frame(width:min(320,geometry.size.width*0.3))
+                            drawer(wide:true).frame(width:min(260,geometry.size.width*0.27))
                         }
                     } else {
                         scene.frame(maxWidth:.infinity,maxHeight:.infinity)
-                        categoryRail(vertical:false).frame(height:78)
-                        drawer(wide:false).frame(height:min(220,max(164,geometry.size.height*0.28)))
+                        categoryRail(vertical:false).frame(height:68)
+                        drawer(wide:false).frame(height:160)
                     }
                 }
                 if let pick=dragPick {
@@ -76,7 +78,6 @@ struct BuilderView: View {
                 StarterFriendsSheet(onChoose:chooseStarter,onClose:{starters=false}).environmentObject(store)
             }
             .onAppear {SoundService.shared.setWorld(.castle)}
-            .task {if !existing && !resuming {starters=true}}
             .task(id:friend) {
                 guard !celebration else {return}
                 do {try await Task.sleep(nanoseconds:650_000_000)} catch {return}
@@ -87,10 +88,15 @@ struct BuilderView: View {
                 if value != .active && !celebration {dragPick=nil;incoming=nil;finishGesture();store.saveEditorDraft(friend,existing:existing)}
             }
             .onDisappear {if !celebration {store.saveEditorDraft(friend,existing:existing)}}
-            .sheet(isPresented:$moreTools) {advancedTools}
+            .fullScreenCover(isPresented:$trying) {
+                CreatorTryRoom(friend:friend,onReturn:{trying=false}).environmentObject(store)
+            }
+            .sheet(isPresented:$moreTools,onDismiss:{
+                if personalityAfterMore {personalityAfterMore=false;personality=true}
+            }) {advancedTools}
             .sheet(isPresented:$naming) {
                 NamingView(friend:$friend) {
-                    if store.save(friend) { naming=false;celebration=true;store.clearEditorDraft(friend.id) }
+                    finishFriend()
                 }.environmentObject(store)
             }
             .sheet(isPresented:$personality) {
@@ -115,8 +121,17 @@ struct BuilderView: View {
             }
             Spacer(minLength:2)
             CreatorToolButton(mark:.undo,label:store.t("undo"),action:undo).disabled(history.isEmpty).opacity(history.isEmpty ? 0.35 : 1)
-            CreatorToolButton(mark:.redo,label:store.t("redo"),action:redo).disabled(future.isEmpty).opacity(future.isEmpty ? 0.35 : 1)
-            CreatorToolButton(mark:.voice,label:store.t("personality")) { personality=true }
+            if wide {
+                CreatorToolButton(mark:.redo,label:store.t("redo"),action:redo).disabled(future.isEmpty).opacity(future.isEmpty ? 0.35 : 1)
+            }
+            RoundButton(icon:"ellipsis",label:store.t("roomMore")) {finishGesture();moreTools=true}
+            Button {finishGesture();selection=nil;trying=true} label:{
+                HStack(spacing:5) {
+                    Image(systemName:"play.fill").font(.system(size:16,weight:.heavy))
+                    if wide {Text(store.t("creatorTry")).font(.system(size:13,weight:.heavy,design:.rounded))}
+                }.padding(.horizontal,12).frame(minWidth:48,minHeight:48)
+                    .background(CandySurface(color:StudioStyle.colors[2],cornerRadius:18))
+            }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("creatorTryTitle"))
             CreatorToolButton(mark:.done,label:store.t("save"),tint:WorkshopLook.yellow) { finishGesture();naming=true }
         }.padding(.horizontal,14).padding(.vertical,10)
     }
@@ -166,9 +181,11 @@ struct BuilderView: View {
                 VStack(spacing:1) {
                     CreatorCategoryIcon(part:item).frame(width:43,height:42)
                     Text(store.t(Words.partKeys[item.rawValue])).font(.system(size:10,weight:.heavy,design:.rounded)).lineLimit(1)
-                }.foregroundColor(part == item ? WorkshopLook.sea : .white)
-                    .frame(width:67,height:65)
-                    .background {if part == item {CandySurface(color:WorkshopLook.yellow,cornerRadius:18)}}
+                }.foregroundColor(WorkshopLook.sea)
+                    .frame(width:67,height:59)
+                    .background(CandySurface(color:part == item ? StudioStyle.color(item) :
+                        GameStyle.mixed(StudioStyle.color(item),with:StorybookStyle.cream,amount:0.60),cornerRadius:18))
+                    .overlay(RoundedRectangle(cornerRadius:18).stroke(part == item ? .white : .clear,lineWidth:2))
                     .contentShape(Rectangle())
             }.buttonStyle(SquishStyle()).accessibilityLabel(store.t(Words.partKeys[item.rawValue]))
                 .accessibilityAddTraits(part == item ? .isSelected : [])
@@ -188,6 +205,11 @@ struct BuilderView: View {
                         Text(store.t(secondary ? "accent" : "color")).font(.system(size:12,weight:.bold,design:.rounded))
                             .padding(10).background(Capsule().fill(WorkshopLook.yellow))
                     }.buttonStyle(SquishStyle())
+                } else if part == .body {
+                    Button {change {$0.bodySculpt=nil;$0.bodyWidth=nil;$0.bodyHeight=nil}} label:{
+                        Image(systemName:"arrow.counterclockwise").font(.system(size:18,weight:.bold))
+                            .frame(width:44,height:44).background(StorybookPanel(cornerRadius:16))
+                    }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("creatorResetClay"))
                 } else {
                     Text(store.t("creatorTrayHint")).font(.system(size:11,weight:.semibold,design:.rounded)).opacity(0.6)
                 }
@@ -213,7 +235,7 @@ struct BuilderView: View {
         ForEach(0..<optionCount,id:\.self) { index in
             Button { apply(CreatorPick(part:part,index:index),at:nil) } label: {
                 VStack(spacing:2) {
-                    choiceArt(index).frame(width:87,height:83)
+                    choiceArt(index).frame(width:wide ? 87 : 72,height:wide ? 83 : 67)
                     if part == .body {
                         Text(store.t(Words.bodyKeys[index])).font(.system(size:11,weight:.bold,design:.rounded))
                     }
@@ -235,7 +257,7 @@ struct BuilderView: View {
     }
     private func sample(_ index:Int)->FantasyFriend {
         var f=friend;f.pieces=nil;f.doodles=nil;f.placements=nil;f.facePlacements=nil;f.hiddenParts=nil;f.mirroredParts=nil
-        if part == .body { f.body=BodyKind(rawValue:index) ?? .round;f.accessories=[] }
+        if part == .body { f.body=BodyKind(rawValue:index) ?? .round;f.bodySculpt=nil;f.bodyWidth=nil;f.bodyHeight=nil;f.accessories=[] }
         if part == .eyes { f.eyes=index }
         if part == .mouth { f.mouth=index }
         return f
@@ -300,7 +322,7 @@ struct BuilderView: View {
                         .frame(width:48,height:48).background(RoundedRectangle(cornerRadius:17).fill(.white))
                 }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("color"))
             } else {
-                Text(store.t(part == .paint ? "paintHint" : "creatorTouchHint"))
+                Text(store.t(part == .body ? "creatorClayHint" : part == .paint ? "paintHint" : "creatorTouchHint"))
                     .font(.system(size:12,weight:.bold,design:.rounded))
                     .padding(.horizontal,15).padding(.vertical,9).background(Capsule().fill(.white.opacity(0.9)))
             }
@@ -333,17 +355,32 @@ struct BuilderView: View {
         }
     }
     private var advancedTools:some View {
+        ScrollView {
         VStack(spacing:22) {
             HStack {Text(store.t("roomMore")).font(.title2.bold());Spacer()
                 RoundButton(icon:"xmark",label:store.t("close")) {moreTools=false}}
             CharacterView(friend:friend).frame(height:200)
+            CandyButton(title:store.t("personality"),icon:"speaker.wave.2.fill") {
+                personalityAfterMore=true;moreTools=false
+            }
+            CandyButton(title:store.t("redo"),icon:"arrow.uturn.forward") {redo();moreTools=false}
+                .disabled(future.isEmpty)
             CandyButton(title:store.t("copyPiece"),icon:"square.on.square") {duplicate();moreTools=false}
-                .disabled(selection == .mouth || selection == .body)
+                .disabled(selection == nil || selection == .mouth || selection == .body)
             CandyButton(title:store.t("mirror"),icon:"arrow.left.and.right") {mirror();moreTools=false}
-                .disabled(selection == .body)
+                .disabled(selection == nil || selection == .body)
             Text(store.t("creatorHandleHint")).font(.system(.body,design:.rounded)).multilineTextAlignment(.center)
             Spacer(minLength:0)
-        }.padding(26).background(StorybookShelf()).foregroundColor(GameStyle.ink)
+        }.padding(26).frame(maxWidth:560).frame(maxWidth:.infinity)
+        }.background(StorybookShelf()).foregroundColor(GameStyle.ink)
+    }
+    private func finishFriend() {
+        if friend.room == nil {
+            var home=RoomLayout.starter(friend.color%3)
+            home.design.wallpaper=friend.color%6
+            friend.room=home.objects;friend.roomDesign=home.design
+        }
+        if store.save(friend) {naming=false;celebration=true;store.clearEditorDraft(friend.id)}
     }
     private func beginGesture() { if transaction == nil { transaction=friend } }
     private func finishGesture() {

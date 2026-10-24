@@ -1,0 +1,9 @@
+# Creator studio artwork and integration
+
+Created with the built-in image_gen tool on 2026-10-24. Production environment saved at `FantasiVen.swiftpm/Resources/Assets.xcassets/CreatorStudioPainted.imageset/artwork.png`. The PNG is bundled locally and loaded through the shared SwiftPM/main-bundle asset loader. It replaces the old procedural room behind the editable creature. The friend, controls, paint and body deformation remain code-driven layers. No bitmap editing or resizing was applied.
+
+The returned image was viewed directly. No app screenshots, build, tests or device validation were performed.
+
+## Final prompt
+
+Use case: illustration-story. Asset type: final production background for an original children's fantasy-friend creation workshop in the offline iPad game FantasiVen. A beautifully hand-painted 2.5D storybook artist's studio, with tactile honey-colored carved wood, warm cream plaster, teal painted beams, a large softly arched window overlooking a sunlit magical forest, plush warm lighting and rich coral/plum/teal paint accents. Tiny paint jars, pencils, folded fabrics and a few rounded wooden toys sit ONLY at the far outer edges on shelves. Lower quarter is a smooth warm wooden workbench with subtle grain. The center 65% must stay open and visually calm, with a softly lit cream/teal wall and open workbench area reserved for a large dynamic creature. No easel, no objects or creature blocking the center. Same premium whimsical craftsmanship as a storybook pizza bakery and curled-roof magical village, polished family-game quality. Slightly elevated front view, square composition. NO characters, hands, text, letters, signage, watermark, logos, interface or buttons. Original architecture only. Avoid grey muted colors, busy center, flat vector shapes or a photorealistic adult room. This is a usable painted environment layer, not an app screenshot.
