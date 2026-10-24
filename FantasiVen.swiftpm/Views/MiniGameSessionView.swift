@@ -131,8 +131,20 @@ struct MiniGameSessionView: View {
         }.foregroundColor(GameStyle.ink).navigationBarHidden(true).statusBar(hidden:true)
             .onAppear {visible=true;lastTick=nil;if kind == .apples || kind == .bubbles {store.visit(kind == .apples ? .apples : .bubbles,friendID:friend.id)}}
             .onDisappear {visible=false;lastTick=nil;SoundService.shared.stopSpeech()}
-            .onChange(of:scenePhase) {_ in lastTick=nil;bubbleOffsets=[:];bubbleOrigins=[:];pinchBases=[:];heldBubble=nil]}
-            .onChange(of:paused) {_ in lastTick=nil;bubbleOffsets=[:];bubbleOrigins=[:];pinchBases=[:];heldBubble=nil]}
+            .onChange(of:scenePhase) {_ in
+                lastTick=nil
+                bubbleOffsets=[:]
+                bubbleOrigins=[:]
+                pinchBases=[:]
+                heldBubble=nil
+            }
+            .onChange(of:paused) {_ in
+                lastTick=nil
+                bubbleOffsets=[:]
+                bubbleOrigins=[:]
+                pinchBases=[:]
+                heldBubble=nil
+            }
             .onReceive(clock) {date in tick(date)}
     }
 

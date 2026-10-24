@@ -510,14 +510,28 @@ struct PizzaPourEffect:View {
                     }
                     PizzaIngredientArt(kind:kind,fillLevel:reduced ? 0.5 : max(0,1-(time-0.18)/0.62))
                         .frame(width:min(90,size.width*0.34),height:min(100,size.height*0.52))
-                        .rotationEffect(.degrees(reduced ? 60 : CreatureRig.key(time,[(0,0),(0.2,65),(0.72,65),(0.95,0)])
-                            +(kind == 0 && time>0.22 && time<0.72 ? sin(time*55)*5 : 0)),anchor:.bottomTrailing)
+                        .rotationEffect(
+                            .degrees(pourAngle(at:time)),
+                            anchor:.bottomTrailing
+                        )
                         .offset(y:reduced ? 0 : CreatureRig.key(time,[(0,18),(0.2,0),(0.75,0),(1,12)]))
                         .position(x:size.width*0.35,y:size.height*0.18)
                 }
             }
         }.accessibilityHidden(true)
     }
+    private func pourAngle(at time:Double)->Double {
+        guard !reduced else {return 60}
+        let tilt=CreatureRig.key(time,[
+            (0,0),
+            (0.2,65),
+            (0.72,65),
+            (0.95,0)
+        ])
+        let shake=kind == 0 && time>0.22 && time<0.72 ? sin(time*55)*5 : 0
+        return tilt+shake
+    }
+
 }
 
 struct PizzaHeatEffects:View {
