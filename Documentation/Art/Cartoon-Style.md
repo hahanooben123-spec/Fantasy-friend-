@@ -1,6 +1,6 @@
 # FantasiVen: cute cartoon direction
 
-User correction, 24 October 2026: the current detailed painted environments have drifted away from the supplied cute cartoon references. This document defines the direction for replacement art; it does not claim those replacements are implemented.
+User correction, 24 October 2026: the current detailed painted environments have drifted away from the supplied cute cartoon references. The replacement set is now integrated in the game. See Cartoon-Art.md for saved files and final prompts.
 
 ## Visual priorities
 
@@ -20,10 +20,12 @@ User correction, 24 October 2026: the current detailed painted environments have
 - Mixing a flat native character with highly realistic painted scenery.
 - Treating increased saturation or additional particles as a substitute for cohesive illustration.
 
-## Replacement order
+## Applied art direction
 
-1. Home environment and village buildings, with the actual customisable friend as the hero.
-2. Creator stage and shared controls in the same clean cartoon language.
-3. Room furniture, pizza props and pumpkin setting as a matched set.
+1. Home environment and five cartoon buildings, with a larger live customisable friend.
+2. Creator stage and shared controls with brighter, softer cartoon materials.
+3. All eight pizza illustrations, four room furniture layers and a new pumpkin setting.
+4. A new header mascot illustration on iPad.
+5. Softer native character shading, brighter eyes and simplified room surfaces.
 
 Keep artwork and interactive layers separate, preserve the child's saved friends and creations, and verify a representative composition at phone and iPad sizes before propagating the style to every scene.

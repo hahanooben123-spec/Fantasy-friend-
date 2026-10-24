@@ -75,6 +75,12 @@ struct HomeView:View {
     }
     private func header(tablet:Bool)->some View {
         HStack(spacing:12) {
+            if tablet {
+                VillageArtwork.image("BrandMascotCartoon").resizable().scaledToFit()
+                    .frame(width:52,height:52)
+                    .clipShape(RoundedRectangle(cornerRadius:18,style:.continuous))
+                    .accessibilityHidden(true)
+            }
             VStack(alignment:.leading,spacing:5) {
                 BrandTitle(size:tablet ? 40 : 28)
                 Text(store.t("villageInvitation")).font(.system(size:tablet ? 15 : 12,weight:.bold,design:.rounded))

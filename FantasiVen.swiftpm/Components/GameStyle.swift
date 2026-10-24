@@ -37,7 +37,7 @@ struct CandySurface: View {
                 .init(color:GameStyle.mixed(color,with:StorybookStyle.cream,amount:0.34),location:0),
                 .init(color:GameStyle.mixed(color,with:.white,amount:0.1),location:0.28),
                 .init(color:color,location:0.62),
-                .init(color:GameStyle.mixed(color,with:GameStyle.ink,amount:0.28),location:1)],
+                .init(color:GameStyle.mixed(color,with:GameStyle.ink,amount:0.17),location:1)],
                 startPoint:.topLeading,endPoint:.bottomTrailing))
             .overlay(RoundedRectangle(cornerRadius:cornerRadius).strokeBorder(
                 GameStyle.mixed(color,with:GameStyle.ink,amount:0.6),lineWidth:1.5))
@@ -48,7 +48,7 @@ struct CandySurface: View {
                 Capsule().fill(LinearGradient(colors:[.white.opacity(0.35),.clear],startPoint:.top,endPoint:.bottom))
                     .frame(height:14).padding(.horizontal,cornerRadius*0.65).padding(.top,6)
             }
-            .shadow(color:GameStyle.mixed(color,with:StorybookStyle.timber,amount:0.58),radius:0,y:4)
+            .shadow(color:GameStyle.mixed(color,with:GameStyle.ink,amount:0.30),radius:0,y:4)
             .shadow(color:GameStyle.ink.opacity(0.2),radius:6,x:0,y:7)
             .allowsHitTesting(false)
     }
@@ -104,14 +104,14 @@ enum ToyFinish {
         let r=path.boundingRect
         guard r.width>0,r.height>0 else {return}
         let key=CGPoint(x:r.minX+r.width*0.29,y:r.minY+r.height*0.22)
-        let light=GameStyle.mixed(color,with:Color(red:1,green:0.96,blue:0.83),amount:0.35)
-        let shade=GameStyle.mixed(color,with:StorybookStyle.plum,amount:0.46)
+        let light=GameStyle.mixed(color,with:Color(red:1,green:0.98,blue:0.92),amount:0.28)
+        let shade=GameStyle.mixed(color,with:StorybookStyle.plum,amount:0.24)
         context.fill(path,with:.radialGradient(Gradient(stops:[
             .init(color:light,location:0),.init(color:color,location:0.48),
             .init(color:shade,location:1)]),center:key,startRadius:0,endRadius:max(r.width,r.height)*0.88))
         var clipped=context;clipped.clip(to:path)
         clipped.stroke(path.applying(CGAffineTransform(translationX:2,y:3)),
             with:.color(.white.opacity(0.22)),lineWidth:3)
-        context.stroke(path,with:.color(GameStyle.mixed(color,with:GameStyle.ink,amount:0.66)),lineWidth:edge)
+        context.stroke(path,with:.color(GameStyle.mixed(color,with:GameStyle.ink,amount:0.48)),lineWidth:edge)
     }
 }

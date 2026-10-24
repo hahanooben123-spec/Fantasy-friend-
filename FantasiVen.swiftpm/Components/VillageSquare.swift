@@ -91,7 +91,7 @@ struct VillageSquare: View {
                 keepsakes(size:s,width:buildingWidth)
                 VStack(spacing:0) {
                     LivingFriend(friend:friend,audible:true,active:active)
-                        .frame(width:min(wide ? 180 : 155,s.width*0.37),height:wide ? 190 : 160)
+                        .frame(width:min(wide ? 230 : 180,s.width*0.43),height:wide ? 245 : 195)
                     Button(action:chooseFriend) {
                         HStack(spacing:6) {
                             Text(friend.name.isEmpty ? store.t("villageCompanion") : friend.name)

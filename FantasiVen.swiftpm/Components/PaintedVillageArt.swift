@@ -23,11 +23,11 @@ extension VillagePlace {
     // Door hinges are authored per illustration, independently of screen size.
     var illustratedDoor: CGRect {
         switch self {
-        case .studio: return CGRect(x:0.433,y:0.656,width:0.162,height:0.252)
-        case .pizza: return CGRect(x:0.447,y:0.580,width:0.164,height:0.267)
-        case .games: return CGRect(x:0.423,y:0.613,width:0.151,height:0.233)
-        case .homes: return CGRect(x:0.456,y:0.637,width:0.154,height:0.227)
-        case .pumpkins: return CGRect(x:0.400,y:0.608,width:0.156,height:0.252)
+        case .studio: return CGRect(x:0.277,y:0.561,width:0.226,height:0.335)
+        case .pizza: return CGRect(x:0.354,y:0.595,width:0.229,height:0.321)
+        case .games: return CGRect(x:0.357,y:0.608,width:0.255,height:0.325)
+        case .homes: return CGRect(x:0.416,y:0.565,width:0.166,height:0.220)
+        case .pumpkins: return CGRect(x:0.424,y:0.602,width:0.177,height:0.331)
         }
     }
 }
@@ -60,7 +60,7 @@ struct PaintedVillageBuilding: View {
                 VillageArtwork.image(place.artworkName).resizable().interpolation(.high)
                     .frame(width:size.width,height:size.height)
                     .mask(VillageDoorCutout(door:unit).fill(style:FillStyle(eoFill:true)))
-                    .shadow(color:StorybookStyle.plum.opacity(0.20),radius:5,x:2,y:5)
+                    .shadow(color:StorybookStyle.plum.opacity(0.12),radius:4,x:1,y:4)
                 // Reuse the painted door pixels, hinged in 3D; no flat replacement door.
                 VillageArtwork.image(place.artworkName).resizable().interpolation(.high)
                     .frame(width:size.width,height:size.height)
@@ -119,7 +119,7 @@ struct PaintedVillageBackdrop: View {
             ZStack {
                 VillageArtwork.image("VillageEnvironment").resizable().interpolation(.high).scaledToFill()
                     .frame(width:proxy.size.width,height:proxy.size.height).clipped()
-                Color(red:0.08,green:0.12,blue:0.29).opacity(dusk ? 0.46 : 0)
+                Color(red:0.08,green:0.12,blue:0.29).opacity(dusk ? 0.28 : 0)
                 LinearGradient(colors:[StorybookStyle.honey.opacity(dusk ? 0.03 : 0.10),.clear],
                     startPoint:.topTrailing,endPoint:.bottomLeading).blendMode(.screen)
                 if animated && !reduced {

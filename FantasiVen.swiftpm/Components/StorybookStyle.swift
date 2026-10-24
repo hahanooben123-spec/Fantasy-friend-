@@ -2,10 +2,10 @@ import SwiftUI
 
 /// The pumpkin workshop's shared materials. Character paint indices stay unchanged.
 enum StorybookStyle {
-    static let cream = Color(red: 1, green: 0.95, blue: 0.81)
-    static let honey = Color(red: 1, green: 0.70, blue: 0.22)
+    static let cream = Color(red: 1, green: 0.97, blue: 0.88)
+    static let honey = Color(red: 1, green: 0.74, blue: 0.12)
     static let timber = Color(red: 0.46, green: 0.25, blue: 0.22)
-    static let teal = Color(red: 0.08, green: 0.35, blue: 0.39)
+    static let teal = Color(red: 0.04, green: 0.49, blue: 0.56)
     static let plum = Color(red: 0.19, green: 0.12, blue: 0.26)
 }
 
@@ -17,15 +17,15 @@ struct StorybookPanel: View {
             .fill(LinearGradient(stops: [
                 .init(color: Color(red: 1, green: 0.99, blue: 0.93), location: 0),
                 .init(color: StorybookStyle.cream, location: 0.65),
-                .init(color: Color(red: 0.97, green: 0.82, blue: 0.59), location: 1)
+                .init(color: Color(red: 0.88, green: 0.95, blue: 0.94), location: 1)
             ], startPoint: .topLeading, endPoint: .bottomTrailing))
             .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .strokeBorder(StorybookStyle.timber.opacity(0.34), lineWidth: 1.5))
+                .strokeBorder(StorybookStyle.teal.opacity(0.40), lineWidth: 1.5))
             .overlay(RoundedRectangle(cornerRadius: max(4, cornerRadius-3), style: .continuous)
                 .strokeBorder(LinearGradient(colors: [.white.opacity(0.95), .white.opacity(0.08)],
                     startPoint: .top, endPoint: .bottom), lineWidth: 2).padding(3))
-            .shadow(color: StorybookStyle.timber.opacity(0.55), radius: 0, y: 3)
-            .shadow(color: StorybookStyle.plum.opacity(0.18), radius: 9, y: 7)
+            .shadow(color: StorybookStyle.teal.opacity(0.30), radius: 0, y: 3)
+            .shadow(color: StorybookStyle.plum.opacity(0.12), radius: 6, y: 5)
             .allowsHitTesting(false)
     }
 }
@@ -33,14 +33,14 @@ struct StorybookPanel: View {
 /// Edge-to-edge tool shelf, with the same wood and inlay as the workshop.
 struct StorybookShelf: View {
     var body: some View {
-        LinearGradient(colors: [StorybookStyle.cream, Color(red: 1, green: 0.90, blue: 0.71)],
+        LinearGradient(colors: [StorybookStyle.cream, Color(red: 0.86, green: 0.96, blue: 0.96)],
             startPoint: .topLeading, endPoint: .bottomTrailing)
             .overlay(alignment: .top) {
                 Rectangle().fill(LinearGradient(colors: [Color.white, StorybookStyle.honey,
-                    StorybookStyle.timber.opacity(0.65)], startPoint: .top, endPoint: .bottom)).frame(height: 6)
+                    StorybookStyle.teal.opacity(0.35)], startPoint: .top, endPoint: .bottom)).frame(height: 6)
             }
             .overlay(alignment: .bottom) {
-                Rectangle().fill(StorybookStyle.timber.opacity(0.18)).frame(height: 2)
+                Rectangle().fill(StorybookStyle.teal.opacity(0.14)).frame(height: 2)
             }
             .shadow(color: StorybookStyle.plum.opacity(0.18), radius: 8, y: -3)
             .allowsHitTesting(false)
@@ -84,13 +84,13 @@ enum StorybookScenery {
             startRadius: 0, endRadius: max(size.width, size.height)*0.75))
         // Only the outer edges shade: saturated scenery and the play area remain clear.
         c.fill(bounds, with: .linearGradient(Gradient(stops: [
-            .init(color: StorybookStyle.plum.opacity(0.15), location: 0),
+            .init(color: StorybookStyle.plum.opacity(0.06), location: 0),
             .init(color: .clear, location: 0.13), .init(color: .clear, location: 0.87),
-            .init(color: StorybookStyle.plum.opacity(0.15), location: 1)
+            .init(color: StorybookStyle.plum.opacity(0.06), location: 1)
         ]), startPoint: .zero, endPoint: CGPoint(x: size.width, y: 0)))
         c.fill(bounds, with: .linearGradient(Gradient(stops: [
             .init(color: .clear, location: 0.7),
-            .init(color: StorybookStyle.plum.opacity(0.16), location: 1)
+            .init(color: StorybookStyle.plum.opacity(0.07), location: 1)
         ]), startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)))
     }
 
@@ -145,10 +145,10 @@ struct StorybookPedestal: View {
             var side = Path(roundedRect: base, cornerRadius: s.height*0.24)
             side.addEllipse(in: base)
             c.fill(side, with: .linearGradient(Gradient(colors: [
-                Color(red: 0.76, green: 0.43, blue: 0.25), StorybookStyle.timber]),
+                Color(red: 1, green: 0.65, blue: 0.39), Color(red: 0.91, green: 0.43, blue: 0.40)]),
                 startPoint: CGPoint(x: 0, y: base.minY), endPoint: CGPoint(x: 0, y: base.maxY)))
             let top = CGRect(x: base.minX, y: s.height*0.12, width: base.width, height: s.height*0.54)
-            ToyFinish.paint(c, path: Path(ellipseIn: top), color: Color(red: 0.94, green: 0.71, blue: 0.40), edge: 1.5)
+            ToyFinish.paint(c, path: Path(ellipseIn: top), color: Color(red: 1, green: 0.85, blue: 0.48), edge: 1.5)
             c.stroke(Path(ellipseIn: top.insetBy(dx: 7, dy: 4)),
                 with: .color(StorybookStyle.cream.opacity(0.6)), lineWidth: 1.5)
             c.fill(Path(ellipseIn: CGRect(x: s.width*0.28, y: s.height*0.23, width: s.width*0.44, height: s.height*0.22)),

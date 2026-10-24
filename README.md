@@ -2,6 +2,14 @@
 
 Et originalt, lokalt iPhone-spil til børn på 3–8 år. Swift 6, SwiftUI og iOS 15+. Ingen tredjepartspakker, login, netværkskald eller køb.
 
+## Samlet nuttet cartoon-grafik
+
+De nitten tidligere malede illustrationer er udskiftet: landskab, fem huse, figurværksted, otte pizzaillustrationer samt seng, dyne, lampe og legetøjsskab. Et nyt græskarmiljø bruger turkis aftenhimmel, lilla tage og varme lys inspireret af brugerens reference. Forsiden på iPad har en ny nuttet maskotillustration. Alle 21 illustrationer er bundtet lokalt.
+
+Store runde former, klare slikfarver og enkle overflader erstatter de realistiske teksturer. Figurernes native rendering har blødere skygger, lysere øjne og større pupiller. Fælles paneler, værktøjsbakker og værelsesfarver er lysere; vennen fylder mere på torvet. Døre, låger og ovnkammer er placeret efter de nye illustrationer. Gemte venner og tegninger bruger fortsat samme data, og pizzaens indhold og græskarudskæringer er stadig dynamiske.
+
+Grafikken er lavet med det indbyggede image_gen-værktøj. Alle filplaceringer og prompts findes i [Documentation/Art/Cartoon-Art.md](Documentation/Art/Cartoon-Art.md). Ingen build, tests eller afprøvning af den kørende app er kørt i denne grafikændring efter brugerens ønske. De følgende afsnit beskriver tidligere udviklingstrin; Cartoon-Art.md beskriver det aktuelle billedsæt.
+
 ## Et levende værelse: Leg og Indret
 
 Værelset åbner i **Leg**. **Indret** bruges til at flytte, dreje, farve og ændre størrelsen på møbler. Fortryd og gentag vises kun under indretning. Tryk i indretning vælger et møbel; i leg udløses dets handling.

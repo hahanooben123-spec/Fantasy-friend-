@@ -2,12 +2,12 @@ import SwiftUI
 
 enum RoomPalette {
     static let walls:[Color]=[
-        Color(red:0.55,green:0.81,blue:0.81),Color(red:1,green:0.8,blue:0.59),
-        Color(red:0.77,green:0.67,blue:0.91),Color(red:0.98,green:0.67,blue:0.75),
-        Color(red:0.65,green:0.82,blue:0.57),Color(red:0.53,green:0.72,blue:0.91)]
+        Color(red:0.29,green:0.84,blue:0.84),Color(red:1,green:0.8,blue:0.59),
+        Color(red:0.76,green:0.65,blue:0.98),Color(red:0.98,green:0.67,blue:0.75),
+        Color(red:0.66,green:0.88,blue:0.33),Color(red:0.53,green:0.72,blue:0.91)]
     static let floors:[Color]=[
-        Color(red:0.76,green:0.49,blue:0.29),Color(red:0.93,green:0.74,blue:0.47),
-        Color(red:0.6,green:0.48,blue:0.6),Color(red:0.59,green:0.73,blue:0.69)]
+        Color(red:1,green:0.78,blue:0.52),Color(red:0.93,green:0.74,blue:0.47),
+        Color(red:0.79,green:0.71,blue:0.93),Color(red:0.59,green:0.73,blue:0.69)]
 }
 struct RoomInterior:View {
     let design:RoomDesign
@@ -17,10 +17,10 @@ struct RoomInterior:View {
             c.fill(Path(CGRect(origin:.zero,size:size)),with:.linearGradient(Gradient(colors:[
                 GameStyle.mixed(wall,with:.white,amount:0.22),wall,GameStyle.mixed(wall,with:GameStyle.ink,amount:0.16)]),
                 startPoint:.zero,endPoint:CGPoint(x:w,y:h)))
-            for row in 0..<9 {
-                for col in 0..<14 {
-                    let x=CGFloat(col)*w/13+CGFloat(row%2)*w/26,y=CGFloat(row)*h*0.07
-                    let rect=CGRect(x:x,y:y,width:5,height:5)
+            for row in 0..<5 {
+                for col in 0..<7 {
+                    let x=CGFloat(col)*w/6+CGFloat(row%2)*w/12,y=CGFloat(row)*h*0.13
+                    let rect=CGRect(x:x,y:y,width:9,height:9)
                     if design.wallpaper%3 == 0 {
                         c.fill(Path(ellipseIn:rect),with:.color(.white.opacity(0.22)))
                     } else if design.wallpaper%3 == 1 {
@@ -35,24 +35,24 @@ struct RoomInterior:View {
             }
             let floorY=h*0.58,wood=RoomPalette.floors[design.floor]
             c.fill(Path(CGRect(x:0,y:floorY,width:w,height:h-floorY)),with:.linearGradient(Gradient(colors:[
-                GameStyle.mixed(wood,with:.white,amount:0.16),wood,GameStyle.mixed(wood,with:GameStyle.ink,amount:0.22)]),
+                GameStyle.mixed(wood,with:.white,amount:0.16),wood,GameStyle.mixed(wood,with:GameStyle.ink,amount:0.10)]),
                 startPoint:CGPoint(x:0,y:floorY),endPoint:CGPoint(x:0,y:h)))
-            for i in 0..<11 {
-                let x=CGFloat(i)*w/10
+            for i in 0..<6 {
+                let x=CGFloat(i)*w/5
                 var seam=Path();seam.move(to:CGPoint(x:w/2+(x-w/2)*0.55,y:floorY))
                 seam.addLine(to:CGPoint(x:x,y:h))
-                c.stroke(seam,with:.color(GameStyle.ink.opacity(0.13)),lineWidth:1.5)
+                c.stroke(seam,with:.color(GameStyle.ink.opacity(0.05)),lineWidth:1.5)
             }
             for row in 1..<6 {
                 let y=floorY+CGFloat(row*row)/36*(h-floorY)
                 var seam=Path();seam.move(to:CGPoint(x:0,y:y));seam.addLine(to:CGPoint(x:w,y:y))
-                c.stroke(seam,with:.color(GameStyle.ink.opacity(0.12)),lineWidth:1.5)
+                c.stroke(seam,with:.color(GameStyle.ink.opacity(0.04)),lineWidth:1.5)
             }
             c.fill(Path(CGRect(x:0,y:floorY-9,width:w,height:12)),with:.color(Color(red:1,green:0.91,blue:0.7)))
             c.fill(Path(CGRect(x:0,y:floorY+3,width:w,height:3)),with:.color(GameStyle.ink.opacity(0.15)))
             let door=CGRect(x:w*0.84,y:floorY-min(160,h*0.29),width:w*0.12,height:min(160,h*0.29))
             ToyFinish.paint(c,path:Path(roundedRect:door,cornerRadius:door.width*0.4),
-                color:Color(red:0.52,green:0.31,blue:0.24),edge:2)
+                color:StorybookStyle.teal,edge:2)
             c.fill(Path(ellipseIn:CGRect(x:door.minX+door.width*0.17,y:door.midY,width:5,height:5)),
                 with:.color(StorybookStyle.honey))
             let light=CGPoint(x:w*0.48,y:h*0.16)

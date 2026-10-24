@@ -22,7 +22,7 @@ struct PaintedPizzaOven: View {
                 c.scaleBy(x:s.width/300,y:s.height/320)
                 c.draw(VillageArtwork.image("PizzaOvenPainted"),in:CGRect(x:0,y:10,width:300,height:300))
                 var chamber=c
-                chamber.clip(to:Path(roundedRect:CGRect(x:61,y:116,width:178,height:104),cornerRadius:40))
+                chamber.clip(to:Path(roundedRect:CGRect(x:82,y:140,width:136,height:87),cornerRadius:40))
                 let time=reduced ? 0 : frame.date.timeIntervalSinceReferenceDate
                 let key=CGPoint(x:150,y:208)
                 chamber.fill(Path(CGRect(x:55,y:105,width:190,height:120)),with:.radialGradient(
@@ -54,7 +54,7 @@ enum PizzaMaterialPainter {
     static func base(_ c:GraphicsContext,path:Path,color:Color,baked:Double) {
         let bounds=path.boundingRect
         let light=GameStyle.mixed(color,with:Color(red:1,green:0.97,blue:0.82),amount:0.44)
-        let shade=GameStyle.mixed(color,with:Color(red:0.62,green:0.30,blue:0.09),amount:0.23+baked*0.12)
+        let shade=GameStyle.mixed(color,with:Color(red:0.62,green:0.30,blue:0.09),amount:0.12+baked*0.10)
         c.fill(path,with:.radialGradient(Gradient(stops:[
             .init(color:light,location:0),.init(color:color,location:0.65),.init(color:shade,location:1)]),
             center:CGPoint(x:bounds.minX+bounds.width*0.35,y:bounds.minY+bounds.height*0.26),
@@ -65,7 +65,7 @@ enum PizzaMaterialPainter {
         var paint=c
         paint.clip(to:PizzaGeometry.outline(recipe))
         let warm=Color(red:0.75,green:0.39,blue:0.13)
-        for i in 0..<90 {
+        for i in 0..<24 {
             let x=CGFloat((i*73+19)%281)+10,y=CGFloat((i*47+23)%283)+14
             let radius:CGFloat=i%4 == 0 ? 3.2 : 1.3
             let r=CGRect(x:x,y:y,width:radius*2,height:radius*1.4)

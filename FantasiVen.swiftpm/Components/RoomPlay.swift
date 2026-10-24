@@ -53,15 +53,15 @@ struct PaintedRoomFurniture:View {
 private struct RoomCabinetSprite:View,Animatable {
     nonisolated var open:Double
     nonisolated var animatableData:Double {get {open} set {open=newValue}}
-    private let doors=[CGRect(x:0.123,y:0.282,width:0.370,height:0.466),
-                       CGRect(x:0.506,y:0.282,width:0.370,height:0.466)]
+    private let doors=[CGRect(x:0.140,y:0.282,width:0.350,height:0.520),
+                       CGRect(x:0.510,y:0.282,width:0.350,height:0.520)]
     var body:some View {
         GeometryReader {proxy in
             let s=proxy.size
             ZStack(alignment:.topLeading) {
                 RoundedRectangle(cornerRadius:12).fill(StorybookStyle.teal)
-                    .frame(width:s.width*0.76,height:s.height*0.48)
-                    .position(x:s.width*0.5,y:s.height*0.515)
+                    .frame(width:s.width*0.76,height:s.height*0.52)
+                    .position(x:s.width*0.5,y:s.height*0.542)
                 VillageArtwork.image("RoomToyCabinetPainted").resizable()
                     .frame(width:s.width,height:s.height)
                     .mask(CabinetMask(doors:doors).fill(style:FillStyle(eoFill:true)))
