@@ -610,7 +610,7 @@ enum PizzaGeometry {
     static func bite(_ bite:PizzaBite)->Path {
         var path=Path()
         for i in 0..<72 {
-            let a=Double(i)*Double.pi/Double(3)6
+            let a=Double(i)*Double.pi/Double(36)
             let radius=bite.radius*300*(1+0.065*cos(a*9))
             let point=CGPoint(x:bite.point.x*300+cos(a)*radius,y:bite.point.y*320+sin(a)*radius)
             if i == 0 {path.move(to:point)} else {path.addLine(to:point)}
