@@ -38,7 +38,7 @@ struct VillageJourney: View {
                 .accessibilityElement(children:.ignore)
                 .accessibilityLabel(store.t(place.titleKey))
                 .accessibilityHint(store.t("villageEnter"))
-                .accessibilityAddTraits(.isButton).accessibilityAction(perform:finish)
+                .accessibilityAddTraits(.isButton).accessibilityAction {finish()}
         }.task(id:phase) {
             guard phase == .active,!finished else {return}
             SoundService.shared.play(.click)

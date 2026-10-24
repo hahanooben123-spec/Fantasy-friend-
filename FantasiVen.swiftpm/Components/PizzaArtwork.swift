@@ -93,7 +93,7 @@ struct PizzaIllustration:View {
                         .position(x:item.point.x*frame.size.width,y:item.point.y*frame.size.height)
                 }
             }.allowsHitTesting(false)
-        }.aspectRatio(300.0/320,contentMode:.fit).accessibilityHidden(true)
+        }.aspectRatio(CGFloat(300)/CGFloat(320),contentMode:.fit).accessibilityHidden(true)
     }
     private func draw(_ c:GraphicsContext) {
         let dough=PizzaGeometry.outline(recipe)
@@ -228,7 +228,7 @@ struct PizzaMixingBowl:View {
             mask.addLine(to:CGPoint(x:300,y:320));mask.addLine(to:CGPoint(x:0,y:320));mask.closeSubpath()
             front.clip(to:mask)
             front.draw(VillageArtwork.image("PizzaBowlPainted"),in:bowlRect)
-        }.aspectRatio(300.0/320,contentMode:.fit).accessibilityHidden(true)
+        }.aspectRatio(CGFloat(300)/CGFloat(320),contentMode:.fit).accessibilityHidden(true)
     }
 }
 struct PizzaOvenArtwork:View {

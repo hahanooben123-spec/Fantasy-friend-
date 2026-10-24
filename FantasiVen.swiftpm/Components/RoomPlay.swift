@@ -51,8 +51,8 @@ struct PaintedRoomFurniture:View {
 }
 
 private struct RoomCabinetSprite:View,Animatable {
-    var open:Double
-    var animatableData:Double {get {open} set {open=newValue}}
+    nonisolated var open:Double
+    nonisolated var animatableData:Double {get {open} set {open=newValue}}
     private let doors=[CGRect(x:0.123,y:0.282,width:0.370,height:0.466),
                        CGRect(x:0.506,y:0.282,width:0.370,height:0.466)]
     var body:some View {
@@ -92,8 +92,8 @@ private struct CabinetMask:Shape {
 }
 
 struct RoomCurtains:View,Animatable {
-    var amount:Double
-    var animatableData:Double {get {amount} set {amount=newValue}}
+    nonisolated var amount:Double
+    nonisolated var animatableData:Double {get {amount} set {amount=newValue}}
     var body:some View {
         Canvas {c,s in
             c.scaleBy(x:s.width/100,y:s.height/110)

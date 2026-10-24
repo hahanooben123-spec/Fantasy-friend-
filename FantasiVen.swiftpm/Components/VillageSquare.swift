@@ -44,9 +44,9 @@ enum VillagePlace: Int, CaseIterable, Identifiable {
 /// Painted sprites and their live doors are shared between map and journey.
 struct VillageBuilding: View, Animatable {
     let place: VillagePlace
-    var opening=0.0
+    nonisolated var opening=0.0
     var tint:Color?
-    var animatableData:Double {
+    nonisolated var animatableData:Double {
         get {opening}
         set {opening=newValue}
     }
