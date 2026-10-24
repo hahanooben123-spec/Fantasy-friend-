@@ -45,7 +45,12 @@ struct AppleToy: View {
             ToyFinish.paint(context,path:body,color:Color(red:0.97,green:0.18,blue:0.29),edge:2)
             var stem = Path(); stem.move(to: CGPoint(x: 49, y: 29)); stem.addQuadCurve(to: CGPoint(x: 56, y: 7), control: CGPoint(x: 46, y: 15))
             context.stroke(stem, with: .color(Color(red: 0.45, green: 0.28, blue: 0.22)), style: StrokeStyle(lineWidth: 6, lineCap: .round))
-            context.fill(Path(ellipseIn: CGRect(x: 57, y: 9, width: 25, height: 12)), with: .color(Color(red: 0.36, green: 0.75, blue: 0.08)))
+            var leaf=Path();leaf.move(to:CGPoint(x:55,y:21))
+            leaf.addQuadCurve(to:CGPoint(x:85,y:7),control:CGPoint(x:58,y:0))
+            leaf.addQuadCurve(to:CGPoint(x:55,y:21),control:CGPoint(x:80,y:29));leaf.closeSubpath()
+            ToyFinish.paint(context,path:leaf,color:Color(red:0.42,green:0.81,blue:0.10),edge:1.2)
+            var vein=Path();vein.move(to:CGPoint(x:58,y:20));vein.addQuadCurve(to:CGPoint(x:80,y:10),control:CGPoint(x:68,y:12))
+            context.stroke(vein,with:.color(Color.white.opacity(0.45)),style:StrokeStyle(lineWidth:1.5,lineCap:.round))
             var blush=context;blush.clip(to:body)
             blush.fill(Path(ellipseIn:CGRect(x:50,y:61,width:39,height:34)),with:.radialGradient(
                 Gradient(colors:[Color.orange.opacity(0.45),.clear]),center:CGPoint(x:65,y:75),startRadius:0,endRadius:27))

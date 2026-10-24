@@ -21,9 +21,16 @@ struct AppleDrop: Identifiable {
     var drifting = false
 }
 
+struct OrchardFlower:Identifiable {
+    let id=UUID()
+    let x:Double
+    let variant:Int
+}
 struct AppleRain {
     private(set) var drops: [AppleDrop] = []
     private(set) var flowers: [Double] = []
+    private(set) var garden:[OrchardFlower]=[]
+    private var flowerSequence=0
     private(set) var caught = 0
     private(set) var streak = 0
     private(set) var goldenCaught = 0
@@ -43,6 +50,13 @@ struct AppleRain {
             spawnSequence+=1
         }
     }
+    private(set) var lastCatches:[AppleDrop]=[]
+    mutating func calmOrchard() {weatherChoice = .orchard}
+    mutating func setOrchardWind(_ enabled:Bool) {weatherChoice=enabled ? .breeze : .orchard}
+    mutating func shareFruit(at index:Int)->Int? {
+        guard fruitBasket.indices.contains(index) else {return nil}
+        return fruitBasket.remove(at:index)
+    }
     private(set) var lastFruit = 0
     private(set) var playerX = 0.5
     private var spawnClock = 1.3
@@ -54,24 +68,29 @@ struct AppleRain {
 
     /// Clamping prevents a background pause from advancing the whole game at once.
     @discardableResult
-    mutating func step(_ delta: Double, spawnX: Double, catchRadius: Double = 0.15, level:Int = 1,adventurous:Bool = false) -> Bool {
+    mutating func step(_ delta: Double, spawnX: Double, catchRadius: Double = 0.15, level:Int = 1,adventurous:Bool = false,catchY:Double = 0.745,catchHalfHeight:Double = 0.045,relaxed:Bool = false) -> Bool {
         guard delta.isFinite, delta > 0 else { return false }
         let dt = min(delta, 0.08)
+        lastCatches=[]
         time += dt
         spawnClock += dt
         let baseInterval = level == 1 ? 1.8 : level == 2 ? 1.6 : 1.3
-        let interval = baseInterval * (adventurous ? (weather == .rainbow ? 0.6 : 0.9) : 1)
-        if spawnClock >= interval && drops.count < 5 {
+        let interval = relaxed ? 2.8 : baseInterval * (adventurous ? (weather == .rainbow ? 0.6 : 0.9) : 1)
+        if spawnClock >= interval && drops.count < (relaxed ? 2 : 5) {
             spawnClock = 0
             var x = spawnX.isFinite ? min(0.83,max(0.17,spawnX)) : 0.5
+            if relaxed {
+                let spread=min(0.28,max(0.16,catchRadius*1.35))
+                x=min(0.83,max(0.17,playerX+(spawnSequence.isMultiple(of:2) ? spread : -spread)))
+            }
             if adventurous && weather == .orchard {x=[0.28,0.5,0.72][(spawnSequence/3)%3]}
             if adventurous && weather == .rainbow {x=0.18+Double(spawnSequence%5)*0.16}
-            drops.append(AppleDrop(x:x,y:adventurous ? 0.12 : -0.06,fruit:spawnSequence%3,
-                                   golden:spawnSequence%7 == 6,anchorX:x,born:time,drifting:adventurous && weather == .breeze))
+            drops.append(AppleDrop(x:x,y:relaxed ? 0.25 : adventurous ? 0.12 : -0.06,fruit:spawnSequence%3,
+                                   golden:!relaxed && spawnSequence%7 == 6,anchorX:x,born:time,drifting:adventurous && weather == .breeze))
             spawnSequence += 1
         }
         var collected = false
-        let speed = (level == 1 ? 0.16 : level == 2 ? 0.18 : 0.22) * (adventurous ? 1.1 : 1)
+        let speed = relaxed ? 0.12 : (level == 1 ? 0.16 : level == 2 ? 0.18 : 0.22) * (adventurous ? 1.1 : 1)
         for index in drops.indices {
             drops[index].y += dt * speed
             if drops[index].drifting {
@@ -80,18 +99,21 @@ struct AppleRain {
         }
         var remaining: [AppleDrop] = []
         for apple in drops {
-            if apple.y >= 0.70 && apple.y <= 0.79 && abs(apple.x - playerX) <= catchRadius {
+            if abs(apple.y-catchY) <= catchHalfHeight && abs(apple.x - playerX) <= catchRadius {
+                lastCatches.append(apple)
                 caught += 1; streak += 1; lastFruit=apple.fruit
                 if apple.golden {goldenCaught += 1}
                 fruitBasket.append(apple.fruit)
-                if fruitBasket.count > 12 { fruitBasket.removeFirst() }
+                if !relaxed && fruitBasket.count > 12 {fruitBasket.removeFirst()}
                 collected = true
                 continue
             }
             if apple.y > 0.94 {
                 streak = 0
                 flowers.append(apple.x)
-                if flowers.count > 8 { flowers.removeFirst() }
+                garden.append(OrchardFlower(x:apple.x,variant:flowerSequence%7));flowerSequence+=1
+                if flowers.count>8 {flowers.removeFirst()}
+                if garden.count>8 {garden.removeFirst()}
                 continue
             }
             remaining.append(apple)

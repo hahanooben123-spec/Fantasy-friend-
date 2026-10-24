@@ -1,5 +1,7 @@
 # Gennemgang af Grib æbler
 
+> Efterfølgende ombygning: [Apple-Game-Redesign.md](Apple-Game-Redesign.md). Fundene nedenfor gælder udgaven før ombygningen.
+
 Kodegennemgang, ikke en afprøvning på iPad eller med børn. Ingen spilændringer i denne gennemgang.
 
 ## Det, der fungerer

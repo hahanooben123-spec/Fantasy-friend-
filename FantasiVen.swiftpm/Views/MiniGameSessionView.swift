@@ -43,6 +43,13 @@ struct MiniGameSessionView: View {
     @State private var cheerUntil = 0.0
     @State private var bubbleFlash: Int?
     @State private var catchRadius = 0.15
+    @State private var orchardWind=false
+    @State private var orchardSize=CGSize(width:390,height:800)
+    @State private var orchardLandings:[OrchardLanding]=[]
+    @State private var orchardCatchTime = -10.0
+    @State private var picnicPoured=false
+    @State private var picnicPouring=false
+    @State private var lastShareTime = -10.0
     private let clock = Timer.publish(every: 1.0 / 30, on: .main, in: .common).autoconnect()
 
     private var count: Int {
@@ -62,7 +69,8 @@ struct MiniGameSessionView: View {
                 else if kind == .bubbles {bubbleField}
                 else {hidingField}
             }.disabled(paused || picnic || scenePhase != .active)
-            PlayCelebration(revision:celebration)
+            if kind != .apples {PlayCelebration(revision:celebration)}
+            if kind == .apples {orchardHUD} else {
             VStack {
                 PlayHUD(title:store.t(kind.titleKey),hint:store.t(kind.hintKey),paused:$paused)
                 HStack {
@@ -79,31 +87,13 @@ struct MiniGameSessionView: View {
                         .accessibilityLabel(store.t(kind == .hide ? "friendsFound" : kind == .apples ? "applesCaught" : "bubblesPopped"))
                         .accessibilityValue("\(count)")
                     Spacer()
-                    if kind == .apples {
-                        Button {apples.chooseNextWeather();SoundService.shared.play(.reaction)} label:{
-                            HStack(spacing:6) {
-                                Image(systemName:["leaf.fill","wind","cloud.sun.fill"][apples.weather.rawValue])
-                                Text(store.t(apples.weather.key))
-                            }.font(.system(size:12,weight:.heavy,design:.rounded))
-                                .padding(12).frame(minHeight:48).background(StorybookPanel(cornerRadius:24))
-                        }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("changeFruitWeather")).disabled(paused || picnic)
-                    }
+
                 }.padding(.horizontal,18)
                 Spacer().allowsHitTesting(false)
                 if !interacted {Text(store.t(kind == .apples ? "appleHelp" : kind == .hide ? "hideHelp" : "bubbleSwipe")).font(.system(.subheadline,design:.rounded).weight(.bold)).padding(10).background(StorybookPanel(cornerRadius:24))}
-                if kind == .apples && apples.fruitBasket.count>=6 && !picnic {
-                    Text(store.t("picnicReady")).font(.system(size:14,weight:.heavy,design:.rounded))
-                        .padding(10).background(Capsule().fill(WorkshopLook.yellow))
-                }
                 PlayDock {
                     RoundButton(icon:"arrow.counterclockwise",label:store.t("restartGame"),action:restart)
-                    if kind == .apples {
-                        movementButton(direction:-1)
-                        Spacer(minLength:0)
-                        PlayToken(symbol:"🧺",label:store.t("picnic")) {picnicShared=[];picnic=true}
-                        Spacer(minLength:0)
-                        movementButton(direction:1)
-                    } else if kind == .bubbles {
+                    if kind == .bubbles {
                         PlayToken(symbol:"🫧",label:store.t("bubbleGrow")) {bubbleScale = bubbleScale >= 1.3 ? 1 : bubbleScale+0.1}
                         Button {paletteOffset=(paletteOffset+3)%16;SoundService.shared.play(.click)} label:{
                             Circle().fill(AngularGradient(colors:[.pink,.yellow,.cyan,.purple,.pink],center:.center))
@@ -126,10 +116,14 @@ struct MiniGameSessionView: View {
                     }
                 }.disabled(paused)
             }
+            }
             if picnic {picnicOverlay}
-            if paused {PlayPauseOverlay(resume:{paused=false;lastTick=nil})}
+            if paused {
+                if kind == .apples {orchardPause}
+                else {PlayPauseOverlay(resume:{paused=false;lastTick=nil})}
+            }
         }.foregroundColor(GameStyle.ink).navigationBarHidden(true).statusBar(hidden:true)
-            .onAppear {visible=true;lastTick=nil;if kind == .apples || kind == .bubbles {store.visit(kind == .apples ? .apples : .bubbles,friendID:friend.id)}}
+            .onAppear {visible=true;lastTick=nil;if kind == .apples {apples.setOrchardWind(orchardWind)};if kind == .apples || kind == .bubbles {store.visit(kind == .apples ? .apples : .bubbles,friendID:friend.id)}}
             .onDisappear {visible=false;lastTick=nil}
             .onChange(of:scenePhase) {_ in
                 lastTick=nil
@@ -148,38 +142,112 @@ struct MiniGameSessionView: View {
             .onReceive(clock) {date in tick(date)}
     }
 
+    private var orchardHUD:some View {
+        VStack {
+            HStack(spacing:12) {
+                RoundButton(icon:"chevron.left",label:store.t("back")) {presentation.wrappedValue.dismiss()}
+                VillageCaption(title:store.t(kind.titleKey),size:24)
+                Spacer(minLength:0)
+                RoundButton(icon:paused ? "play.fill" : "pause.fill",label:store.t(paused ? "resumeGame" : "pauseGame")) {paused.toggle()}
+            }.padding(12)
+            Spacer().allowsHitTesting(false)
+            Button {picnicPoured=false;picnicPouring=false;picnicFruit=nil;picnicSignal=0;picnic=true;lastTick=nil} label:{
+                HStack(spacing:12) {
+                    OrchardBasket(fruits:Array(apples.fruitBasket.suffix(4))).frame(width:72,height:50)
+                    Text(store.t("picnic")).font(.system(size:20,weight:.heavy,design:.rounded))
+                    if !apples.fruitBasket.isEmpty {
+                        Text("\(apples.fruitBasket.count)").font(.system(size:19,weight:.black,design:.rounded))
+                            .frame(width:34,height:34).background(Circle().fill(.white))
+                    }
+                }.padding(.horizontal,20).frame(minHeight:72)
+                    .background(CandySurface(color:WorkshopLook.yellow,cornerRadius:30))
+            }.buttonStyle(SquishStyle()).disabled(paused).padding(.bottom,12)
+                .accessibilityLabel(store.t("picnic")).accessibilityValue("\(apples.fruitBasket.count)")
+        }
+    }
+    private var orchardPause:some View {
+        ZStack {
+            GameStyle.ink.opacity(0.35).ignoresSafeArea()
+            VStack(spacing:18) {
+                LivingFriend(friend:friend,active:false).frame(width:130,height:140)
+                CandyButton(title:store.t("resumeGame"),icon:"play.fill",color:StorybookStyle.teal) {paused=false;lastTick=nil}
+                Button {
+                    orchardWind.toggle();apples.setOrchardWind(orchardWind);SoundService.shared.play(.click)
+                } label:{
+                    Label(store.t(orchardWind ? "orchardCalm" : "orchardWind"),systemImage:orchardWind ? "leaf.fill" : "wind")
+                        .font(.system(size:16,weight:.heavy,design:.rounded)).frame(minHeight:48)
+                }.buttonStyle(SquishStyle())
+                Button(store.t("restartGame")) {restart();orchardWind=false;apples.calmOrchard();paused=false}
+                    .font(.system(size:16,weight:.bold,design:.rounded)).frame(minHeight:48)
+            }.padding(24).frame(maxWidth:340).background(StorybookPanel())
+        }
+    }
     private var picnicOverlay:some View {
         ZStack {
-            Color.indigo.opacity(0.38).ignoresSafeArea()
+            WorldBackdrop(world:.meadow,animated:scenePhase == .active)
             ScrollView(showsIndicators:false) {
-            VStack(spacing:14) {
-                LivingFriend(friend:friend,action:.feed,signal:picnicSignal,feedingFood:nil,active:!paused)
-                    .frame(height:180).allowsHitTesting(false)
-                Text(store.t("picnic")).font(.system(.title2,design:.rounded).weight(.heavy))
-                Text(store.t("picnicShareHint")).font(.system(.subheadline,design:.rounded).weight(.bold)).multilineTextAlignment(.center)
-                LazyVGrid(columns:Array(repeating:GridItem(.flexible(),spacing:10),count:4),spacing:12) {
-                    ForEach(Array(apples.fruitBasket.enumerated()),id:\.offset) {index,kind in
-                        Button {shareFruit(index,kind:kind)} label:{
-                            FruitArtwork(kind:kind).frame(height:56)
-                                .padding(5).background(Circle().fill(.white.opacity(0.8)))
-                                .opacity(picnicShared.contains(index) ? 0.15 : 1)
-                        }.buttonStyle(SquishStyle()).disabled(picnicShared.contains(index))
-                            .accessibilityLabel(store.t("shareFruit"))
+                VStack(spacing:16) {
+                    HStack {
+                        RoundButton(icon:"chevron.left",label:store.t("keepPlaying")) {picnic=false;lastTick=nil}
+                        VillageCaption(title:store.t("picnic"),size:27);Spacer()
                     }
-                }.padding(18).background(PicnicBlanket())
-                if apples.fruitBasket.isEmpty {Text(store.t("picnicEmpty")).font(.system(.body,design:.rounded))}
-                CandyButton(title:store.t("keepPlaying"),icon:"play.fill") {picnic=false;lastTick=nil}
-            }.padding(22).frame(maxWidth:440)
-                .background(CandySurface(color:WorkshopLook.cream,cornerRadius:36)).padding(18)
-            }.frame(maxWidth:480)
+                    LivingFriend(friend:friend,action:.feed,signal:picnicSignal,feedingFood:nil,
+                        active:scenePhase == .active,greetOnArrival:true)
+                        .frame(height:220).allowsHitTesting(false)
+                    if !picnicPoured && !apples.fruitBasket.isEmpty {
+                        Button {
+                            withAnimation(reducedMotion ? nil : .easeInOut(duration:0.65)) {picnicPouring=true}
+                            SoundService.shared.play(.bounce)
+                        } label:{
+                            VStack(spacing:10) {
+                                ZStack {
+                                    OrchardBasket(fruits:picnicPouring ? [] : Array(apples.fruitBasket.suffix(5)))
+                                        .frame(width:210,height:145)
+                                        .rotationEffect(.degrees(reducedMotion ? -12 : picnicPouring ? -75 : -12))
+                                        .offset(x:picnicPouring && !reducedMotion ? -45 : 0,y:picnicPouring && !reducedMotion ? -25 : 0)
+                                    ForEach(Array(apples.fruitBasket.suffix(6).enumerated()),id:\.offset) {index,kind in
+                                        FruitArtwork(kind:kind).frame(width:48,height:48)
+                                            .offset(x:picnicPouring ? CGFloat(index%3-1)*55 : -20,
+                                                y:picnicPouring ? CGFloat(index/3)*45+48 : 0)
+                                            .opacity(picnicPouring ? 1 : 0)
+                                    }
+                                }.frame(height:190)
+                                Label(store.t("orchardPourBasket"),systemImage:"arrow.down.circle.fill")
+                                    .font(.system(size:21,weight:.heavy,design:.rounded))
+                            }.padding(25).frame(maxWidth:.infinity).background(PicnicBlanket())
+                        }.buttonStyle(SquishStyle()).disabled(picnicPouring)
+                            .contentShape(Rectangle())
+                            .task(id:picnicPouring && scenePhase == .active) {
+                                guard picnicPouring else {return}
+                                do {try await Task.sleep(nanoseconds:750_000_000);try Task.checkCancellation()} catch {return}
+                                withAnimation(reducedMotion ? nil : .easeInOut(duration:0.2)) {picnicPoured=true;picnicPouring=false}
+                            }
+                    } else if !apples.fruitBasket.isEmpty {
+                        LazyVGrid(columns:Array(repeating:GridItem(.flexible(),spacing:12),count:4),spacing:16) {
+                            ForEach(Array(apples.fruitBasket.enumerated()),id:\.offset) {index,kind in
+                                Button {shareFruit(index,kind:kind)} label:{
+                                    FruitArtwork(kind:kind).frame(height:76).padding(7)
+                                        .background(Circle().fill(.white.opacity(0.8)))
+                                }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("shareFruit"))
+                            }
+                        }.padding(20).background(PicnicBlanket())
+                            .transition(.scale(scale:reducedMotion ? 1 : 0.8).combined(with:.opacity))
+                    } else {
+                        FlowerArtwork().frame(width:100,height:110)
+                        Text(store.t(apples.caught == 0 ? "picnicEmpty" : "orchardPicnicDone")).font(.system(size:21,weight:.heavy,design:.rounded)).multilineTextAlignment(.center)
+                    }
+                    CandyButton(title:store.t("keepPlaying"),icon:"play.fill",color:StorybookStyle.teal) {picnic=false;lastTick=nil}
+                }.padding(22).frame(maxWidth:560).frame(maxWidth:.infinity)
+            }
             if let fruit=picnicFruit,picnicSignal>0 {
-                FruitDelivery(kind:fruit,revision:picnicSignal).frame(maxWidth:440,maxHeight:550)
+                FruitDelivery(kind:fruit,revision:picnicSignal).frame(maxWidth:500,maxHeight:570).allowsHitTesting(false)
             }
         }
     }
     private func shareFruit(_ index:Int,kind:Int) {
-        guard !picnicShared.contains(index) else {return}
-        picnicShared.insert(index);picnicFruit=kind;picnicSignal+=1
+        let now=ProcessInfo.processInfo.systemUptime
+        guard now-lastShareTime>0.3,let fruit=apples.shareFruit(at:index) else {return}
+        lastShareTime=now;picnicFruit=fruit;picnicSignal+=1
         SoundService.shared.play(.munch)
     }
 
@@ -187,64 +255,68 @@ struct MiniGameSessionView: View {
         guard let fruit=apples.drops.max(by:{$0.y<$1.y}) else {return .zero}
         return CGPoint(x:min(1,max(-1,(fruit.x-apples.playerX)*4)),y:-0.7)
     }
-    private var appleField: some View {
-        GeometryReader { proxy in
-            let size = proxy.size
+    private var appleField:some View {
+        GeometryReader {proxy in
+            let size=proxy.size
+            let basket=OrchardMetrics.basketWidth(size)
+            let fruit=OrchardMetrics.fruitSize(size)
+            let age=max(0,elapsed-orchardCatchTime)
+            let bounce=reducedMotion || age>0.5 ? 0 : sin(age*Double.pi/0.5)
+            let pending=orchardLandings.filter {elapsed-$0.born<0.42}.count
             ZStack {
-                VStack {ShakingFruitCanopy(weather:apples.weather,onShake:{guard !paused && !picnic else {return};interacted=true;apples.shake();SoundService.shared.play(.bounce)}).padding(.top,65);Spacer().allowsHitTesting(false)}
-                Ellipse().fill(Color.green.opacity(0.16)).frame(width: size.width * 1.5, height: 120).position(x: size.width / 2, y: size.height * 0.99)
-                ForEach(Array(apples.flowers.enumerated()), id: \.offset) { index, x in
-                    FlowerArtwork(index:index).frame(width:32,height:38)
-                        .position(x: x * size.width, y: size.height * 0.94)
-                }
-                ForEach(apples.drops) { apple in
-                    FruitArtwork(kind:apple.fruit,golden:apple.golden).frame(width:46,height:48)
-                        .rotationEffect(.degrees(reducedMotion ? 0 : sin(apple.y * 9) * 12))
-                        .position(x: apple.x * size.width, y: apple.y * size.height)
-                        .accessibilityHidden(true)
-                }
-                CharacterView(friend:friend,happy:elapsed<cheerUntil,gaze:orchardGaze,
-                    pose:CreatureRig.sample(elapsed<cheerUntil ? .laugh : elapsed<orchardWalkUntil ? .walk : .idle,
-                        time:elapsed<cheerUntil ? max(0,elapsed-cheerUntil+0.7) : elapsed,
-                        clock:elapsed,energy:orchardDirection,reduced:reducedMotion))
-                    .scaleEffect(x:elapsed<cheerUntil ? 1.035 : 1,y:elapsed<cheerUntil ? 0.97 : 1,anchor:.bottom)
-                    .animation(reducedMotion ? nil : .spring(response:0.3,dampingFraction:0.5),value:elapsed<cheerUntil)
-                    .frame(width: min(210,size.width*0.34), height:min(225,size.width*0.37))
-                    .position(x: apples.playerX * size.width, y: size.height * 0.83)
-                    .allowsHitTesting(false)
-                BasketToy().position(x: apples.playerX * size.width, y: size.height * 0.75)
-                    .allowsHitTesting(false)
-                HStack(spacing:-3) {
-                    ForEach(Array(apples.fruitBasket.suffix(3).enumerated()),id:\.offset) {_,fruit in
-                        FruitArtwork(kind:fruit).frame(width:23,height:23)
-                    }
-                }.position(x:apples.playerX*size.width,y:size.height*0.74).allowsHitTesting(false)
-                OrchardCatchBurst(revision:apples.caught,fruit:apples.lastFruit)
-                    .frame(width:140,height:140).position(x:apples.playerX*size.width,y:size.height*0.72)
-                if elapsed < cheerUntil {
-                    FruitArtwork(kind:apples.lastFruit).frame(width:47,height:47)
-                        .position(x: apples.playerX * size.width, y: size.height * 0.57)
+                FruitCanopy(weather:apples.weather).frame(height:min(230,size.height*0.28))
+                    .position(x:size.width/2,y:size.height*0.22).allowsHitTesting(false)
+                Ellipse().fill(Color.green.opacity(0.16)).frame(width:size.width*1.5,height:100)
+                    .position(x:size.width/2,y:size.height*0.95).allowsHitTesting(false)
+                ForEach(apples.garden) {flower in
+                    OrchardBloom(index:flower.variant,time:elapsed,active:!paused && !picnic && scenePhase == .active)
+                        .frame(width:65,height:85).position(x:flower.x*size.width,y:size.height*0.88)
                         .allowsHitTesting(false)
                 }
-            }.frame(width: size.width, height: size.height)
-                .contentShape(Rectangle())
-                .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { value in
-                    guard !paused && !picnic else { return }
-                    interacted = true
-                    apples.move(to: value.location.x / max(1, size.width))
-                })
-                .onChange(of:apples.playerX) {value in
-                    orchardWalkUntil=elapsed+0.24
-                    orchardDirection=orchardGaze.x<0 ? -1 : 1
+                ForEach(apples.drops) {drop in
+                    FruitArtwork(kind:drop.fruit,golden:drop.golden).frame(width:fruit,height:fruit)
+                        .rotationEffect(.degrees(reducedMotion ? 0 : sin(elapsed*2+drop.x*8)*9))
+                        .shadow(color:GameStyle.ink.opacity(0.15),radius:4,y:5)
+                        .position(x:drop.x*size.width,y:drop.y*size.height).allowsHitTesting(false)
                 }
-                .onAppear { catchRadius = max(0.09, min(0.22, 62 / max(1, size.width))) }
-                .onChange(of: size.width) { width in catchRadius = max(0.09, min(0.22, 62 / max(1, width))) }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(store.t("appleHelp"))
-                .accessibilityAdjustableAction { direction in
-                    guard !paused && !picnic else { return }
-                    interacted = true
-                    apples.move(to: apples.playerX + (direction == .increment ? 0.12 : -0.12))
+                CharacterView(friend:friend,blink:elapsed.truncatingRemainder(dividingBy:4.2)>4.05,happy:age<1.3,gaze:orchardGaze,
+                    pose:CreatureRig.sample(age<1.3 ? .proud : elapsed<orchardWalkUntil ? .walk : .idle,
+                        time:age<1.3 ? age : elapsed,clock:elapsed,energy:orchardDirection,reduced:reducedMotion))
+                    .frame(width:OrchardMetrics.friendWidth(size),height:OrchardMetrics.friendWidth(size)*320/300)
+                    .position(x:apples.playerX*size.width,y:size.height*0.72).allowsHitTesting(false)
+                OrchardBasket(fruits:Array(apples.fruitBasket.dropLast(pending).suffix(5)))
+                    .frame(width:basket,height:basket*110/160)
+                    .scaleEffect(x:1+bounce*0.06,y:1-bounce*0.10,anchor:.bottom)
+                    .position(x:apples.playerX*size.width,y:OrchardMetrics.basketY(size)).allowsHitTesting(false)
+                ForEach(orchardLandings) {landing in
+                    OrchardLandingArt(landing:landing,time:elapsed,size:size,playerX:apples.playerX,reduced:reducedMotion)
+                }
+                OrchardCatchBurst(revision:apples.caught,fruit:apples.lastFruit)
+                    .frame(width:150,height:150).position(x:apples.playerX*size.width,y:OrchardMetrics.openingY(size))
+                if !interacted {
+                    if reducedMotion {
+                        Image(systemName:"arrow.left.and.right").font(.system(size:35,weight:.heavy))
+                            .foregroundColor(.white).shadow(color:GameStyle.purple,radius:2)
+                            .position(x:size.width*0.5,y:size.height*0.64).allowsHitTesting(false)
+                    } else {
+                        GestureLesson(activity:0,from:UnitPoint(x:0.43,y:0.78),to:UnitPoint(x:0.65,y:0.78))
+                    }
+                }
+            }.frame(width:size.width,height:size.height).contentShape(Rectangle())
+                .gesture(DragGesture(minimumDistance:0).onChanged {value in
+                    guard !paused,!picnic else {return}
+                    interacted=true
+                    let previous=apples.playerX
+                    apples.move(to:value.location.x/max(1,size.width))
+                    if abs(apples.playerX-previous)>0.001 {orchardDirection=apples.playerX>previous ? 1 : -1;orchardWalkUntil=elapsed+0.2}
+                })
+                .onAppear {orchardSize=size}
+                .onChange(of:size) {orchardSize=$0}
+                .accessibilityElement(children:.ignore).accessibilityLabel(store.t("appleHelp"))
+                .accessibilityAdjustableAction {direction in
+                    guard !paused,!picnic else {return};interacted=true
+                    orchardDirection=direction == .increment ? 1 : -1;orchardWalkUntil=elapsed+0.2
+                    apples.move(to:apples.playerX+orchardDirection*0.08)
                 }
         }
     }
@@ -438,24 +510,26 @@ struct MiniGameSessionView: View {
         if spot>0 {copy.color=(friend.color+spot*3)%16;copy.accessories.insert(spot%15)}
         return copy
     }
-    private func movementButton(direction: Double) -> some View {
-        RoundButton(icon: direction < 0 ? "arrow.left" : "arrow.right", label: store.t(direction < 0 ? "moveLeft" : "moveRight")) {
-            apples.move(to: apples.playerX + direction * 0.12)
-        }
-    }
-
     private func tick(_ date: Date) {
         guard visible, !paused, !picnic, scenePhase == .active, kind != .hide else { lastTick = nil; return }
         guard let previous = lastTick else { lastTick = date; return }
         lastTick = date
         let dt = max(0, min(0.08, date.timeIntervalSince(previous)))
+        if kind == .apples && !interacted {return}
         elapsed += dt
         surprises.removeAll {elapsed-$0.born >= $0.lifetime}
-        if kind == .apples, apples.step(dt, spawnX: Double.random(in: 0.17...0.83), catchRadius: catchRadius, level:store.settings.challengeLevel,adventurous:true) {
-            cheerUntil = elapsed + 0.7
-            SoundService.shared.play(.catchFruit)
-            if apples.caught.isMultiple(of:5) || apples.goldenCaught>lastGolden {celebration += 1}
-            lastGolden=apples.goldenCaught
+        if kind == .apples {
+            let width=max(1,orchardSize.width),height=max(1,orchardSize.height)
+            let radius=(OrchardMetrics.basketWidth(orchardSize)*0.43+OrchardMetrics.fruitSize(orchardSize)*0.20)/width
+            let caught=apples.step(dt,spawnX:Double.random(in:0.17...0.83),catchRadius:Double(radius),
+                adventurous:orchardWind,catchY:Double(OrchardMetrics.openingY(orchardSize)/height),
+                catchHalfHeight:Double((OrchardMetrics.fruitSize(orchardSize)*0.4+8)/height),relaxed:true)
+            orchardLandings.removeAll {elapsed-$0.born>0.7}
+            if caught {
+                orchardCatchTime=elapsed;cheerUntil=elapsed+0.7
+                for drop in apples.lastCatches {orchardLandings.append(OrchardLanding(drop:drop,born:elapsed))}
+                SoundService.shared.play(.catchFruit)
+            }
         }
         if bubbleFlash != nil && elapsed >= cheerUntil { bubbleFlash = nil }
     }
@@ -494,6 +568,7 @@ struct MiniGameSessionView: View {
         mergedSlots=[];bubbleSizes=[:];pinchBases=[:];heldBubble=nil;giantSize=1
         interacted = false; popTimes=[:]; surprises=[]; lastGolden=0
         picnic = false; giantBubble = false; bubbleScale = 1; clueSpot = nil; flyUntil = 0
+        orchardLandings=[];orchardCatchTime = -10;picnicPoured=false;picnicPouring=false
         elapsed = 0; cheerUntil = 0; bubbleFlash = nil; lastTick = nil
         SoundService.shared.play(.click)
     }
