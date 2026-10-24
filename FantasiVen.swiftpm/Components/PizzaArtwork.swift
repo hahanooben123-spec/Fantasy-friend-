@@ -593,7 +593,7 @@ struct PizzaBiteFlight:View {
                 .opacity(visible ? 1 : 0)
         }.task(id:revision) {
             var transaction=Transaction();transaction.disablesAnimations=true
-            withTransaction(transaction) {arrived=false;visible=true;started=Date()}
+            withTransaction(transaction) {arrived=false;visible=true}
             await Task.yield()
             withAnimation(reduced ? nil : .easeInOut(duration:0.65)) {arrived=true}
             do {try await Task.sleep(nanoseconds:650_000_000)} catch {return}

@@ -158,7 +158,6 @@ struct CreatorStage: View {
     }
     @ViewBuilder private func selectionFrame(_ selected:CreatorSelection,size:CGSize)->some View {
         let rect=CreatorGeometry.bounds(selected,friend:friend)
-        let center=screen(CGPoint(x:rect.midX,y:rect.midY),size:size)
         if selected == .body {
             bodyHandle(horizontal:true,size:size).position(screen(CGPoint(x:rect.maxX+14,y:rect.midY),size:size))
             bodyHandle(horizontal:false,size:size).position(screen(CGPoint(x:rect.midX,y:rect.maxY+12),size:size))
