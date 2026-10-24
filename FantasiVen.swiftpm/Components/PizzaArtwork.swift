@@ -180,6 +180,24 @@ struct PizzaIllustration:View {
         }
     }
 }
+/// Coordinates match the inner rim of PizzaBowlPainted, drawn in a 300 x 320 canvas.
+enum PizzaBowlLayout {
+    static let opening=CGRect(x:24,y:85,width:252,height:60)
+    static let contents=CGRect(x:43,y:106,width:214,height:43)
+    static var frontMask:Path {
+        let r=opening
+        var p=Path();p.move(to:CGPoint(x:0,y:r.midY))
+        p.addLine(to:CGPoint(x:r.minX,y:r.midY))
+        p.addCurve(to:CGPoint(x:r.midX,y:r.maxY),
+            control1:CGPoint(x:r.minX,y:r.midY+r.height*0.276),
+            control2:CGPoint(x:r.midX-r.width*0.276,y:r.maxY))
+        p.addCurve(to:CGPoint(x:r.maxX,y:r.midY),
+            control1:CGPoint(x:r.midX+r.width*0.276,y:r.maxY),
+            control2:CGPoint(x:r.maxX,y:r.midY+r.height*0.276))
+        p.addLine(to:CGPoint(x:300,y:r.midY));p.addLine(to:CGPoint(x:300,y:320))
+        p.addLine(to:CGPoint(x:0,y:320));p.closeSubpath();return p
+    }
+}
 struct PizzaMixingBowl:View {
     let recipe:PizzaRecipe
     var turn=0.0
@@ -188,53 +206,59 @@ struct PizzaMixingBowl:View {
             c.scaleBy(x:s.width/CGFloat(300),y:s.height/CGFloat(320))
             let bowlRect=CGRect(x:0,y:10,width:300,height:300)
             c.draw(VillageArtwork.image("PizzaBowlPainted"),in:bowlRect)
-            let opening=Path(ellipseIn:CGRect(x:27,y:89,width:246,height:85))
-            var fill=c;fill.clip(to:opening)
+            var fill=c;fill.clip(to:Path(ellipseIn:PizzaBowlLayout.opening))
+            let contents=Path(ellipseIn:PizzaBowlLayout.contents)
             if !recipe.ingredients.isEmpty {
-                let contents=Path(ellipseIn:CGRect(x:47,y:131,width:208,height:57))
+                // The surface is below the rim, with a soft contact shadow on the inner wall.
+                var shadow=fill;shadow.addFilter(.blur(radius:3))
+                shadow.fill(contents.applying(CGAffineTransform(translationX:0,y:3)),
+                    with:.color(StorybookStyle.plum.opacity(0.22)))
                 if recipe.ingredients.contains(1) {
-                    fill.fill(contents,with:.linearGradient(Gradient(colors:[Color(red:0.55,green:0.88,blue:0.96),Color(red:0.22,green:0.66,blue:0.81)]),
-                        startPoint:CGPoint(x:0,y:130),endPoint:CGPoint(x:0,y:180)))
-                    for i in 0..<3 {
-                        fill.stroke(Path(ellipseIn:CGRect(x:88+CGFloat(i)*13,y:142+CGFloat(i)*3,width:74,height:18)),
-                            with:.color(.white.opacity(0.45*(1-recipe.mixed))),lineWidth:1.5)
-                    }
+                    fill.fill(contents,with:.linearGradient(Gradient(colors:[
+                        Color(red:0.65,green:0.92,blue:0.98),Color(red:0.24,green:0.69,blue:0.82)]),
+                        startPoint:CGPoint(x:150,y:107),endPoint:CGPoint(x:150,y:147)))
                 }
                 if recipe.ingredients.contains(0) {
-                    var mound=Path();mound.move(to:CGPoint(x:71,y:175))
-                    mound.addQuadCurve(to:CGPoint(x:151,y:126),control:CGPoint(x:109,y:139))
-                    mound.addQuadCurve(to:CGPoint(x:231,y:175),control:CGPoint(x:187,y:133))
-                    mound.closeSubpath()
-                    fill.fill(mound,with:.linearGradient(Gradient(colors:[.white,Color(red:1,green:0.89,blue:0.67)]),
-                        startPoint:CGPoint(x:110,y:136),endPoint:CGPoint(x:160,y:178)))
+                    let flour=Path(ellipseIn:CGRect(x:57,y:108,width:190,height:39))
+                    fill.fill(flour,with:.radialGradient(Gradient(colors:[.white,Color(red:1,green:0.87,blue:0.62)]),
+                        center:CGPoint(x:140,y:116),startRadius:0,endRadius:105))
                 }
                 if recipe.ingredients.contains(2) {
                     for i in 0..<7 {
-                        let x=CGFloat((i*29)%140)+78,y=CGFloat((i*11)%23)+149
-                        let oil=Path(ellipseIn:CGRect(x:x,y:y,width:17,height:7))
+                        let x=CGFloat((i*29)%140)+78,y=CGFloat((i*11)%17)+116
+                        let oil=Path(ellipseIn:CGRect(x:x,y:y,width:15,height:5))
                         fill.fill(oil,with:.color(Color(red:1,green:0.76,blue:0.12).opacity(0.85*(1-recipe.mixed))))
                         fill.stroke(oil,with:.color(.white.opacity(0.35*(1-recipe.mixed))),lineWidth:0.8)
                     }
                 }
-                fill.fill(contents,with:.color(Color(red:1,green:0.91,blue:0.69).opacity(recipe.mixed)))
-                if recipe.mixed<1 {
-                    for i in 0..<18 {
-                        let a=Double(i)*2.4+turn*0.01,r=Double(i%5)*17
-                        let x=150+cos(a)*r,y=150+sin(a)*r*0.28
-                        fill.fill(Path(ellipseIn:CGRect(x:x,y:y,width:8,height:5)),with:.color(i%3 == 0 && recipe.ingredients.contains(1) ? .cyan.opacity(0.5) : .white.opacity(0.65)))
-                    }
+                fill.fill(contents,with:.radialGradient(Gradient(colors:[
+                    Color(red:1,green:0.95,blue:0.78).opacity(recipe.mixed),
+                    Color(red:0.93,green:0.76,blue:0.46).opacity(recipe.mixed)]),
+                    center:CGPoint(x:137,y:118),startRadius:0,endRadius:110))
+                var surface=fill;surface.clip(to:contents)
+                for i in 0..<12 {
+                    let a=Double(i)*2.4+turn*0.017,r=Double(i%5)*16
+                    let x=150+cos(a)*r,y=127+sin(a)*r*0.20
+                    surface.fill(Path(ellipseIn:CGRect(x:x,y:y,width:6,height:2.5)),
+                        with:.color(.white.opacity(0.16+0.32*(1-recipe.mixed))))
+                }
+                // Elliptical ridges follow the spoon's stirring direction even after mixing is ready.
+                for i in 0..<3 {
+                    let a=turn*0.017+Double(i)*2.1
+                    let x=150+cos(a)*Double(20+i*15),y=125+sin(a)*Double(3+i*2)
+                    var ridge=Path();ridge.move(to:CGPoint(x:x-14,y:y))
+                    ridge.addQuadCurve(to:CGPoint(x:x+13,y:y+2),control:CGPoint(x:x,y:y-4))
+                    surface.stroke(ridge,with:.color(.white.opacity(0.32)),
+                        style:StrokeStyle(lineWidth:1.5,lineCap:.round))
                 }
             }
+            // Pivot at the spoon head; the handle rises above the bowl instead of sweeping through its rim.
             var spoon=c
-            spoon.translateBy(x:155+sin(turn*0.017)*9,y:145)
-            spoon.rotate(by:.degrees(-25+sin(turn*0.02)*24))
-            spoon.draw(VillageArtwork.image("PizzaSpoonPainted"),in:CGRect(x:-55,y:-125,width:110,height:145))
-            // Front lip occludes the moving spoon head and the lower contents.
-            var front=c
-            var mask=Path();mask.move(to:CGPoint(x:0,y:112))
-            mask.addQuadCurve(to:CGPoint(x:300,y:112),control:CGPoint(x:150,y:210))
-            mask.addLine(to:CGPoint(x:300,y:320));mask.addLine(to:CGPoint(x:0,y:320));mask.closeSubpath()
-            front.clip(to:mask)
+            spoon.translateBy(x:150+sin(turn*0.017)*35,y:123+cos(turn*0.017)*8)
+            spoon.rotate(by:.degrees(-18+sin(turn*0.017)*14))
+            spoon.draw(VillageArtwork.image("PizzaSpoonPainted"),in:CGRect(x:-70,y:-108,width:140,height:140))
+            // Redraw the actual painted front rim over both contents and the submerged spoon tip.
+            var front=c;front.clip(to:PizzaBowlLayout.frontMask)
             front.draw(VillageArtwork.image("PizzaBowlPainted"),in:bowlRect)
         }.aspectRatio(CGFloat(300)/CGFloat(320),contentMode:.fit).accessibilityHidden(true)
     }

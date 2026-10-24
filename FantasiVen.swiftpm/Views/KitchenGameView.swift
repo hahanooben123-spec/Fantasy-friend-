@@ -67,7 +67,7 @@ struct KitchenGameView:View {
                     if let ingredient=pouringIngredient {
                         PizzaPourEffect(kind:ingredient,reduced:reduced)
                             .frame(width:surfaceFrame.width*0.85,height:surfaceFrame.height*0.55)
-                            .position(x:surfaceFrame.midX,y:surfaceFrame.minY+surfaceFrame.height*0.30)
+                            .position(x:surfaceFrame.midX,y:surfaceFrame.minY+surfaceFrame.height*0.205)
                             .id(pourRevision).allowsHitTesting(false)
                     }
                 }.coordinateSpace(name:"pizzaWorkshop")
@@ -80,7 +80,7 @@ struct KitchenGameView:View {
                         guard active,step == 0,pouringIngredient == ingredient else {return}
                         change {$0.ingredients.insert(ingredient)}
                         pouringIngredient=nil
-                        landingPoint=CGPoint(x:surfaceFrame.midX,y:surfaceFrame.minY+surfaceFrame.height*0.47)
+                        landingPoint=CGPoint(x:surfaceFrame.midX,y:surfaceFrame.minY+surfaceFrame.height*(127.0/320.0))
                         landingRevision+=1
                         notice(.proud);SoundService.shared.play(.reaction)
                     }
@@ -488,7 +488,9 @@ struct KitchenGameView:View {
     }
     private func bowlContains(_ point:CGPoint)->Bool {
         let p=surfacePoint(point)
-        return p.x>0.06 && p.x<0.94 && p.y>0.16 && p.y<0.79
+        // Forgiving touch target surrounds the illustrated opening, not the bowl's foot.
+        let dx=(p.x-0.5)/0.46,dy=(p.y-0.36)/0.19
+        return dx*dx+dy*dy<=1
     }
     private func startPour(_ index:Int) {
         guard step == 0,pouringIngredient == nil,!recipe.ingredients.contains(index) else {return}
@@ -620,7 +622,7 @@ private struct PizzaWorkSurface:View {
                     if targeted {
                         Canvas {c,s in
                             c.scaleBy(x:s.width/300,y:s.height/320)
-                            let path=mixing ? Path(ellipseIn:CGRect(x:30,y:106,width:240,height:80)) : PizzaGeometry.outline(recipe)
+                            let path=mixing ? Path(ellipseIn:PizzaBowlLayout.opening) : PizzaGeometry.outline(recipe)
                             c.stroke(path,with:.color(.white),style:StrokeStyle(lineWidth:3,dash:[7,4]))
                         }.allowsHitTesting(false)
                     }
