@@ -26,6 +26,7 @@ struct RoomScene:View {
     @ObservedObject var pumpkins:PumpkinStore
     var onPizza:()->Void = {}
     var onLantern:(PumpkinLantern)->Void = {_ in}
+    var fixedLayout=false
     @EnvironmentObject private var store:FriendStore
     @Environment(\.accessibilityReduceMotion) private var reduced
     @State private var blanketPreview:Double?
@@ -46,7 +47,8 @@ struct RoomScene:View {
                     RoomPlacedObject(object:shown,roomSize:size,editing:editing,selected:selected == value.id,
                         night:layout.design.night,curtainsClosed:layout.design.curtainsClosed ?? false,
                         showQuilt:editing || layout.design.sleepingBed != value.id,doodles:friend.doodles ?? [],pulse:activeID == value.id ? pulse : 0,
-                        onTap:{onTap(value)},onMove:onMove)
+                        onTap:{onTap(value)},onMove:onMove,
+                        canMove:!fixedLayout || (!editing && value.kind == RoomItem.ball.rawValue))
                         .zIndex(editing && selected == value.id ? 4000 : Double(shown.level)*1000+shown.y*100)
                 }
                 if !editing {
@@ -80,7 +82,9 @@ struct RoomScene:View {
                         .position(x:size.width*(table?.x ?? 0.76),y:size.height*(table.map {$0.y-0.055} ?? 0.82))
                         .zIndex(2250)
                 }
-                GestureLesson(activity:pulse+(selected == nil ? 0 : 1),from:UnitPoint(x:0.25,y:0.65),to:UnitPoint(x:0.4,y:0.6)).zIndex(4500)
+                if !fixedLayout {
+                    GestureLesson(activity:pulse+(selected == nil ? 0 : 1),from:UnitPoint(x:0.25,y:0.65),to:UnitPoint(x:0.4,y:0.6)).zIndex(4500)
+                }
                 if editing || layout.design.sleepingBed == nil ||
                     !layout.objects.contains(where:{$0.id == layout.design.sleepingBed}) {
                 companion(size)
@@ -183,6 +187,7 @@ struct RoomScene:View {
             .frame(width:width,height:width*320/300)
             .position(x:point.x*size.width,y:point.y*size.height)
             .simultaneousGesture(DragGesture(minimumDistance:5,coordinateSpace:.named("friendRoomScene")).onChanged {value in
+                guard !fixedLayout || !editing else {return}
                 onSelect(nil)
                 if friendOrigin == nil {friendOrigin=point}
                 guard let start=friendOrigin else {return}
@@ -190,6 +195,7 @@ struct RoomScene:View {
                     y:min(0.9,max(0.2,start.y+value.translation.height/max(1,size.height))))
                 onFriendMove(moved,false)
             }.onEnded {value in
+                guard !fixedLayout || !editing else {return}
                 let start=friendOrigin ?? point
                 let moved=CGPoint(x:min(0.9,max(0.1,start.x+value.translation.width/max(1,size.width))),
                     y:min(0.9,max(0.2,start.y+value.translation.height/max(1,size.height))))
@@ -220,6 +226,7 @@ private struct RoomPlacedObject:View {
     let pulse:Int
     let onTap:()->Void
     let onMove:(RoomObject,Bool)->Void
+    var canMove=true
     @Environment(\.accessibilityReduceMotion) private var reduced
     @EnvironmentObject private var words:FriendStore
     @State private var origin:RoomObject?
@@ -264,13 +271,14 @@ private struct RoomPlacedObject:View {
             .position(x:object.x*roomSize.width,y:object.y*roomSize.height)
             .onTapGesture(perform:onTap)
             .gesture(DragGesture(minimumDistance:5,coordinateSpace:.named("friendRoomScene")).onChanged {event in
-                guard editing || object.kind == RoomItem.ball.rawValue else {return}
+                guard canMove && (editing || object.kind == RoomItem.ball.rawValue) else {return}
                 if origin == nil {origin=object}
                 guard var next=origin else {return}
                 next.move(x:next.x+Double(event.translation.width/max(1,roomSize.width)),
                     y:next.y+Double(event.translation.height/max(1,roomSize.height)))
                 gestureValue=next;onMove(next,false)
             }.onEnded {event in
+                guard canMove else {onTap();return}
                 if var next=gestureValue {
                     if object.kind == RoomItem.ball.rawValue {
                         let dx=Double((event.predictedEndTranslation.width-event.translation.width)/max(1,roomSize.width))*0.45
@@ -286,7 +294,7 @@ private struct RoomPlacedObject:View {
             .accessibilityLabel(words.t("furniture_\(object.kind)"))
             .accessibilityAction {onTap()}
             .accessibilityAdjustableAction {direction in
-                guard editing else {return}
+                guard editing,canMove else {return}
                 var next=object;next.scale=min(1.6,max(0.6,next.sizeFactor+(direction == .increment ? 0.1 : -0.1)))
                 onMove(next,true)
             }

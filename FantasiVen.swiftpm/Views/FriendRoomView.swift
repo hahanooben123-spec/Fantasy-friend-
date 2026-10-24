@@ -1,369 +1,195 @@
 import SwiftUI
 
+private enum LittleRoomChoice:Int,CaseIterable {
+    case bed,rug,lamp,toys,picture,walls
+    var item:RoomItem {
+        switch self {case .bed:return .bed;case .rug:return .rug;case .lamp:return .lamp
+        case .toys:return .toybox;case .picture:return .picture;case .walls:return .window}
+    }
+    static func choice(for item:RoomItem)->Self {
+        allCases.first {$0.item == item} ?? .walls
+    }
+}
+
 struct FriendRoomView:View {
     @EnvironmentObject private var store:FriendStore
     @Environment(\.presentationMode) private var presentation
+    @Environment(\.accessibilityReduceMotion) private var reduced
+    @Environment(\.scenePhase) private var phase
     let friendID:UUID
     @State private var layout=RoomLayout()
-    @StateObject private var pumpkins=PumpkinStore()
-    @State private var pizzaOpen=false
-    @State private var lanternOpen:PumpkinLantern?
     @State private var loaded=false
-    @State private var selected:UUID?
-    @State private var moving:RoomObject?
-    @State private var friendPreview:CGPoint?
-    @State private var pending:RoomItem?
+    @State private var decorating=false
+    @State private var choice=LittleRoomChoice.bed
     @State private var history:[RoomLayout]=[]
-    @State private var future:[RoomLayout]=[]
-    @State private var editing=false
+    @State private var friendPreview:CGPoint?
     @State private var toyPreview:RoomPlaything?
-    @State private var category=0
-    @State private var trayOpen=false
-    @State private var trayDragged=false
-    @Environment(\.scenePhase) private var phase
-    @State private var extras=false
-    @State private var draggingItem:RoomItem?
-    @State private var dragPoint=CGPoint.zero
-    @State private var roomFrame=CGRect.zero
-    @State private var styles=false
-    @State private var colors=false
+    @State private var moving:RoomObject?
     @State private var action=PlayAction.jump
     @State private var signal=0
     @State private var activeID:UUID?
     @State private var pulse=0
     @State private var full=false
+    @StateObject private var pumpkins=PumpkinStore()
+    @State private var pizzaOpen=false
+    @State private var lanternOpen:PumpkinLantern?
+    private let paints=[9,11,6,3]
     private var friend:FantasyFriend? {store.friends.first {$0.id == friendID}}
-    private var choice:RoomObject? {layout.objects.first {$0.id == selected}}
+    private var chosenObject:RoomObject? {layout.objects.first {$0.kind == choice.item.rawValue}}
+
     var body:some View {
         GeometryReader {proxy in
-            let wide=proxy.size.width>=740
-            ZStack {
-                StorybookWorkshopWall().ignoresSafeArea()
-                VStack(spacing:0) {
-                    header(wide)
-                    if let friend=friend {
-                        if editing && trayOpen {
-                            PlayWorkspace(wide:wide,toolWidth:290,toolHeight:245) {
-                                room(friend)
-                            } tools: {tray(vertical:wide)}
-                        } else {room(friend).frame(maxWidth:.infinity,maxHeight:.infinity)}
-                        if editing {selectionTools}
-                        else {playTools}
-                    } else {
-                        Spacer()
-                        Text(store.t("roomMissing")).foregroundColor(.white).padding(30)
-                        Spacer()
-                    }
+            let large=proxy.size.width>=650
+            VStack(spacing:0) {
+                header
+                if let friend=friend {
+                    RoomScene(friend:friend,layout:layout,editing:decorating,selected:decorating ? chosenObject?.id : nil,
+                        moving:moving,friendPreview:friendPreview,action:action,signal:signal,activeID:activeID,pulse:pulse,pending:nil,
+                        onSelect:{_ in},onTap:tap,onMove:move,onFriendMove:moveFriend,
+                        onDropItem:{_,_ in},toyPreview:toyPreview,onSpawnToy:spawnToy,onMoveToy:moveToy,
+                        onUseToy:useToy,onCover:cover,pumpkins:pumpkins,onPizza:{pizzaOpen=true},onLantern:{lanternOpen=$0},fixedLayout:true)
+                        .frame(maxWidth:.infinity,maxHeight:.infinity)
+                    if decorating {decorationTray(large:large).frame(height:large ? 230 : 285)}
+                    else {playTray}
+                } else {
+                    Spacer();Text(store.t("roomMissing")).foregroundColor(.white).padding(30);Spacer()
                 }
-                if let item=draggingItem {
-                    RoomFurniture(kind:item.rawValue).frame(width:92,height:102)
-                        .shadow(color:GameStyle.ink.opacity(0.3),radius:8,x:0,y:10)
-                        .position(dragPoint).allowsHitTesting(false)
-                }
-            }.coordinateSpace(name:"roomWorkshop")
-                .onPreferenceChange(RoomSurfaceFrameKey.self) {roomFrame=$0}
+            }.background(StorybookWorkshopWall().ignoresSafeArea())
         }.foregroundColor(GameStyle.ink).navigationBarHidden(true).statusBar(hidden:true)
-            .onAppear {load();store.visit(.room,friendID:friendID);SoundService.shared.setWorld(layout.design.night ? .stars : .castle)}
-            .onChange(of:layout.design.night) {night in SoundService.shared.setWorld(night ? .stars : .castle)}
-            .onChange(of:phase) {value in if value != .active {draggingItem=nil;trayDragged=false;moving=nil;friendPreview=nil;toyPreview=nil}}
-            .task(id:draggingItem == nil && trayDragged) {
-                guard draggingItem == nil,trayDragged else {return}
-                do {try await Task.sleep(nanoseconds:220_000_000)} catch {return}
-                trayDragged=false
+            .onAppear {load();pumpkins.reload();store.visit(.room,friendID:friendID);SoundService.shared.setWorld(layout.design.night ? .stars : .castle)}
+            .onChange(of:phase) {value in
+                if value != .active {friendPreview=nil;toyPreview=nil;moving=nil}
             }
+            .onChange(of:layout.design.night) {night in SoundService.shared.setWorld(night ? .stars : .castle)}
             .fullScreenCover(isPresented:$pizzaOpen) {
-                NavigationView {KitchenGameView(friend:friend ?? store.companion)}
-                    .navigationViewStyle(.stack).environmentObject(store)
+                NavigationView {KitchenGameView(friend:friend ?? store.companion)}.navigationViewStyle(.stack).environmentObject(store)
             }
             .fullScreenCover(item:$lanternOpen) {lantern in
-                PumpkinWorkshopView(original:lantern,library:pumpkins,
-                    onGarden:{lanternOpen=nil},onClose:{lanternOpen=nil}).environmentObject(store)
+                PumpkinWorkshopView(original:lantern,library:pumpkins,onGarden:{lanternOpen=nil},onClose:{lanternOpen=nil}).environmentObject(store)
             }
-            .sheet(isPresented:$styles) {
-                RoomDesignSheet(design:layout.design,onDesign:{value in
-                    var next=layout;next.design=value;commit(next)
-                },onPreset:{index in
-                    if commit(RoomLayout.starter(index)) {selected=nil;styles=false;editing=true;action = .jump;signal+=1}
-                },onClose:{styles=false}).environmentObject(store)
-            }
-            .sheet(isPresented:$colors) {colorSheet}
-            .sheet(isPresented:$extras) {extraTools}
             .alert(store.t("error"),isPresented:Binding(get:{store.error != nil},set:{if !$0 {store.error=nil}})) {
                 Button("OK") {store.error=nil}
             } message:{Text(store.error ?? "")}
-            .task(id:full) {
-                guard full else {return}
-                do {try await Task.sleep(nanoseconds:2_800_000_000)} catch {return}
-                full=false
-            }
     }
-    private func header(_ wide:Bool)->some View {
-        HStack(spacing:6) {
-            RoundButton(icon:"chevron.left",label:store.t("close")) {presentation.wrappedValue.dismiss()}
-            if wide {Text(store.t("myRoom")).font(.system(size:20,weight:.heavy,design:.rounded)).foregroundColor(.white).lineLimit(1)}
-            if editing {
-                CreatorToolButton(mark:.undo,label:store.t("undo"),action:undo).disabled(history.isEmpty)
-                if !future.isEmpty {CreatorToolButton(mark:.redo,label:store.t("redo"),action:redo)}
+    private var header:some View {
+        HStack(spacing:10) {
+            RoundButton(icon:"chevron.left",label:store.t("back")) {presentation.wrappedValue.dismiss()}
+            if decorating {
+                RoundButton(icon:"arrow.uturn.backward",label:store.t("undo"),action:undo).disabled(history.isEmpty)
             }
             Spacer(minLength:0)
-            HStack(spacing:3) {modeButton(build:true,wide:wide);modeButton(build:false,wide:wide)}
-                .padding(3).background(StorybookPanel(cornerRadius:25))
+            RoundButton(icon:layout.design.night ? "moon.stars.fill" : "sun.max.fill",label:store.t("roomDayNight")) {
+                var next=layout;next.design.night.toggle();commit(next)
+            }
+            Button {
+                decorating.toggle();friendPreview=nil;toyPreview=nil;moving=nil
+                if !decorating {action = .hug;signal+=1}
+                SoundService.shared.play(.click)
+            } label:{
+                Label(store.t(decorating ? "done" : "roomLittleDecorate"),systemImage:decorating ? "checkmark" : "paintbrush.fill")
+                    .font(.system(size:17,weight:.heavy,design:.rounded)).padding(.horizontal,17).frame(minHeight:54)
+                    .background(CandySurface(color:StorybookStyle.honey,cornerRadius:27))
+            }.buttonStyle(SquishStyle())
         }.padding(.horizontal,10).padding(.vertical,8)
     }
-    private func modeButton(build:Bool,wide:Bool)->some View {
-        Button {
-            moving=nil;friendPreview=nil;toyPreview=nil;pending=nil;draggingItem=nil;selected=nil
-            editing=build;if !build {trayOpen=false}
-        } label:{
-            VStack(spacing:1) {
-                Image(systemName:build ? "paintbrush.fill" : "play.fill").font(.system(size:17,weight:.bold))
-                Text(store.t(build ? "roomBuild" : "roomPlayShort")).font(.system(size:11,weight:.heavy,design:.rounded))
-            }.frame(width:wide ? 74 : 58,height:46)
-                .background(Capsule().fill(editing == build ? WorkshopLook.yellow : .clear))
-        }.buttonStyle(SquishStyle()).accessibilityAddTraits(editing == build ? .isSelected : [])
-    }
-    private func room(_ friend:FantasyFriend)->some View {
-        ZStack(alignment:.top) {
-            RoomScene(friend:friend,layout:layout,editing:editing,selected:selected,moving:moving,
-                friendPreview:friendPreview,action:action,signal:signal,activeID:activeID,pulse:pulse,pending:pending,
-                onSelect:{selected=$0},onTap:tap,onMove:move,onFriendMove:moveFriend,
-                onDropItem:{item,point in add(item,at:point)},toyPreview:toyPreview,
-                onSpawnToy:spawnToy,onMoveToy:moveToy,onUseToy:useToy,onCover:cover,pumpkins:pumpkins,
-                onPizza:{pizzaOpen=true},onLantern:{lanternOpen=$0})
-            if full {
-            Text(store.t(full ? "roomFull" : editing ? (draggingItem != nil ? "roomDropHere" : choice != nil && !trayOpen ? "roomSizeHint" : "roomSimpleHint") : "roomLivingHint"))
-                .font(.system(size:12,weight:.bold,design:.rounded)).multilineTextAlignment(.center)
-                .padding(.horizontal,14).padding(.vertical,9)
-                .background(StorybookPanel(cornerRadius:24)).padding(10).allowsHitTesting(false)
-            }
-        }.background(GeometryReader {proxy in
-            Color.clear.preference(key:RoomSurfaceFrameKey.self,value:proxy.frame(in:.named("roomWorkshop")))
-        })
-    }
-    private func tray(vertical:Bool)->some View {
-        VStack(spacing:6) {
-            HStack(spacing:5) {
-                ForEach(0..<3) {index in
-                    Button {category=index;pending=nil} label:{
-                        VStack(spacing:0) {
-                            RoomFurniture(kind:[6,1,13][index]).frame(width:36,height:36)
-                            Text(store.t("roomCategory\(index)")).font(.system(size:11,weight:.heavy,design:.rounded)).lineLimit(1)
-                        }.frame(maxWidth:.infinity,minHeight:59)
-                            .background(GameChoiceSurface(selected:category == index))
-                    }.buttonStyle(SquishStyle()).accessibilityAddTraits(category == index ? .isSelected : [])
-                }
-            }.padding(.horizontal,10)
-            ScrollView(.vertical,showsIndicators:false) {
-                LazyVGrid(columns:Array(repeating:GridItem(.flexible(),spacing:8),count:vertical ? 2 : 4),spacing:10) {
-                    items(vertical:vertical)
-                }.padding(10)
-            }
-        }.padding(.top,8).background(StorybookShelf())
-    }
-    private func items(vertical:Bool)->some View {
-        ForEach(RoomItem.allCases.filter {$0.category == category},id:\.rawValue) {item in
-            Button {if !trayDragged {add(item,at:nil)}} label:{
-                VStack(spacing:0) {
-                    RoomFurniture(kind:item.rawValue).frame(height:vertical ? 76 : 47)
-                    Text(store.t(item.key)).font(.system(size:vertical ? 12 : 10,weight:.bold,design:.rounded))
-                        .lineLimit(1).minimumScaleFactor(0.7)
-                }.padding(5).frame(maxWidth:.infinity).frame(height:vertical ? 108 : 74)
-                    .background(CandySurface(color:.white,cornerRadius:20))
-            }.buttonStyle(SquishStyle()).accessibilityLabel(store.t(item.key))
-                .simultaneousGesture(DragGesture(minimumDistance:8,coordinateSpace:.named("roomWorkshop")).onChanged {value in
-                    if draggingItem == nil {
-                        if vertical {guard abs(value.translation.width)>abs(value.translation.height)*0.65 else {return}}
-                    }
-                    trayDragged=true;draggingItem=item;dragPoint=value.location
-                }.onEnded {value in
-                    defer {draggingItem=nil}
-                    guard draggingItem != nil,roomFrame.contains(value.location),roomFrame.width>0,roomFrame.height>0 else {return}
-                    let point=CGPoint(x:(value.location.x-roomFrame.minX)/roomFrame.width,
-                        y:(value.location.y-roomFrame.minY)/roomFrame.height)
-                    add(item,at:point)
-                })
-        }
-    }
-    private var selectionTools:some View {
-        VStack(spacing:5) {
-            if !trayOpen {
-                if choice != nil {roomSizeChoices}
-                else {
-                    Text(store.t("roomSimpleHint")).font(.system(size:13,weight:.bold,design:.rounded))
-                        .multilineTextAlignment(.center).frame(height:62).padding(.horizontal,16)
+    private func decorationTray(large:Bool)->some View {
+        VStack(spacing:10) {
+            LazyVGrid(columns:Array(repeating:GridItem(.flexible(),spacing:7),count:large ? 6 : 3),spacing:7) {
+                ForEach(LittleRoomChoice.allCases,id:\.rawValue) {value in
+                    Button {choice=value;SoundService.shared.play(.click)} label:{
+                        HStack(spacing:4) {
+                            RoomFurniture(kind:value.item.rawValue).frame(width:large ? 52 : 38,height:large ? 54 : 43)
+                            Text(store.t(value == .walls ? "roomLittleWalls" : value.item.key))
+                                .font(.system(size:large ? 14 : 12,weight:.heavy,design:.rounded)).lineLimit(1).minimumScaleFactor(0.75)
+                        }.frame(maxWidth:.infinity,minHeight:large ? 76 : 62)
+                            .background(GameChoiceSurface(selected:choice == value))
+                    }.buttonStyle(SquishStyle()).accessibilityAddTraits(choice == value ? .isSelected : [])
                 }
             }
-        HStack(spacing:10) {
-            if trayOpen {
-                Image(systemName:"hand.draw.fill").font(.system(size:23,weight:.bold)).foregroundColor(.white)
-                Text(store.t("roomTrayHint")).font(.system(size:12,weight:.bold,design:.rounded)).foregroundColor(.white)
-                Spacer(minLength:0)
-                simpleTool("checkmark","roomDone") {trayOpen=false}.frame(maxWidth:160)
-            } else if choice != nil {
-                simpleTool("paintpalette.fill","color") {colors=true}
-                simpleTool("tray.and.arrow.down.fill","roomPutAway") {
-                    guard let id=selected else {return}
-                    var next=layout;next.objects.removeAll {$0.id == id}
-                    if commit(next) {selected=nil}
-                }
-                simpleTool("ellipsis","roomMore") {extras=true}
-                simpleTool("plus","roomAdd") {selected=nil;trayOpen=true}
-            } else {
-                Button {trayOpen=true} label:{
-                    Label(store.t("roomAddThings"),systemImage:"plus.circle.fill")
-                        .font(.system(size:16,weight:.heavy,design:.rounded)).frame(maxWidth:.infinity,minHeight:56)
-                        .background(CandySurface(color:WorkshopLook.yellow,cornerRadius:22))
-                }.buttonStyle(SquishStyle())
-                Button {styles=true} label:{
-                    Label(store.t("roomColors"),systemImage:"paintpalette.fill")
-                        .font(.system(size:14,weight:.heavy,design:.rounded)).frame(maxWidth:.infinity,minHeight:56)
-                        .background(CandySurface(color:WorkshopLook.cream,cornerRadius:22))
-                }.buttonStyle(SquishStyle())
-            }
-        }.padding(.horizontal,12).padding(.vertical,10).frame(maxWidth:680).frame(maxWidth:.infinity)
-            }
-    }
-    private var roomSizeChoices:some View {
-        HStack(spacing:10) {
-            if let item=choice {
-                ForEach(Array([0.75,1.0,1.25].enumerated()),id:\.offset) {index,size in
-                    Button {transform {$0.scale=size}} label:{
-                        VStack(spacing:2) {
-                            RoomFurniture(kind:item.kind,tint:item.color,isOn:item.isOn)
-                                .frame(width:CGFloat(32)*CGFloat(size),height:36).frame(height:40)
-                            Text(store.t("creatorSize\(index)")).font(.system(size:11,weight:.heavy,design:.rounded))
-                        }.frame(maxWidth:.infinity,minHeight:62)
-                            .background(GameChoiceSurface(selected:abs(item.sizeFactor-size)<0.02))
-                    }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("creatorLimbSize")+" "+store.t("creatorSize\(index)"))
+            HStack(spacing:10) {
+                ForEach(0..<4) {index in
+                    Button {decorate(index)} label:{
+                        Group {
+                            if choice == .walls {
+                                RoomInterior(design:previewDesign(index)).clipShape(RoundedRectangle(cornerRadius:19))
+                            } else {
+                                RoomFurniture(kind:choice.item.rawValue,tint:paints[index],isOn:true)
+                                    .padding(5)
+                            }
+                        }.frame(height:large ? 95 : 77).frame(maxWidth:.infinity)
+                            .background(GameChoiceSurface(selected:choice == .walls ? layout.design.wallpaper == index : chosenObject?.color == paints[index],tint:GameStyle.palette[paints[index]]))
+                    }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("roomLittleLook")+" \(index+1)")
                 }
             }
-        }.frame(maxWidth:340).padding(.horizontal,12)
+        }.padding(12).background(StorybookShelf())
     }
-    private func simpleTool(_ icon:String,_ key:String,action:@escaping()->Void)->some View {
+    private var playTray:some View {
+        HStack(spacing:12) {
+            playButton("heart.fill","hug",color:GameStyle.palette[1]) {react(.hug)}
+            playButton("music.note","dance",color:GameStyle.palette[6]) {react(.dance)}
+            playButton("circle.fill","roomToy_bubbles",color:GameStyle.palette[11]) {
+                if let toy=layout.design.playthings?.first(where:{$0.kind == .bubbles}) {useToy(toy)}
+                else {spawnToy(.bubbles,CGPoint(x:0.56,y:0.82));react(.tickle)}
+            }
+        }.padding(12).frame(maxWidth:700).frame(maxWidth:.infinity)
+    }
+    private func playButton(_ icon:String,_ key:String,color:Color,action:@escaping()->Void)->some View {
         Button(action:action) {
-            VStack(spacing:3) {
-                Image(systemName:icon).font(.system(size:23,weight:.bold))
-                Text(store.t(key)).font(.system(size:12,weight:.heavy,design:.rounded)).lineLimit(1).minimumScaleFactor(0.8)
-            }.frame(maxWidth:.infinity,minHeight:55)
-                .background(CandySurface(color:WorkshopLook.cream,cornerRadius:19))
+            VStack(spacing:4) {
+                Group {
+                    if key == "roomToy_bubbles" {RoomToyArtwork(kind:.bubbles).frame(width:35,height:35)}
+                    else {Image(systemName:icon).font(.system(size:27,weight:.bold)).frame(height:35)}
+                }
+                Text(store.t(key)).font(.system(size:14,weight:.heavy,design:.rounded))
+            }.frame(maxWidth:.infinity,minHeight:72).background(CandySurface(color:color,cornerRadius:24))
         }.buttonStyle(SquishStyle())
     }
-    private var extraTools:some View {
-        ScrollView {
-            VStack(spacing:20) {
-                HStack {
-                    Text(store.t("roomMore")).font(.system(.title,design:.rounded).weight(.heavy))
-                    Spacer();RoundButton(icon:"xmark",label:store.t("close")) {extras=false}
-                }
-                if let choice=choice {RoomFurniture(kind:choice.kind,tint:choice.color).frame(width:150,height:165)}
-                LazyVGrid(columns:[GridItem(.flexible()),GridItem(.flexible())],spacing:14) {
-                    simpleTool("square.on.square","copyPiece") {duplicate()}
-                    simpleTool("arrow.left.and.right","roomMirror") {transform {$0.mirrored = !($0.mirrored ?? false)}}
-                    simpleTool("rotate.right","roomRotate") {transform {$0.rotation=$0.angle>=150 ? -180 : $0.angle+30}}
-                    simpleTool("square.3.layers.3d","roomFront") {transform {$0.layer=2}}
-                    simpleTool("square.3.layers.3d.bottom.filled","roomBack") {transform {$0.layer = -1}}
-                }
-            }.padding(24)
-        }.background(StorybookShelf())
-    }
-    private var playTools:some View {
-        HStack(spacing:12) {
-            simpleTool("heart.fill","hug") {react(.hug)}
-            simpleTool("music.note","dance") {react(.dance)}
-            simpleTool("tray.and.arrow.down.fill","roomTidyToys") {putAwayToys()}
-            simpleTool("sun.max.fill","roomDayNight") {var next=layout;next.design.night.toggle();commit(next)}
-        }.padding(12).frame(maxWidth:620).frame(maxWidth:.infinity)
-    }
-    private var colorSheet:some View {
-        VStack(spacing:20) {
-            HStack {
-                Text(store.t("color")).font(.system(.title,design:.rounded).weight(.heavy))
-                Spacer();RoundButton(icon:"xmark",label:store.t("close")) {colors=false}
-            }
-            if let choice=choice {RoomFurniture(kind:choice.kind,tint:choice.color,isOn:choice.isOn).frame(width:150,height:165)}
-            LazyVGrid(columns:Array(repeating:GridItem(.flexible()),count:4),spacing:16) {
-                ForEach(0..<16) {index in
-                    Button {transform {$0.color=index};colors=false} label:{
-                        Circle().fill(GameStyle.palette[index]).frame(width:48,height:48)
-                            .overlay(Circle().stroke(choice?.color == index ? GameStyle.ink : .white,lineWidth:3))
-                    }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("color")+" \(index+1)")
-                }
-            }
-            Spacer(minLength:0)
-        }.padding(26).background(StorybookShelf())
+    private func previewDesign(_ index:Int)->RoomDesign {var next=layout.design;next.wallpaper=index;next.floor=index%4;return next}
+    private func decorate(_ index:Int) {
+        var next=layout
+        if choice == .walls {next.design=previewDesign(index)}
+        else if let i=next.objects.firstIndex(where:{$0.kind == choice.item.rawValue}) {
+            next.objects[i].color=paints[index];activeID=next.objects[i].id;pulse+=1
+        }
+        if commit(next) {action = .hug;signal+=1}
     }
     private func load() {
-        guard !loaded,let friend=friend else {return}
-        loaded=true
-        if let objects=friend.room {layout=RoomLayout(objects:objects,design:friend.roomDesign ?? RoomDesign())}
-        else {
-            let starter=RoomLayout.starter(0)
-            if persist(starter) {layout=starter}
-        }
+        guard !loaded,let friend=friend else {return};loaded=true
+        let saved=RoomLayout(objects:friend.room ?? [],design:friend.roomDesign ?? RoomDesign())
+        // Keep every saved object, its identity and appearance. Only arrange it on fixed places.
+        layout=saved.forLittleHands()
+        if friend.room == nil {persist(layout)}
     }
     @discardableResult private func persist(_ next:RoomLayout)->Bool {
         guard var current=friend else {return false}
-        current.room=next.objects;current.roomDesign=next.design
-        return store.save(current)
+        current.room=next.objects;current.roomDesign=next.design;return store.save(current)
     }
-    @discardableResult private func commit(_ proposed:RoomLayout)->Bool {
-        var next=proposed
-        if let bed=next.design.sleepingBed,!next.objects.contains(where:{$0.id == bed && $0.kind == RoomItem.bed.rawValue}) {next.design.sleepingBed=nil}
+    @discardableResult private func commit(_ next:RoomLayout)->Bool {
         guard next != layout else {return true}
         guard persist(next) else {return false}
-        history.append(layout);if history.count>50 {history.removeFirst()}
-        future=[];layout=next;SoundService.shared.play(.click);return true
+        history.append(layout);if history.count>40 {history.removeFirst()}
+        withAnimation(reduced ? nil : .spring(response:0.4,dampingFraction:0.8)) {layout=next}
+        SoundService.shared.play(.click);return true
     }
     private func undo() {
         guard let previous=history.last,persist(previous) else {return}
-        future.append(layout);layout=previous;history.removeLast()
-        moving=nil;friendPreview=nil;toyPreview=nil;selected=nil
+        history.removeLast();layout=previous;friendPreview=nil;toyPreview=nil
     }
-    private func redo() {
-        guard let next=future.last,persist(next) else {return}
-        history.append(layout);layout=next;future.removeLast()
-        moving=nil;friendPreview=nil;toyPreview=nil;selected=nil
-    }
-    private func add(_ item:RoomItem,at point:CGPoint?) {
-        pending=nil
-        guard layout.objects.count<32 else {full=true;return}
-        var next=layout
-        let slot=Double(next.objects.count%4)
-        var value=RoomObject(kind:item.rawValue,x:0.25+slot*0.16,y:item.isWall ? 0.32 : 0.73)
-        if let point=point {value.move(x:Double(point.x),y:Double(point.y))}
-        next.objects.append(value)
-        if commit(next) {selected=value.id;if point == nil {trayOpen=false}}
+    private func tap(_ value:RoomObject) {
+        if decorating {choice=LittleRoomChoice.choice(for:RoomItem(rawValue:value.kind) ?? .window);SoundService.shared.play(.click)}
+        else {use(value)}
     }
     private func move(_ value:RoomObject,_ finished:Bool) {
-        selected=value.id
-        guard finished else {moving=value;return}
-        defer {moving=nil}
+        guard !decorating,value.kind == RoomItem.ball.rawValue else {return}
+        guard finished else {moving=value;return};defer {moving=nil}
         guard let i=layout.objects.firstIndex(where:{$0.id == value.id}) else {return}
         var next=layout;next.objects[i]=value;commit(next)
     }
     private func moveFriend(_ point:CGPoint,_ finished:Bool) {
+        guard !decorating else {return}
         guard finished else {friendPreview=point;return}
-        var next=layout;next.design.friendX=Double(point.x);next.design.friendY=Double(point.y)
-        next.design.sleepingBed=nil
+        var next=layout;next.design.friendX=Double(point.x);next.design.friendY=Double(point.y);next.design.sleepingBed=nil
         if commit(next) {action = .hug;signal+=1};friendPreview=nil
-    }
-    private func tap(_ value:RoomObject) {
-        pending=nil
-        if editing {
-            selected=value.id
-            SoundService.shared.play(.click)
-        } else {use(value)}
-    }
-    private func transform(_ update:(inout RoomObject)->Void) {
-        guard let selected=selected,let i=layout.objects.firstIndex(where:{$0.id == selected}) else {return}
-        var next=layout;update(&next.objects[i]);commit(next)
-    }
-    private func duplicate() {
-        guard var value=choice else {return}
-        guard layout.objects.count<32 else {full=true;return}
-        value.id=UUID();value.move(x:value.x+0.1,y:value.y+0.04)
-        var next=layout;next.objects.append(value)
-        if commit(next) {selected=value.id}
     }
     private func use(_ value:RoomObject) {
         activeID=value.id;pulse+=1
@@ -406,6 +232,7 @@ struct FriendRoomView:View {
         if commit(next) {action=value;signal+=1}
     }
     private func spawnToy(_ kind:RoomToyKind,_ point:CGPoint) {
+        if kind != .blocks,let existing=layout.design.playthings?.first(where:{$0.kind == kind}) {useToy(existing);return}
         var next=layout
         var toys=next.design.playthings ?? []
         guard toys.count<24 else {full=true;return}

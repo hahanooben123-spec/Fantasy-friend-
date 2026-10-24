@@ -107,6 +107,31 @@ struct RoomLayout:Equatable {
     }
 }
 
+// Stable furniture anchors remove placement, size and rotation decisions for small children.
+extension RoomLayout {
+    func forLittleHands()->RoomLayout {
+        var next=self
+        let anchors:[(Double,Double)]=[
+            (0.22,0.69),(0.12,0.49),(0.84,0.54),(0.15,0.42),(0.51,0.84),(0.57,0.28),
+            (0.29,0.70),(0.69,0.72),(0.39,0.81),(0.22,0.29),(0.50,0.20),(0.74,0.32),
+            (0.83,0.77),(0.54,0.87),(0.69,0.67),(0.88,0.42),(0.59,0.78),(0.47,0.36)]
+        for kind in [RoomItem.bed,.rug,.lamp,.toybox,.picture,.window] where
+            !next.objects.contains(where:{$0.kind == kind.rawValue}) && next.objects.count<32 {
+            next.objects.append(RoomObject(kind:kind.rawValue,x:0.5,y:0.5))
+        }
+        var seen:[Int:Int]=[:]
+        for i in next.objects.indices {
+            let kind=next.objects[i].kind
+            guard anchors.indices.contains(kind) else {continue}
+            let duplicate=seen[kind,default:0];seen[kind]=duplicate+1
+            let anchor=anchors[kind]
+            next.objects[i].move(x:anchor.0+Double(duplicate%2)*0.05,y:anchor.1-Double(duplicate)*0.035)
+            next.objects[i].rotation=0;next.objects[i].scale=kind == RoomItem.rug.rawValue ? 1.2 : 1
+        }
+        return next
+    }
+}
+
 struct KitchenRecipe {
     private(set) var ingredients: [Int] = []
     var flavor: Int { ingredients.reduce(0, +) % 3 }

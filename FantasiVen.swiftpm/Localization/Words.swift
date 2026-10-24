@@ -138,6 +138,9 @@ enum Words {
 
         "pizzaEndlessToppings": ("Fyld på! Du bestemmer hvor meget.", "Pile it on! You choose how much."),
 
+        "roomLittleDecorate": ("Pynt", "Decorate"),
+        "roomLittleWalls": ("Vægge", "Walls"),
+        "roomLittleLook": ("Vælg dette udseende", "Choose this look"),
         "roomOpenLantern": ("Leg videre med dit græskar", "Play with your pumpkin"),
         "roomTastePizza": ("Smag din pizza", "Taste your pizza"),
         "pizzaMoveToppings": ("Flyt", "Move"),
