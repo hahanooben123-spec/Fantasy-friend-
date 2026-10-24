@@ -148,6 +148,8 @@ enum Words {
         "creatorExtraGroup2": ("Bagpå", "Behind"),
         "creatorRename": ("Skift navn", "Change name"),
         "creatorReady": ("Min ven er klar!", "My friend is ready!"),
+        "orchardStreak": ("I træk", "In a row"),
+        "orchardRecord": ("Rekord", "Best streak"),
         "orchardWind": ("Prøv lidt vind", "Try a little breeze"),
         "orchardCalm": ("Rolige frugter", "Calm fruit"),
         "orchardPourBasket": ("Hæld frugterne ud!", "Pour out the fruit!"),

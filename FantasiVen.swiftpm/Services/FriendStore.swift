@@ -80,6 +80,10 @@ final class FriendStore: ObservableObject {
     @discardableResult func savePizzaDraft(_ draft:PizzaDraft)->Bool {
         updateSessions {$0.pizza=draft;$0.recent=ActivityBookmark(kind:.pizza,friendID:draft.companion.id)}
     }
+    @discardableResult func recordAppleStreak(_ streak:Int)->Bool {
+        guard streak>(sessions.appleBestStreak ?? 0) else {return true}
+        return updateSessions {$0.appleBestStreak=streak}
+    }
     func visit(_ kind:ActivityKind,friendID:UUID?=nil) {
         updateSessions {
             $0.recent=ActivityBookmark(kind:kind,friendID:friendID)

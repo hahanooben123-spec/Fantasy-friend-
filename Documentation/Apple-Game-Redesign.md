@@ -51,3 +51,23 @@ and hide-and-seek interfaces remain on their shared HUD.
 
 No build, tests or simulator run was performed. Visual layout is not claimed verified
 on a real iPad.
+
+
+## Saved streak and gradual speed
+
+The HUD shows the current streak and the app-wide best streak. A fruit that passes
+the catch window resets the current streak once, while it continues falling into
+a flower. The simulation records the highest streak immediately on each catch,
+including multiple catches in one frame. FriendStore saves a higher record through
+the existing atomic sessions.json writer; unchanged/lower scores do not write. The
+optional appleBestStreak field keeps older session archives readable. Restart resets
+the current run and its speed, and preserves the saved record.
+
+After the first 15 active seconds, relaxed play gradually increases fall speed from
+0.12 to 0.22 scene-heights per second, and decreases spawn spacing from 2.8 to 1.5
+seconds. The ramp reaches its cap at 180 active seconds. The concurrent fruit limit
+rises from two to three during that ramp. Waiting for the first gesture, pausing,
+app inactivity and picnic do not advance simulation time or difficulty.
+
+On short landscape screens both counters share the top row, keeping the extra
+score row out of the falling-fruit area. No build or tests run for this change.

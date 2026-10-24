@@ -124,8 +124,9 @@ struct MiniGameSessionView: View {
             }
         }.foregroundColor(GameStyle.ink).navigationBarHidden(true).statusBar(hidden:true)
             .onAppear {visible=true;lastTick=nil;if kind == .apples {apples.setOrchardWind(orchardWind)};if kind == .apples || kind == .bubbles {store.visit(kind == .apples ? .apples : .bubbles,friendID:friend.id)}}
-            .onDisappear {visible=false;lastTick=nil}
-            .onChange(of:scenePhase) {_ in
+            .onDisappear {visible=false;lastTick=nil;if kind == .apples {store.recordAppleStreak(apples.bestStreak)}}
+            .onChange(of:scenePhase) {phase in
+                if kind == .apples && phase != .active {store.recordAppleStreak(apples.bestStreak)}
                 lastTick=nil
                 bubbleOffsets=[:]
                 bubbleOrigins=[:]
@@ -148,8 +149,18 @@ struct MiniGameSessionView: View {
                 RoundButton(icon:"chevron.left",label:store.t("back")) {presentation.wrappedValue.dismiss()}
                 VillageCaption(title:store.t(kind.titleKey),size:24)
                 Spacer(minLength:0)
+                if orchardSize.height<520 {
+                    orchardScore(store.t("orchardStreak"),value:apples.streak,record:false).frame(width:112)
+                    orchardScore(store.t("orchardRecord"),value:store.sessions.appleBestStreak ?? 0,record:true).frame(width:112)
+                }
                 RoundButton(icon:paused ? "play.fill" : "pause.fill",label:store.t(paused ? "resumeGame" : "pauseGame")) {paused.toggle()}
             }.padding(12)
+            if orchardSize.height>=520 {
+                HStack(spacing:12) {
+                    orchardScore(store.t("orchardStreak"),value:apples.streak,record:false)
+                    orchardScore(store.t("orchardRecord"),value:store.sessions.appleBestStreak ?? 0,record:true)
+                }.padding(.horizontal,18).frame(maxWidth:500)
+            }
             Spacer().allowsHitTesting(false)
             Button {picnicPoured=false;picnicPouring=false;picnicFruit=nil;picnicSignal=0;picnic=true;lastTick=nil} label:{
                 HStack(spacing:12) {
@@ -164,6 +175,19 @@ struct MiniGameSessionView: View {
             }.buttonStyle(SquishStyle()).disabled(paused).padding(.bottom,12)
                 .accessibilityLabel(store.t("picnic")).accessibilityValue("\(apples.fruitBasket.count)")
         }
+    }
+    private func orchardScore(_ title:String,value:Int,record:Bool)->some View {
+        HStack(spacing:8) {
+            if record {Image(systemName:"trophy.fill").font(.system(size:24,weight:.bold)).foregroundColor(Color.orange)}
+            else {FruitArtwork().frame(width:26,height:28)}
+            VStack(alignment:.leading,spacing:1) {
+                Text(title).font(.system(size:12,weight:.heavy,design:.rounded))
+                Text("\(value)").font(.system(size:23,weight:.black,design:.rounded)).monospacedDigit()
+            }
+            Spacer(minLength:0)
+        }.padding(.horizontal,12).frame(maxWidth:.infinity,minHeight:57)
+            .background(StorybookPanel(cornerRadius:22))
+            .accessibilityElement(children:.ignore).accessibilityLabel(title).accessibilityValue("\(value)")
     }
     private var orchardPause:some View {
         ZStack {
@@ -526,6 +550,7 @@ struct MiniGameSessionView: View {
                 catchHalfHeight:Double((OrchardMetrics.fruitSize(orchardSize)*0.4+8)/height),relaxed:true)
             orchardLandings.removeAll {elapsed-$0.born>0.7}
             if caught {
+                store.recordAppleStreak(apples.bestStreak)
                 orchardCatchTime=elapsed;cheerUntil=elapsed+0.7
                 for drop in apples.lastCatches {orchardLandings.append(OrchardLanding(drop:drop,born:elapsed))}
                 SoundService.shared.play(.catchFruit)

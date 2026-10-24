@@ -34,5 +34,6 @@ struct PlaySessions:Codable,Equatable {
     var pizza:PizzaDraft?
     var recent:ActivityBookmark?
     var companionID:UUID?
-    var isValid:Bool {version == 1 && (editor?.friend.isValid ?? true) && (pizza?.isValid ?? true)}
+    var appleBestStreak:Int?
+    var isValid:Bool {version == 1 && (appleBestStreak.map {$0>=0} ?? true) && (editor?.friend.isValid ?? true) && (pizza?.isValid ?? true)}
 }
