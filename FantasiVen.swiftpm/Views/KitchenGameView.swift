@@ -43,19 +43,16 @@ struct KitchenGameView:View {
     var body:some View {
         AdventureGameShell(kind:.kitchen) {active in
             GeometryReader {proxy in
-                let wide=proxy.size.width>=740
+                let wide=proxy.size.width>=900 && proxy.size.width>proxy.size.height
+                let large=proxy.size.width>=650
                 ZStack {
                     PizzaKitchenBackdrop()
                     VStack(spacing:8) {
                         phaseRibbon
-                        PlayWorkspace(wide:wide,toolWidth:300,toolHeight:panelHeight) {
+                        PlayWorkspace(wide:wide,toolWidth:min(440,max(350,proxy.size.width*0.38)),toolHeight:panelHeight(large:large)) {
                             stage
                         } tools: {
-                            if wide {
-                                ScrollView(.vertical,showsIndicators:false) {
-                                    controls.fixedSize(horizontal:false,vertical:true)
-                                }.background(StorybookShelf())
-                            } else {controls}
+                            controls(large:large,side:wide)
                         }
                     }.padding(.top,77).padding(.horizontal,4)
                     if step == 0 && recipe.ingredients.isEmpty && pouringIngredient == nil {
@@ -237,11 +234,12 @@ struct KitchenGameView:View {
             }
         }.accessibilityElement(children:.combine)
     }
-    private var panelHeight:CGFloat {
-        if served {return 112}
+    private func panelHeight(large:Bool)->CGFloat {
+        if served {return 170}
         if step == 3 {return 155}
-        if step == 0 {return 250}
-        return 300
+        if step == 0 {return large ? 295 : 270}
+        if tool == .shape || tool == .toppings {return large ? 365 : 415}
+        return large ? 325 : 305
     }
     private var instruction:String {
         if step == 0 {return pouringIngredient != nil ? "pizzaPouring" : recipe.ingredients.count == 3 ? "pizzaQuickStir" : "pizzaMixHint"}
@@ -308,38 +306,45 @@ struct KitchenGameView:View {
         companionFocus=CGPoint(x:min(1,max(-1,(point.x-0.15)*2)),y:min(1,max(-1,(point.y-0.8)*2)))
     }
     private func notice(_ moment:CompanionMoment) {companionMoment=moment;companionSignal+=1}
-    private var controls:some View {
-        VStack(spacing:9) {
-            Text(store.t(instruction)).font(.system(size:14,weight:.bold,design:.rounded))
-                .multilineTextAlignment(.center).fixedSize(horizontal:false,vertical:true)
-            if step == 0 {
-                HStack(spacing:8) {
-                    ForEach(0..<3) {index in
-                        Button {startPour(index)} label:{
-                            VStack(spacing:3) {
-                                PizzaIngredientArt(kind:index).frame(width:42,height:48)
-                                Text(store.t("pizzaIngredient\(index)")).font(.system(size:12,weight:.heavy,design:.rounded))
-                            }.frame(maxWidth:.infinity,minHeight:80)
-                                .background(GameChoiceSurface(selected:recipe.ingredients.contains(index),tint:GameStyle.palette[11]))
-                        }.buttonStyle(SquishStyle()).disabled(recipe.ingredients.contains(index) || pouringIngredient != nil)
-                            .highPriorityGesture(dragGesture(.ingredient(index)))
+    private func controls(large:Bool,side:Bool)->some View {
+        VStack(spacing:10) {
+            ScrollView(.vertical,showsIndicators:true) {
+                VStack(spacing:12) {
+                    Text(store.t(instruction)).font(.system(size:large ? 17 : 14,weight:.bold,design:.rounded))
+                        .multilineTextAlignment(.center).fixedSize(horizontal:false,vertical:true)
+                    if step == 0 {
+                        HStack(spacing:10) {
+                            ForEach(0..<3) {index in
+                                Button {startPour(index)} label:{
+                                    VStack(spacing:5) {
+                                        PizzaIngredientArt(kind:index).frame(width:large ? 74 : 54,height:large ? 85 : 60)
+                                        Text(store.t("pizzaIngredient\(index)"))
+                                            .font(.system(size:large ? 16 : 14,weight:.heavy,design:.rounded))
+                                    }.frame(maxWidth:.infinity,minHeight:large ? 128 : 100)
+                                        .background(GameChoiceSurface(selected:recipe.ingredients.contains(index),tint:GameStyle.palette[11]))
+                                }.buttonStyle(SquishStyle()).disabled(recipe.ingredients.contains(index) || pouringIngredient != nil)
+                                    .highPriorityGesture(dragGesture(.ingredient(index)))
+                            }
+                        }
+                    } else if step == 1 {
+                        toolTabs(large:large,side:side)
+                        if tool == .shape {shapeTray(large:large,side:side)}
+                        else if tool == .sauce {
+                            Button(action:assist) {
+                                Label(store.t("pizzaSpreadHelp"),systemImage:"paintbrush.fill")
+                                    .font(.system(size:large ? 18 : 15,weight:.heavy,design:.rounded))
+                                    .frame(maxWidth:.infinity,minHeight:large ? 85 : 65)
+                                    .background(CandySurface(color:.white,cornerRadius:22))
+                            }.buttonStyle(SquishStyle())
+                        } else {decorationTray(large:large,side:side)}
+                    } else if !served {
+                        ProgressView(value:baked).tint(.orange)
+                    } else {
+                        CandyButton(title:store.t("pizzaAgain"),icon:"arrow.clockwise",color:.orange,action:reset)
                     }
-                }
-            } else if step == 1 {
-                toolTabs
-                if tool == .shape {shapeTray}
-                else if tool == .sauce {
-                    Button(action:assist) {
-                        Label(store.t("pizzaSpreadHelp"),systemImage:"paintbrush.fill")
-                            .font(.system(size:15,weight:.heavy,design:.rounded)).frame(maxWidth:.infinity,minHeight:56)
-                            .background(CandySurface(color:.white,cornerRadius:18))
-                    }.buttonStyle(SquishStyle())
-                } else {decorationTray}
-            } else if !served {
-                ProgressView(value:baked).tint(.orange)
-            } else {
-                CandyButton(title:store.t("pizzaAgain"),icon:"arrow.clockwise",color:.orange,action:reset)
+                }.padding(.horizontal,3).padding(.top,3).padding(.bottom,6)
             }
+            // Navigation stays visible even when a smaller screen needs to scroll the choices.
             if !served {
                 HStack(spacing:10) {
                     if step == 1 {
@@ -357,12 +362,11 @@ struct KitchenGameView:View {
         }.padding(14).frame(maxWidth:.infinity,maxHeight:.infinity)
             .background(StorybookShelf())
     }
-    private var toolTabs:some View {
-        HStack(spacing:5) {
+    private func toolTabs(large:Bool,side:Bool)->some View {
+        LazyVGrid(columns:Array(repeating:GridItem(.flexible(),spacing:8),count:4),spacing:8) {
             ForEach(PizzaWorkTool.allCases,id:\.rawValue) {value in
                 Button {
-                    finish();interaction+=1
-                    tool=value;SoundService.shared.play(.click)
+                    finish();interaction+=1;tool=value;SoundService.shared.play(.click)
                 } label:{
                     VStack(spacing:4) {
                         Group {
@@ -372,68 +376,73 @@ struct KitchenGameView:View {
                             case .toppings:PizzaToppingArt(kind:.cheese)
                             case .herbs:PizzaIngredientArt(kind:0,spice:true)
                             }
-                        }.frame(width:32,height:32)
-                        Text(store.t("pizzaTool\(value.rawValue)")).font(.system(size:11,weight:.heavy,design:.rounded))
-                    }.frame(maxWidth:.infinity,minHeight:60)
+                        }.frame(width:large ? 46 : 36,height:large ? 46 : 36)
+                        Text(store.t("pizzaTool\(value.rawValue)"))
+                            .font(.system(size:large ? 15 : 12,weight:.heavy,design:.rounded))
+                            .lineLimit(1).minimumScaleFactor(0.8)
+                    }.frame(maxWidth:.infinity,minHeight:large ? 82 : 66)
                         .background(GameChoiceSurface(selected:tool == value))
                 }.buttonStyle(SquishStyle()).accessibilityAddTraits(tool == value ? .isSelected : [])
             }
         }
     }
-    private var shapeTray:some View {
-        ScrollView(.horizontal,showsIndicators:false) {
-            HStack(spacing:10) {
-                ForEach(PizzaDoughForm.allCases,id:\.rawValue) {form in
-                    Button {
-                        change {$0.doughForm=form;$0.doughStretch=nil;$0.formed=1}
-                        shaped=true;interaction+=1
-                    } label:{
-                        PizzaDoughSwatch(form:form).frame(width:55,height:55).padding(4)
-                            .background(GameChoiceSurface(selected:recipe.doughForm == form))
-                    }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("pizzaForm\(form.rawValue)"))
-                }
-            }.padding(.vertical,3)
+    private func shapeTray(large:Bool,side:Bool)->some View {
+        LazyVGrid(columns:Array(repeating:GridItem(.flexible(),spacing:10),count:side ? 3 : large ? 6 : 3),spacing:10) {
+            ForEach(PizzaDoughForm.allCases,id:\.rawValue) {form in
+                Button {
+                    change {$0.doughForm=form;$0.doughStretch=nil;$0.formed=1}
+                    shaped=true;interaction+=1
+                } label:{
+                    VStack(spacing:2) {
+                        PizzaDoughSwatch(form:form).frame(width:large ? 62 : 45,height:large ? 62 : 45)
+                        Text(store.t("pizzaForm\(form.rawValue)"))
+                            .font(.system(size:large ? 14 : 12,weight:.bold,design:.rounded))
+                            .lineLimit(1).minimumScaleFactor(0.8)
+                    }.frame(maxWidth:.infinity,minHeight:large ? 94 : 76)
+                        .background(GameChoiceSurface(selected:recipe.doughForm == form))
+                }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("pizzaForm\(form.rawValue)"))
+            }
         }
     }
-    private var decorationTray:some View {
+    private func decorationTray(large:Bool,side:Bool)->some View {
         Group {
             if tool == .herbs {
-                HStack(spacing:8) {
+                HStack(spacing:10) {
                     ForEach(0..<3) {index in
                         Button {spice=index;SoundService.shared.play(.click)} label:{
-                            VStack(spacing:3) {
-                                PizzaIngredientArt(kind:index,spice:true).frame(width:31,height:37)
-                                Text(store.t("pizzaSpice\(index)")).font(.system(size:11,weight:.bold,design:.rounded))
-                            }.frame(maxWidth:.infinity,minHeight:67)
+                            VStack(spacing:5) {
+                                PizzaIngredientArt(kind:index,spice:true).frame(width:large ? 54 : 42,height:large ? 65 : 50)
+                                Text(store.t("pizzaSpice\(index)"))
+                                    .font(.system(size:large ? 15 : 13,weight:.bold,design:.rounded))
+                            }.frame(maxWidth:.infinity,minHeight:large ? 110 : 84)
                                 .background(GameChoiceSurface(selected:spice == index))
                         }.buttonStyle(SquishStyle()).highPriorityGesture(dragGesture(.herb(index)))
                     }
                 }
             } else {
-                HStack(spacing:8) {
+                LazyVGrid(columns:Array(repeating:GridItem(.flexible(),spacing:8),count:side ? 3 : large ? 8 : 4),spacing:10) {
                     Button {
                         finish();adjustingToppings.toggle();SoundService.shared.play(.click)
-                    } label: {
-                        VStack(spacing:3) {
-                            Image(systemName:"hand.draw.fill").font(.system(size:25,weight:.bold))
-                            Text(store.t("pizzaMoveToppings")).font(.system(size:10,weight:.heavy,design:.rounded))
-                        }.frame(width:58,height:67)
+                    } label:{
+                        VStack(spacing:5) {
+                            Image(systemName:"hand.draw.fill").font(.system(size:large ? 36 : 27,weight:.bold))
+                                .frame(height:large ? 58 : 42)
+                            Text(store.t("pizzaMoveToppings")).font(.system(size:large ? 14 : 12,weight:.heavy,design:.rounded))
+                        }.frame(maxWidth:.infinity,minHeight:large ? 96 : 78)
                             .background(GameChoiceSurface(selected:adjustingToppings,tint:GameStyle.palette[11]))
                     }.buttonStyle(SquishStyle()).accessibilityAddTraits(adjustingToppings ? .isSelected : [])
-                ScrollView(.horizontal,showsIndicators:false) {
-                HStack(spacing:8) {
                     ForEach(PizzaToppingKind.allCases,id:\.rawValue) {kind in
                         Button {topping=kind;adjustingToppings=false;SoundService.shared.play(.click)} label:{
-                            VStack(spacing:2) {
-                                ZStack {PizzaServingDish();PizzaToppingArt(kind:kind).padding(7)}.frame(height:39)
-                                Text(store.t(kind.key)).font(.system(size:10,weight:.heavy,design:.rounded)).lineLimit(1).minimumScaleFactor(0.65)
-                            }.frame(width:74,height:67)
-                                .background(GameChoiceSurface(selected:topping == kind))
+                            VStack(spacing:4) {
+                                ZStack {PizzaServingDish();PizzaToppingArt(kind:kind).padding(8)}
+                                    .frame(width:large ? 64 : 46,height:large ? 58 : 42)
+                                Text(store.t(kind.key)).font(.system(size:large ? 14 : 12,weight:.heavy,design:.rounded))
+                                    .lineLimit(1).minimumScaleFactor(0.75)
+                            }.frame(maxWidth:.infinity,minHeight:large ? 96 : 78)
+                                .background(GameChoiceSurface(selected:topping == kind && !adjustingToppings))
                         }.buttonStyle(SquishStyle()).accessibilityLabel(store.t(kind.key))
-                            .simultaneousGesture(dragGesture(.topping(kind)))
+                            .highPriorityGesture(dragGesture(.topping(kind)))
                     }
-                }.padding(.vertical,3)
-                }
                 }
             }
         }
@@ -451,7 +460,6 @@ struct KitchenGameView:View {
         DragGesture(minimumDistance:6,coordinateSpace:.named("pizzaWorkshop")).onChanged {value in
             guard pouringIngredient == nil else {return}
             if dragItem == nil {
-                if case .topping = item,abs(value.translation.width)>abs(value.translation.height)*1.1 {return}
                 finish();SoundService.shared.play(.click)
             }
             dragItem=item;dragPoint=value.location

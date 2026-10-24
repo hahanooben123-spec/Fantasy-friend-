@@ -35,3 +35,17 @@ Gesture lessons also demonstrate stirring and sauce spreading after inactivity.
 They disappear as soon as that activity begins. No speech or external services.
 
 No build, tests or simulator checks were run, following the user's preference.
+
+
+## Larger visible choices
+
+Landscape tablets use a 350-440 point tool tray, proportional to screen width.
+Portrait tablets keep the work surface above a full-width tray instead of placing
+a narrow vertical shelf beside it. Ingredient pictures and tool labels are larger.
+All six dough shapes and all seven topping types plus Move appear in grids; there
+is no hidden horizontal choice strip. Tablet portrait uses one row of topping
+choices, landscape uses three columns, and phones use four columns. Touch drags
+can now start in any direction because no horizontal tray scroll competes with them.
+
+The option area can scroll vertically on smaller screens, with an indicator. Undo
+and the next-step button stay outside that scroll so navigation remains visible.
