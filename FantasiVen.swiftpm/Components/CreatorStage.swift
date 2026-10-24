@@ -143,7 +143,8 @@ struct CreatorStage: View {
         }
         .onChange(of:phase) {value in
             guard value != .active else {return}
-            let held=origin != nil || handleOrigin != nil || pinchOrigin != nil
+            let held=origin != nil || handleOrigin != nil || pinchOrigin != nil || draft != nil
+            if let stroke=draft,stroke.isValid {var strokes=friend.doodles ?? [];strokes.append(stroke);friend.doodles=strokes}
             origin=nil;handleOrigin=nil;pinchOrigin=nil;draft=nil;reactingParts=false
             if held {onEnd()}
         }
@@ -173,7 +174,9 @@ struct CreatorStage: View {
                 }
             } catch { blink=false }
         }
-        .onDisappear {draft=nil;origin=nil;handleOrigin=nil;pinchOrigin=nil;reactingParts=false}
+        .onDisappear {
+            if let stroke=draft,stroke.isValid {var strokes=friend.doodles ?? [];strokes.append(stroke);friend.doodles=strokes;onEnd()}
+            draft=nil;origin=nil;handleOrigin=nil;pinchOrigin=nil;reactingParts=false}
     }
     private var displayed: FantasyFriend {
         var copy=friend

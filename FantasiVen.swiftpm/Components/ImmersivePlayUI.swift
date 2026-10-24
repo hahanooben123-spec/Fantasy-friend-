@@ -22,7 +22,8 @@ struct PlayHUD: View {
                     VStack(spacing:24) {
                         Text(title).font(.system(.title,design:.rounded).weight(.heavy))
                         Text(hint).font(.system(.title3,design:.rounded)).multilineTextAlignment(.center)
-                        FlowerDifficulty()
+                        Toggle(store.t("sound"),isOn:Binding(get:{store.settings.sound},set:{value in store.updateSettings {$0.sound=value}}))
+                        Toggle(store.t("music"),isOn:Binding(get:{store.settings.music},set:{value in store.updateSettings {$0.music=value}}))
                         CandyButton(title:store.t("continue"),icon:"checkmark") {settings=false}
                     }.padding(28).frame(maxWidth:480)
                 }
@@ -68,12 +69,13 @@ struct PlayToken:View {
     }
 }
 struct PlayCelebration:View {
+    @Environment(\.scenePhase) private var phase
     let revision:Int
     @Environment(\.accessibilityReduceMotion) private var reduced
     @State private var start=Date.distantPast
     @State private var animating=false
     var body:some View {
-        TimelineView(.animation(minimumInterval:1.0/30,paused:!animating)) { timeline in
+        TimelineView(.animation(minimumInterval:1.0/30,paused:!animating || phase != .active)) { timeline in
             let progress=timeline.date.timeIntervalSince(start)/1.1
             Canvas { canvas,size in
                 guard progress>=0 && progress<1 else {return}

@@ -14,13 +14,15 @@ struct MiniGameSessionView: View {
     @State private var picnicSignal=0
     @State private var picnicFruit:Int?
     @State private var picnicShared:Set<Int>=[]
+    @State private var bubbleViewport=CGSize(width:390,height:800)
+    @State private var bubbleToybox=false
+    @State private var bubbleExploring=false
     @State private var bubbleOffsets:[Int:CGSize]=[:]
     @State private var bubbleOrigins:[Int:CGPoint]=[:]
     @State private var giantColor=Color.cyan
     @State private var giantSize=1.0
     @State private var mergedSlots:Set<Int>=[]
     @State private var bubbleSizes:[Int:Double]=[:]
-    @State private var pinchBases:[Int:Double]=[:]
     @State private var heldBubble:Int?
     @State private var heldUntil=0.0
     @State private var paletteOffset=0
@@ -29,7 +31,6 @@ struct MiniGameSessionView: View {
     @State private var surprises:[BubbleSurprise] = []
     @State private var popTimes: [Int:Double] = [:]
     @State private var interacted = false
-    @State private var bubbleScale = 1.0
     @State private var giantBubble = false
     @State private var flyUntil = 0.0
     @State private var clueSpot: Int?
@@ -63,13 +64,13 @@ struct MiniGameSessionView: View {
 
     var body: some View {
         ZStack {
-            WorldBackdrop(world:kind == .bubbles ? .clouds : .meadow,animated:!paused)
+            WorldBackdrop(world:kind == .bubbles ? .clouds : .meadow,animated:!paused && !bubbleToybox)
             Group {
                 if kind == .apples {appleField}
                 else if kind == .bubbles {bubbleField}
                 else {hidingField}
-            }.disabled(paused || picnic || scenePhase != .active)
-            if kind != .apples {PlayCelebration(revision:celebration)}
+            }.disabled(paused || picnic || bubbleToybox || scenePhase != .active)
+            if kind == .hide {PlayCelebration(revision:celebration)}
             if kind == .apples {orchardHUD} else {
             VStack {
                 PlayHUD(title:store.t(kind.titleKey),hint:store.t(kind.hintKey),paused:$paused)
@@ -90,19 +91,15 @@ struct MiniGameSessionView: View {
 
                 }.padding(.horizontal,18)
                 Spacer().allowsHitTesting(false)
-                if !interacted {Text(store.t(kind == .apples ? "appleHelp" : kind == .hide ? "hideHelp" : "bubbleSwipe")).font(.system(.subheadline,design:.rounded).weight(.bold)).padding(10).background(StorybookPanel(cornerRadius:24))}
+                if !interacted {Text(store.t(kind == .apples ? "appleHelp" : kind == .hide ? "hideHelp" : "bubbleSimpleHint")).font(.system(.subheadline,design:.rounded).weight(.bold)).padding(10).background(StorybookPanel(cornerRadius:24))}
                 PlayDock {
-                    RoundButton(icon:"arrow.counterclockwise",label:store.t("restartGame"),action:restart)
                     if kind == .bubbles {
-                        PlayToken(symbol:"🫧",label:store.t("bubbleGrow")) {bubbleScale = bubbleScale >= 1.3 ? 1 : bubbleScale+0.1}
                         Button {paletteOffset=(paletteOffset+3)%16;SoundService.shared.play(.click)} label:{
                             Circle().fill(AngularGradient(colors:[.pink,.yellow,.cyan,.purple,.pink],center:.center))
-                                .frame(width:38,height:38).padding(8).background(Circle().fill(.white))
+                                .frame(width:44,height:44).padding(8).background(Circle().fill(.white))
                         }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("bubblePalette"))
                         Spacer(minLength:0)
-                        PlayToken(symbol:"🌈",label:store.t(giantBubble ? "releaseBubble" : "bubbleMerge"),selected:giantBubble) {
-                            if giantBubble {release()} else {makeGiantBubble()}
-                        }
+                        RoundButton(icon:"tray.fill",label:store.t("toybox")) {bubbleToybox=true;lastTick=nil}
                     } else {
                         Spacer()
                         if seek.complete {
@@ -130,16 +127,16 @@ struct MiniGameSessionView: View {
                 lastTick=nil
                 bubbleOffsets=[:]
                 bubbleOrigins=[:]
-                pinchBases=[:]
                 heldBubble=nil
             }
             .onChange(of:paused) {_ in
                 lastTick=nil
                 bubbleOffsets=[:]
                 bubbleOrigins=[:]
-                pinchBases=[:]
                 heldBubble=nil
             }
+            .onChange(of:bubbleToybox) {_ in lastTick=nil}
+            .sheet(isPresented:$bubbleToybox) {bubbleExtras}
             .onReceive(clock) {date in tick(date)}
     }
 
@@ -349,7 +346,7 @@ struct MiniGameSessionView: View {
         GeometryReader { proxy in
             ZStack {
                 CharacterView(friend:blowingFriend,blink:elapsed.truncatingRemainder(dividingBy:4)<0.13,happy:elapsed<cheerUntil && !blowing,gaze:CGPoint(x:sin(elapsed*0.5)*0.35,y:elapsed<flyUntil ? 0.5 : -0.6),expression:elapsed<flyUntil ? .wonder : .normal)
-                    .frame(width:180,height:192)
+                    .frame(width:min(180,proxy.size.height*0.24),height:min(192,proxy.size.height*0.26))
                     .position(x:proxy.size.width/2,y:proxy.size.height*(elapsed<flyUntil ? 0.25 : 0.81))
                     .animation(reducedMotion ? nil : .easeInOut(duration:0.6),value:elapsed<flyUntil)
                     .allowsHitTesting(false)
@@ -357,11 +354,9 @@ struct MiniGameSessionView: View {
                     .position(x:proxy.size.width/2+48,y:proxy.size.height*0.83).allowsHitTesting(false)
                 ForEach(0..<6) { slot in
                     let generation = bubbles.generations[slot]
-                    let diameter = min(170, max(70, proxy.size.width * 0.22)) * bubbleScale * (bubbleSizes[slot] ?? 1)
-                    let base=bubbleOrigins[slot] ?? bubbleCenter(slot,generation:generation,size:proxy.size)
-                    let offset=bubbleOffsets[slot] ?? .zero
-                    let center=CGPoint(x:base.x+offset.width,y:base.y+offset.height)
-                    Button { pop(slot, generation: generation) } label: {
+                    let diameter=bubbleDiameter(slot,in:proxy.size)
+                    let center=bubbleLocation(slot,generation:generation,size:proxy.size)
+                    Group {
                         BubbleToy(color:bubbleColor(slot,generation:generation))
                             .overlay {
                                 if bubbleFlash == slot {
@@ -372,19 +367,20 @@ struct MiniGameSessionView: View {
                                 }
                             }
                             .frame(width: diameter, height: diameter)
-                    }.buttonStyle(SquishStyle())
+                    }.contentShape(Circle())
                         .scaleEffect(elapsed-(popTimes[slot] ?? -10)<0.22 ? 0.1 : 1,anchor:.center)
+                        .highPriorityGesture(LongPressGesture(minimumDuration:0.4).exclusively(before:TapGesture()).onEnded {gesture in
+                            switch gesture {
+                            case .first:growBubble(slot)
+                            case .second:pop(slot,generation:generation)
+                            }
+                        })
+                        .simultaneousGesture(bubbleDrag(slot,generation:generation,size:proxy.size),including:bubbleExploring ? .all : .none)
                         .position(center)
-                        .onLongPressGesture(minimumDuration:0.35) {growBubble(slot)}
-                        .simultaneousGesture(bubbleDrag(slot,generation:generation,size:proxy.size))
-                        .simultaneousGesture(MagnificationGesture().onChanged {scale in
-                            guard !paused,!mergedSlots.contains(slot) else {return}
-                            if pinchBases[slot] == nil {pinchBases[slot]=bubbleSizes[slot] ?? 1}
-                            heldBubble=slot;heldUntil=elapsed+0.45;interacted=true
-                            bubbleSizes[slot]=min(1.9,max(0.7,(pinchBases[slot] ?? 1)*Double(scale)))
-                        }.onEnded {_ in pinchBases[slot]=nil})
                         .animation(reducedMotion ? nil : .spring(response:0.35,dampingFraction:0.6),value:elapsed-(popTimes[slot] ?? -10)<0.22)
                         .accessibilityLabel(store.t("popBubble"))
+                        .accessibilityAddTraits(.isButton).accessibilityAction {pop(slot,generation:generation)}
+                        .accessibilityAction(named:Text(store.t("bubbleGrow"))) {growBubble(slot)}
                         .disabled(paused || mergedSlots.contains(slot))
                         .opacity(mergedSlots.contains(slot) ? 0 : 1)
                 }
@@ -398,18 +394,43 @@ struct MiniGameSessionView: View {
                 if giantBubble {
                     Button(action: release) {
                         BubbleToy(color:giantColor).overlay(CharacterView(friend: friend).padding(30))
-                            .frame(width: min(260, proxy.size.width * 0.8), height: min(260, proxy.size.width * 0.8))
+                            .frame(width: giantDiameter(proxy.size), height: giantDiameter(proxy.size))
                     }.buttonStyle(SquishStyle()).scaleEffect(giantSize)
                         .animation(reducedMotion ? nil : .spring(response:0.35,dampingFraction:0.6),value:giantSize)
                         .position(x: proxy.size.width / 2, y: proxy.size.height * 0.45)
                         .accessibilityLabel(store.t("releaseBubble")).disabled(paused || picnic)
                 }
             }.frame(width:proxy.size.width,height:proxy.size.height)
+                .onAppear {bubbleViewport=proxy.size}
+                .onChange(of:proxy.size) {bubbleViewport=$0}
                 .coordinateSpace(name:"bubbleGarden")
-                .overlay(GestureLesson(activity:interacted ? 1 : 0,from:UnitPoint(x:0.2,y:0.57),to:UnitPoint(x:0.5,y:0.4)))
+                .overlay(GestureLesson(activity:interacted ? 1 : 0,from:UnitPoint(x:0.5,y:0.4),to:UnitPoint(x:0.5,y:0.4)))
         }
     }
 
+
+    private func bubbleDiameter(_ slot:Int,in size:CGSize)->CGFloat {
+        min(135,min(size.width*0.23,size.height*0.16))*CGFloat(bubbleSizes[slot] ?? 1)
+    }
+    private func giantDiameter(_ size:CGSize)->CGFloat {min(230,min(size.width*0.66,size.height*0.36))}
+    private func bubbleLocation(_ slot:Int,generation:Int,size:CGSize)->CGPoint {
+        let base=bubbleOrigins[slot] ?? bubbleCenter(slot,generation:generation,size:size)
+        let offset=bubbleOffsets[slot] ?? .zero
+        let radius=bubbleDiameter(slot,in:size)/2
+        return CGPoint(x:min(max(radius+8,base.x+offset.width),max(radius+8,size.width-radius-8)),
+            y:min(max(size.height*0.20+radius,base.y+offset.height),max(size.height*0.20+radius,size.height*0.76-radius)))
+    }
+
+    private var bubbleExtras:some View {
+        VStack(spacing:20) {
+            HStack {VillageCaption(title:store.t("toybox"),size:26);Spacer();RoundButton(icon:"xmark",label:store.t("close")) {bubbleToybox=false}}
+            CandyButton(title:store.t(giantBubble ? "releaseBubble" : "bubbleMerge"),icon:"sparkles",color:StorybookStyle.mint) {
+                if giantBubble {release()} else {makeGiantBubble()};bubbleToybox=false
+            }
+            Toggle(store.t("bubbleDragPlay"),isOn:$bubbleExploring).font(.system(size:18,weight:.bold,design:.rounded)).padding(12)
+            CandyButton(title:store.t("restartGame"),icon:"arrow.clockwise") {restart();bubbleToybox=false}
+        }.padding(24).background(StorybookWorkshopWall())
+    }
 
     private func bubbleColor(_ slot:Int,generation:Int)->Color {
         GameStyle.palette[(slot*2+generation+paletteOffset)%GameStyle.palette.count]
@@ -418,7 +439,7 @@ struct MiniGameSessionView: View {
         guard !paused,!mergedSlots.contains(slot) else {return}
         heldBubble=slot;heldUntil=elapsed+0.45;interacted=true
         withAnimation(reducedMotion ? nil : .spring(response:0.4,dampingFraction:0.65)) {
-            bubbleSizes[slot]=min(1.9,(bubbleSizes[slot] ?? 1)+0.25)
+            bubbleSizes[slot]=min(1.45,(bubbleSizes[slot] ?? 1)+0.2)
         }
         SoundService.shared.play(.bubble)
     }
@@ -434,16 +455,15 @@ struct MiniGameSessionView: View {
         DragGesture(minimumDistance:10,coordinateSpace:.named("bubbleGarden")).onChanged {value in
             guard !paused,!mergedSlots.contains(slot),bubbles.generations[slot] == generation else {return}
             interacted=true
-            if bubbleOrigins[slot] == nil {bubbleOrigins[slot]=bubbleCenter(slot,generation:generation,size:size)}
+            if bubbleOrigins[slot] == nil {bubbleOrigins[slot]=bubbleLocation(slot,generation:generation,size:size)}
             bubbleOffsets[slot]=value.translation
         }.onEnded {value in
             defer {bubbleOffsets[slot]=nil;bubbleOrigins[slot]=nil}
             guard !paused,!mergedSlots.contains(slot),bubbles.generations[slot] == generation else {return}
-            let origin=bubbleOrigins[slot] ?? bubbleCenter(slot,generation:generation,size:size)
-            let end=CGPoint(x:origin.x+value.translation.width,y:origin.y+value.translation.height)
+            let end=bubbleLocation(slot,generation:generation,size:size)
             let sourceColor=bubbleColor(slot,generation:generation)
             if giantBubble {
-                let radius=min(260,size.width*0.8)*giantSize*0.55
+                let radius=giantDiameter(size)*giantSize*0.55
                 if hypot(end.x-size.width*0.5,end.y-size.height*0.45)<radius {
                     giantColor=GameStyle.mixed(giantColor,with:sourceColor,amount:1/Double(mergedSlots.count+1))
                     mergedSlots.insert(slot)
@@ -453,14 +473,13 @@ struct MiniGameSessionView: View {
                 }
                 return
             }
-            let diameter=min(170,max(70,size.width*0.22))*bubbleScale
             if let other=(0..<6).filter({$0 != slot && !mergedSlots.contains($0)}).min(by:{
-                let a=bubbleCenter($0,generation:bubbles.generations[$0],size:size)
-                let b=bubbleCenter($1,generation:bubbles.generations[$1],size:size)
+                let a=bubbleLocation($0,generation:bubbles.generations[$0],size:size)
+                let b=bubbleLocation($1,generation:bubbles.generations[$1],size:size)
                 return hypot(a.x-end.x,a.y-end.y)<hypot(b.x-end.x,b.y-end.y)
             }) {
-                let target=bubbleCenter(other,generation:bubbles.generations[other],size:size)
-                let radius=diameter*((bubbleSizes[slot] ?? 1)+(bubbleSizes[other] ?? 1))*0.32
+                let target=bubbleLocation(other,generation:bubbles.generations[other],size:size)
+                let radius=(bubbleDiameter(slot,in:size)+bubbleDiameter(other,in:size))*0.35
                 if hypot(target.x-end.x,target.y-end.y)<radius {
                     giantColor=GameStyle.mixed(sourceColor,with:bubbleColor(other,generation:bubbles.generations[other]),amount:0.5)
                     mergedSlots=[slot,other];giantSize=1
@@ -535,7 +554,7 @@ struct MiniGameSessionView: View {
         return copy
     }
     private func tick(_ date: Date) {
-        guard visible, !paused, !picnic, scenePhase == .active, kind != .hide else { lastTick = nil; return }
+        guard visible, !paused, !picnic, !bubbleToybox, scenePhase == .active, kind != .hide else { lastTick = nil; return }
         guard let previous = lastTick else { lastTick = date; return }
         lastTick = date
         let dt = max(0, min(0.08, date.timeIntervalSince(previous)))
@@ -563,7 +582,8 @@ struct MiniGameSessionView: View {
         guard !paused,!picnic,!mergedSlots.contains(slot),
               !(heldBubble == slot && elapsed<heldUntil),
               elapsed-(popTimes[slot] ?? -10)>0.28,bubbles.pop(slot:slot,generation:generation) else {return}
-        let point=bubbleCenter(slot,generation:generation,size:CGSize(width:1,height:1))
+        let location=bubbleLocation(slot,generation:generation,size:bubbleViewport)
+        let point=CGPoint(x:location.x/max(1,bubbleViewport.width),y:location.y/max(1,bubbleViewport.height))
         let kind=BubbleSurpriseKind(rawValue:(slot+generation)%4) ?? .music
         surprises.append(BubbleSurprise(kind:kind,x:point.x,y:point.y,born:elapsed))
         if surprises.count>8 {surprises.removeFirst()}
@@ -590,9 +610,9 @@ struct MiniGameSessionView: View {
     private func restart() {
         apples = AppleRain(); bubbles = BubbleGarden(); seek = HideAndSeek()
         picnicShared=[];picnicSignal=0;picnicFruit=nil;bubbleOffsets=[:];bubbleOrigins=[:]
-        mergedSlots=[];bubbleSizes=[:];pinchBases=[:];heldBubble=nil;giantSize=1
+        mergedSlots=[];bubbleSizes=[:];heldBubble=nil;giantSize=1
         interacted = false; popTimes=[:]; surprises=[]; lastGolden=0
-        picnic = false; giantBubble = false; bubbleScale = 1; clueSpot = nil; flyUntil = 0
+        picnic = false; giantBubble = false; clueSpot = nil; flyUntil = 0
         orchardLandings=[];orchardCatchTime = -10;picnicPoured=false;picnicPouring=false
         elapsed = 0; cheerUntil = 0; bubbleFlash = nil; lastTick = nil
         SoundService.shared.play(.click)

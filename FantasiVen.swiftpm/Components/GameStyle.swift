@@ -75,7 +75,7 @@ struct CandyButton: View {
     var body: some View {
         Button(action: { SoundService.shared.play(.click); action() }) {
             HStack(spacing: 12) {
-                Image(systemName: icon).font(.system(size: 24, weight: .heavy)).frame(width:44,height:44)
+                StorybookIcon(symbol:icon).frame(width:38,height:38).padding(3)
                 .background(Circle().fill(.white.opacity(0.18)))
                 Text(title).font(.system(size:18,weight:.heavy,design:.rounded)).lineLimit(2).minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
@@ -103,8 +103,7 @@ struct RoundButton: View {
     var action: () -> Void
     var body: some View {
         Button(action: action) {
-            Image(systemName: icon).font(.system(size: 21, weight: .bold))
-                .foregroundColor(GameStyle.ink).frame(width: 54, height: 54)
+            StorybookIcon(symbol:icon).frame(width:30,height:30).frame(width:54,height:54)
                 .background(CandySurface(color: Color(red: 1, green: 0.91, blue: 0.48), cornerRadius: 27))
                 .contentShape(Circle())
         }.buttonStyle(SquishStyle()).accessibilityLabel(label)

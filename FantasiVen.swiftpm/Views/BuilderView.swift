@@ -38,7 +38,7 @@ struct BuilderView: View {
     }
     var body: some View {
         GeometryReader { geometry in
-            let wide=geometry.size.width>=650 && geometry.size.width>geometry.size.height
+            let wide=WorkshopLayout.sidebar(geometry.size)
             let large=geometry.size.width>=650
             ZStack {
                 StorybookWorkshopWall().ignoresSafeArea()
@@ -62,7 +62,7 @@ struct BuilderView: View {
                     }.foregroundColor(GameStyle.ink)
                 }
             }.coordinateSpace(name:"creatorWorkshop")
-        }.foregroundColor(WorkshopLook.sea)
+        }.foregroundColor(WorkshopLook.sea).overlay(LocalSaveStatus())
             .sheet(isPresented:$starters) {
                 StarterFriendsSheet(onChoose:chooseStarter,onClose:{starters=false}).environmentObject(store)
             }
@@ -108,6 +108,7 @@ struct BuilderView: View {
             if wide {VillageCaption(title:store.t("creatorTitle"),size:23)}
             Spacer(minLength:2)
             CreatorToolButton(mark:.undo,label:store.t("undo"),action:undo).disabled(history.isEmpty).opacity(history.isEmpty ? 0.35 : 1)
+            RoundButton(icon:"play.fill",label:store.t("creatorTryTitle")) {finishGesture();trying=true}
             RoundButton(icon:"ellipsis",label:store.t("roomMore")) {finishGesture();moreTools=true}
             Button {finishGesture();naming=true} label:{
                 HStack(spacing:6) {
@@ -123,7 +124,10 @@ struct BuilderView: View {
             CreatorRoomArtwork()
             CreatorStage(friend:$friend,selection:$selection,incoming:$incoming,part:part,
                 brush:part == .paint ? PaintTool(color:paintColor,width:brushWidth,erasing:erasing) : nil,
-                revision:revision,onBegin:beginGesture,onEnd:finishGesture,onDrop:{_,_ in},molding:molding)
+                revision:revision,onBegin:beginGesture,onEnd:{
+                    finishGesture()
+                    if phase != .active && !celebration {store.saveEditorDraft(friend,existing:existing)}
+                },onDrop:{_,_ in},molding:molding)
                 .frame(maxWidth:.infinity,maxHeight:.infinity)
         }
     }

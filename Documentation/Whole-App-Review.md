@@ -1,5 +1,7 @@
 # Samlet gennemgang af FantasiVen
 
+> Opfølgning: [Implementerede forbedringer](Whole-App-Improvements.md). Fundene nedenfor beskriver udgangspunktet før denne ændringsrunde.
+
 Gennemgang af kildekoden pr. 24. oktober 2026, udgangspunkt: `6be6891`.
 Dette er en vurdering af kode, flows og layoutregler. Appen er ikke kørt på en
 iPad, og grafikkens faktiske udtryk, animationernes jævnhed og børns forståelse

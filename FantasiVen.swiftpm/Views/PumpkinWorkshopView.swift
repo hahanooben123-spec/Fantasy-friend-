@@ -30,19 +30,18 @@ struct PumpkinWorkshopView:View {
     }
     var body:some View {
         GeometryReader {proxy in
-            let wide=proxy.size.width>=740
+            let wide=WorkshopLayout.sidebar(proxy.size)
             ZStack {
                 PumpkinBackdrop(darkness:lantern.darkness)
                 VStack(spacing:8) {
                     header
-                    if wide {
-                        HStack(spacing:0) {
-                            workspace
-                            controls.frame(width:300)
-                        }
-                    } else {
-                        workspace.frame(maxWidth:.infinity,maxHeight:.infinity)
-                        controls.frame(height:step == .light ? 235 : step == .carve ? (tool == .stamp ? 184 : 102) : step == .choose ? 170 : 112)
+                    PlayWorkspace(wide:wide,toolWidth:320,toolHeight:step == .light ? 320 : step == .carve ? 300 : 270) {
+                        workspace
+                    } tools: {
+                        VStack(spacing:10) {
+                            ScrollView(.vertical,showsIndicators:true) {controls.padding(.vertical,4)}
+                            if nextReady {WorkshopNextButton(title:words.t(nextTitle),action:nextStep)}
+                        }.padding(12).background(StorybookShelf())
                     }
                 }
                 if revealing {reveal.transition(.opacity)}
@@ -51,8 +50,11 @@ struct PumpkinWorkshopView:View {
             .task(id:lantern) {
                 guard !saved else {return}
                 do {try await Task.sleep(nanoseconds:650_000_000)} catch {return}
+                guard !saved else {return}
                 library.saveDraft(lantern)
             }
+            .onDisappear {finish();if !saved {library.saveDraft(lantern)}}
+
             .onChange(of:phase) {value in if value != .active && !saved {library.saveDraft(lantern)}}
             .sheet(isPresented:$showTools) {
                 VStack(spacing:18) {
@@ -70,17 +72,26 @@ struct PumpkinWorkshopView:View {
                     }
                 }.padding(26).background(StorybookShelf())
             }
-            .task(id:step == .scoop && lantern.scooped>=1) {
-                guard step == .scoop,lantern.scooped>=1 else {return}
-                do {try await Task.sleep(nanoseconds:400_000_000)} catch {return}
-                guard step == .scoop else {return}
-                go(.carve);SoundService.shared.play(.complete)
-            }
             .task(id:warning) {
                 guard warning else {return}
                 do {try await Task.sleep(nanoseconds:2_800_000_000)} catch {return}
                 warning=false
             }
+    }
+    private var nextReady:Bool {
+        switch step {
+        case .choose:return true
+        case .scoop:return lantern.scooped>=1
+        case .carve:return !lantern.cuts.isEmpty
+        case .light:return true
+        }
+    }
+    private var nextTitle:String {
+        switch step {case .choose:return "lanternNextScoop";case .scoop:return "lanternNextCarve";case .carve:return "lanternNextLight";case .light:return "lanternNextReveal"}
+    }
+    private func nextStep() {
+        if step == .light {showReveal()}
+        else {go(PumpkinStep(rawValue:step.rawValue+1) ?? .light)}
     }
     private var header:some View {
         HStack(spacing:8) {
@@ -101,7 +112,7 @@ struct PumpkinWorkshopView:View {
             HStack(spacing:8) {
                 ForEach(PumpkinStep.allCases,id:\.rawValue) {item in
                     Button {go(item)} label:{
-                        Text(["🍊","🥄","✂️","🕯️"][item.rawValue]).font(.system(size:24))
+                        PlayControlArtwork(symbol:["🍊","🥄","✂️","🕯️"][item.rawValue]).frame(width:34,height:34)
                             .frame(maxWidth:.infinity,minHeight:46)
                             .background(GameChoiceSurface(selected:step == item,tint:.orange))
                     }.buttonStyle(SquishStyle()).accessibilityLabel(words.t("lanternStep\(item.rawValue)"))
@@ -151,7 +162,7 @@ struct PumpkinWorkshopView:View {
                 }
             case .scoop:
                 ProgressView(value:lantern.scooped).tint(.orange).padding(.horizontal,24)
-                Button {change {$0.scooped=1};go(.carve)} label:{
+                Button {change {$0.scooped=1}} label:{
                     Label(words.t("lanternSkipScoop"),systemImage:"arrow.right").font(.system(.headline,design:.rounded)).frame(minHeight:48)
                 }.buttonStyle(SquishStyle())
             case .carve:

@@ -245,8 +245,7 @@ struct PlayControlArtwork:View {
             case "☁️":CloudArtwork()
             case "🍊":PumpkinIllustration(lantern:PumpkinDoor.sample,animated:false)
             default:
-                Image(systemName:systemIcon).font(.system(size:29,weight:.heavy))
-                    .foregroundColor(WorkshopLook.sea)
+                StorybookIcon(symbol:systemIcon)
             }
         }.accessibilityHidden(true)
     }

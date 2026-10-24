@@ -219,8 +219,8 @@ private struct RoomPlacedObject:View {
     var body:some View {
         ZStack {
             if RoomItem(rawValue:object.kind)?.isWall != true && object.kind != 4 {
-                Ellipse().fill(GameStyle.ink.opacity(0.14))
-                    .frame(width:width*0.75,height:width*0.10).blur(radius:3).offset(y:width*0.43)
+                Ellipse().fill(GameStyle.ink.opacity(origin != nil ? 0.22 : 0.14))
+                    .frame(width:width*(origin != nil ? 0.85 : 0.75),height:width*0.10).blur(radius:origin != nil ? 6 : 3).offset(y:width*0.43)
                     .allowsHitTesting(false)
             }
             RoomFurniture(kind:object.kind,tint:object.color,isOn:object.isOn,night:night,
@@ -239,11 +239,13 @@ private struct RoomPlacedObject:View {
                     }
                 }
                 .scaleEffect(x:object.mirrored == true ? -1 : 1,y:1)
+                .scaleEffect(origin != nil && !reduced ? 1.04 : 1)
                 .offset(y:lifted && !reduced ? (object.kind == 13 ? -28 : -5) : 0)
                 .rotationEffect(.degrees(lifted && !reduced && object.kind != 13 ? 5 : 0))
             if editing && selected {
-                RoundedRectangle(cornerRadius:18).stroke(.white,style:StrokeStyle(lineWidth:2.5,dash:[6,4]))
-                    .shadow(color:GameStyle.purple,radius:1).allowsHitTesting(false)
+                RoundedRectangle(cornerRadius:22).stroke(StorybookStyle.honey,lineWidth:4)
+                    .overlay(RoundedRectangle(cornerRadius:22).stroke(.white,lineWidth:1.5).padding(3))
+                    .shadow(color:StorybookStyle.honey.opacity(0.65),radius:8).allowsHitTesting(false)
             }
         }.frame(width:width,height:width*1.1)
             .rotationEffect(.degrees(object.angle))

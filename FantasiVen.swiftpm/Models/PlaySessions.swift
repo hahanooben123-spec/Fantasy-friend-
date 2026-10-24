@@ -32,8 +32,22 @@ struct PlaySessions:Codable,Equatable {
     var version=1
     var editor:EditorDraft?
     var pizza:PizzaDraft?
+    // Optional fields preserve compatibility with the original single-draft archive.
+    var editorDrafts:[EditorDraft]?
+    var pizzaDrafts:[PizzaDraft]?
+    var allEditors:[EditorDraft] {
+        var values=editorDrafts ?? []
+        if let editor {values.removeAll {$0.friend.id == editor.friend.id};values.insert(editor,at:0)}
+        return values
+    }
+    var allPizzas:[PizzaDraft] {
+        var values=pizzaDrafts ?? []
+        if let pizza {values.removeAll {$0.companion.id == pizza.companion.id};values.insert(pizza,at:0)}
+        return values
+    }
+    func pizza(for id:UUID)->PizzaDraft? {allPizzas.first {$0.companion.id == id}}
     var recent:ActivityBookmark?
     var companionID:UUID?
     var appleBestStreak:Int?
-    var isValid:Bool {version == 1 && (appleBestStreak.map {$0>=0} ?? true) && (editor?.friend.isValid ?? true) && (pizza?.isValid ?? true)}
+    var isValid:Bool {version == 1 && (appleBestStreak.map {$0>=0} ?? true) && (editor?.friend.isValid ?? true) && (pizza?.isValid ?? true) && allEditors.allSatisfy { $0.friend.isValid } && allPizzas.allSatisfy { $0.isValid }}
 }

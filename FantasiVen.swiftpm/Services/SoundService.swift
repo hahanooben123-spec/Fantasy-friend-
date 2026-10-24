@@ -11,6 +11,23 @@ final class SoundService {
     private var fadingMusic: [AVAudioPlayer] = []
     private var cache: [String: Data] = [:]
     private var active = true
+    private var interrupted=false
+    private var interruptionObserver:NSObjectProtocol?
+    private var lastVoice=0.0
+    private var quietReactionsUntil=0.0
+    private init() {
+        interruptionObserver=NotificationCenter.default.addObserver(forName:AVAudioSession.interruptionNotification,object:nil,queue:.main) { [weak self] notification in
+            let began=(notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt) == AVAudioSession.InterruptionType.began.rawValue
+            let options=notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+            let resume=AVAudioSession.InterruptionOptions(rawValue:options).contains(.shouldResume)
+            Task { @MainActor [weak self] in
+                guard let self else {return}
+                self.interrupted=began || !resume
+                if began {self.effects.forEach {$0.stop()};self.effects.removeAll()}
+                self.updateMusic()
+            }
+        }
+    }
     private var performing = false
     private var world = World.forest
     private var lastCue: [Cue: TimeInterval] = [:]
@@ -33,6 +50,7 @@ final class SoundService {
     }
     func setActive(_ value: Bool) {
         active = value
+        if value {interrupted=false}
         if !value {
             effects.forEach { $0.stop() }; effects.removeAll()
         }
@@ -65,7 +83,7 @@ final class SoundService {
             ?? bundle.url(forResource: name, withExtension: "wav", subdirectory: "Audio")
     }
     private func updateMusic() {
-        guard settings.music && active && !performing else {
+        guard settings.music && active && !interrupted && !performing else {
             music?.pause()
             fadingMusic.forEach { $0.stop() }; fadingMusic.removeAll()
             return
@@ -84,8 +102,10 @@ final class SoundService {
         music?.setVolume(musicLevel, fadeDuration: 0.7)
     }
     func play(_ cue: Cue) {
-        guard settings.sound && active else { return }
+        guard settings.sound && active && !interrupted else { return }
         let now = ProcessInfo.processInfo.systemUptime
+        if cue == .reaction && now<quietReactionsUntil {return}
+        if cue == .complete {quietReactionsUntil=now+1.2}
         let interval:Double = cue == .click ? 0.075 : cue == .mix ? 0.20 : cue == .oven ? 0.85 : 0.16
         if let previous = lastCue[cue], now - previous < interval { return }
         lastCue[cue] = now
@@ -111,14 +131,20 @@ final class SoundService {
         }
     }
     func pizzaReveal() {
+        let now=ProcessInfo.processInfo.systemUptime
+        guard now>=quietReactionsUntil else {return}
+        quietReactionsUntil=now+1.2
         playNotes([392, 523.25, 659.25, 783.99], duration:0.11, timbre:1)
     }
     func react(voice: Int) {
+        let now=ProcessInfo.processInfo.systemUptime
+        guard now-lastVoice>=0.32,now>=quietReactionsUntil else {return}
+        lastVoice=now
         let root = [523.25, 880, 261.63][min(2, max(0, voice))]
         playNotes([root, root * [1.25, 1.5, 0.75].randomElement()!], duration: 0.13, timbre: voice)
     }
     func instrument(_ row: Int, beat: Int, voice: Int = 0) {
-        guard settings.sound && active else { return }
+        guard settings.sound && active && !interrupted else { return }
         let key = "instrument-\(min(2,max(0,row)))-\(beat%8)-\(min(2,max(0,voice)))"
         let data: Data
         if let existing = cache[key] { data = existing }
@@ -129,9 +155,9 @@ final class SoundService {
         playData(data)
     }
     private func startEffect(_ player: AVAudioPlayer, gain: Float, varied: Bool = false) {
-        guard settings.sound && active else { return }
+        guard settings.sound && active && !interrupted else { return }
         effects.removeAll { !$0.isPlaying }
-        guard effects.count < 8 else { return }
+        guard effects.count < 5 else { return }
         try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
         player.volume = Float(settings.effectsLevel) * gain
         if varied {
@@ -146,7 +172,7 @@ final class SoundService {
         startEffect(player, gain: 0.55)
     }
     private func playNotes(_ notes: [Double], duration: Double, timbre: Int) {
-        guard settings.sound && active else { return }
+        guard settings.sound && active && !interrupted else { return }
         let key = "\(notes)-\(duration)-\(timbre)"
         let data: Data
         if let stored = cache[key] { data = stored }

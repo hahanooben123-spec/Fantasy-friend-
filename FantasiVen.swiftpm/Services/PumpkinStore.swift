@@ -18,25 +18,20 @@ final class PumpkinStore:ObservableObject {
     }
     func reload() {
         let file=directory.appendingPathComponent("lanterns.json")
-        guard FileManager.default.fileExists(atPath:file.path) else {return}
+        guard LocalSaveQueue.shared.hasSnapshot(file) || FileManager.default.fileExists(atPath:file.path) || FileManager.default.fileExists(atPath:file.appendingPathExtension("bak").path) else {return}
         do {
-            let archive=try JSONDecoder().decode(Archive.self,from:Data(contentsOf:file))
-            guard archive.version == 1,archive.lanterns.allSatisfy(\.isValid),
-                  Set(archive.lanterns.map(\.id)).count == archive.lanterns.count,
-                  archive.draft?.isValid ?? true else {throw CocoaError(.fileReadCorruptFile)}
+            guard let archive=LocalSaveQueue.read(Archive.self,from:file,valid:{
+                $0.version == 1 && $0.lanterns.allSatisfy(\.isValid) &&
+                Set($0.lanterns.map(\.id)).count == $0.lanterns.count && ($0.draft?.isValid ?? true)
+            }) else {throw CocoaError(.fileReadCorruptFile)}
             lanterns=archive.lanterns;draft=archive.draft;readable=true;errorKey=nil
         } catch {readable=false;errorKey="lanternLoadError"}
     }
     private func write(_ values:[PumpkinLantern],draft:PumpkinLantern?)->Bool {
         guard readable else {errorKey="lanternLoadError";return false}
         guard values.allSatisfy(\.isValid),draft?.isValid ?? true else {errorKey="lanternSaveError";return false}
-        do {
-            try FileManager.default.createDirectory(at:directory,withIntermediateDirectories:true)
-            let encoder=JSONEncoder();encoder.outputFormatting=[.prettyPrinted,.sortedKeys]
-            let archive=Archive(lanterns:values,draft:draft)
-            try encoder.encode(archive).write(to:directory.appendingPathComponent("lanterns.json"),options:.atomic)
-            lanterns=values;self.draft=draft;return true
-        } catch {errorKey="lanternSaveError";return false}
+        LocalSaveQueue.shared.enqueue(Archive(lanterns:values,draft:draft),to:directory.appendingPathComponent("lanterns.json"))
+        lanterns=values;self.draft=draft;return true
     }
     @discardableResult func saveDraft(_ value:PumpkinLantern)->Bool {write(lanterns,draft:value)}
     @discardableResult func save(_ value:PumpkinLantern)->Bool {

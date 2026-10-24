@@ -32,14 +32,16 @@ struct FriendRoomView:View {
             VStack(spacing:0) {
                 header
                 if let friend=friend {
-                    RoomScene(friend:friend,layout:layout,editing:decorating,selected:decorating ? selected : nil,
-                        moving:moving,friendPreview:friendPreview,action:action,signal:signal,activeID:activeID,pulse:pulse,pending:nil,
-                        onSelect:{selected=$0},onTap:tap,onMove:move,onFriendMove:moveFriend,
-                        onDropItem:{_,_ in},toyPreview:toyPreview,onSpawnToy:spawnToy,onMoveToy:moveToy,
-                        onUseToy:useToy,onCover:cover,fixedLayout:false)
-                        .frame(maxWidth:.infinity,maxHeight:.infinity)
-                    if decorating {decorationTray(large:large).frame(height:large ? 245 : 315)}
-                    else {playTray}
+                    if decorating {
+                        PlayWorkspace(wide:WorkshopLayout.sidebar(proxy.size),toolWidth:330,toolHeight:large ? 245 : 290) {
+                            roomScene(friend)
+                        } tools:{
+                            ScrollView(.vertical,showsIndicators:true) {decorationTray(large:false)}.background(StorybookShelf())
+                        }
+                    } else {
+                        roomScene(friend).frame(maxWidth:.infinity,maxHeight:.infinity)
+                        playTray
+                    }
                 } else {
                     Spacer();Text(store.t("roomMissing")).foregroundColor(.white).padding(30);Spacer()
                 }
@@ -53,6 +55,13 @@ struct FriendRoomView:View {
             .alert(store.t("error"),isPresented:Binding(get:{store.error != nil},set:{if !$0 {store.error=nil}})) {
                 Button("OK") {store.error=nil}
             } message:{Text(store.error ?? "")}
+    }
+    private func roomScene(_ friend:FantasyFriend)->some View {
+        RoomScene(friend:friend,layout:layout,editing:decorating,selected:decorating ? selected : nil,
+                        moving:moving,friendPreview:friendPreview,action:action,signal:signal,activeID:activeID,pulse:pulse,pending:nil,
+                        onSelect:{selected=$0},onTap:tap,onMove:move,onFriendMove:moveFriend,
+                        onDropItem:{_,_ in},toyPreview:toyPreview,onSpawnToy:spawnToy,onMoveToy:moveToy,
+                        onUseToy:useToy,onCover:cover,fixedLayout:false)
     }
     private var header:some View {
         HStack(spacing:10) {
@@ -199,7 +208,8 @@ struct FriendRoomView:View {
         if decorating {selected=value.id}
         guard finished else {moving=value;return};defer {moving=nil}
         guard let i=layout.objects.firstIndex(where:{$0.id == value.id}) else {return}
-        var next=layout;next.objects[i]=value;commit(next)
+        var next=layout;next.objects[i]=value
+        if commit(next) {activeID=value.id;pulse+=1;SoundService.shared.play(.bounce)}
     }
     private func moveFriend(_ point:CGPoint,_ finished:Bool) {
         guard !decorating else {return}

@@ -9,6 +9,9 @@ struct EditorRequest:Identifiable {
 struct HomeView:View {
     @EnvironmentObject private var store:FriendStore
     @State private var editor:EditorRequest?
+    @State private var showingDrafts=false
+    @State private var chosenDraft:EditorDraft?
+    @State private var newDraftRequested=false
     @State private var resumeNavigation=false
     @StateObject private var pumpkins=PumpkinStore()
     @State private var departure:VillagePlace?
@@ -29,7 +32,7 @@ struct HomeView:View {
                 let tablet=proxy.size.width>=700
                 let wide=proxy.size.width>=650 && proxy.size.width>proxy.size.height
                 ZStack {
-                    WelcomeGardenBackdrop(dusk:dusk,active:homeVisible && journey == nil)
+                    WelcomeGardenBackdrop(dusk:dusk,active:homeVisible && journey == nil && phase == .active)
                     VStack(spacing:0) {
                         header(tablet:tablet).padding(.horizontal,tablet ? 28 : 16).padding(.vertical,4)
                         VillageSquare(friend:mascot,lanterns:pumpkins.lanterns,pizza:store.sessions.pizza,
@@ -63,6 +66,10 @@ struct HomeView:View {
                 }
                 #endif
             }
+            .sheet(isPresented:$showingDrafts,onDismiss:{
+                if let draft=chosenDraft {chosenDraft=nil;editor=EditorRequest(friend:draft.friend,existing:draft.existing,resuming:true)}
+                else if newDraftRequested {newDraftRequested=false;openEditor(FantasyFriend.studioStarter(),existing:false)}
+            }) {draftShelf}
             .fullScreenCover(item:$editor) {request in
                 BuilderView(original:request.friend,existing:request.existing,resuming:request.resuming).environmentObject(store)
             }
@@ -128,7 +135,7 @@ struct HomeView:View {
     private var resumeCard:some View {
         Button(action:resume) {
             HStack(spacing:12) {
-                CharacterView(friend:recentFriend).frame(width:48,height:50).allowsHitTesting(false)
+                resumeArtwork.frame(width:64,height:55).allowsHitTesting(false)
                 VillageCaption(title:store.t("resumePlay"),size:18)
                 Image(systemName:"play.circle.fill").font(.system(size:32,weight:.heavy))
                     .foregroundColor(StorybookStyle.teal)
@@ -136,6 +143,16 @@ struct HomeView:View {
                 .background(CandySurface(color:StorybookStyle.cream,cornerRadius:29))
                 .contentShape(Capsule())
         }.buttonStyle(SquishStyle())
+    }
+    @ViewBuilder private var resumeArtwork:some View {
+        switch recent?.kind {
+        case .pizza:MiniGameArt(kind:.kitchen)
+        case .apples:MiniGameArt(kind:.apples)
+        case .bubbles:MiniGameArt(kind:.bubbles)
+        case .orchestra:MiniGameArt(kind:.orchestra)
+        case .room:DestinationArt(kind:.village)
+        default:CharacterView(friend:recentFriend)
+        }
     }
     private func resume() {
         if recent?.kind == .creator,let draft=store.sessions.editor {
@@ -155,7 +172,37 @@ struct HomeView:View {
         }
     }
 
-    private func create() {openEditor(FantasyFriend.studioStarter(),existing:false)}
+    private func create() {
+        if !store.sessions.allEditors.isEmpty {showingDrafts=true}
+        else {openEditor(FantasyFriend.studioStarter(),existing:false)}
+    }
+    private var draftShelf:some View {
+        ZStack {
+            WelcomeGardenBackdrop(active:false)
+            VStack(spacing:16) {
+                HStack {
+                    VillageCaption(title:store.t("unfinishedFriends"),size:24)
+                    Spacer();RoundButton(icon:"xmark",label:store.t("close")) {showingDrafts=false}
+                }
+                ScrollView {
+                    LazyVGrid(columns:[GridItem(.adaptive(minimum:145,maximum:230))],spacing:16) {
+                        ForEach(store.sessions.allEditors,id:\.friend.id) {draft in
+                            Button {chosenDraft=draft;showingDrafts=false} label:{
+                                VStack(spacing:8) {
+                                    CharacterView(friend:draft.friend).frame(height:155)
+                                    Text(draft.friend.name).font(.system(size:18,weight:.heavy,design:.rounded))
+                                    StorybookIcon(symbol:"play.fill").frame(width:30,height:30)
+                                }.padding(12).frame(maxWidth:.infinity).background(GameChoiceSurface(selected:false))
+                            }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("resumePlay")+" "+draft.friend.name)
+                        }
+                    }.padding(4)
+                }
+                CandyButton(title:store.t("newFriend"),icon:"plus",color:StorybookStyle.mint) {
+                    newDraftRequested=true;showingDrafts=false
+                }
+            }.padding(20)
+        }
+    }
     private func openEditor(_ friend:FantasyFriend,existing:Bool) {
         editor=EditorRequest(friend:friend,existing:existing)
     }
@@ -167,7 +214,7 @@ struct MenuTile: View {
     let color: Color
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icon).font(.system(size: 23, weight: .bold)).frame(width: 30)
+            StorybookIcon(symbol:icon).frame(width:34,height:34)
             Text(title).font(.system(.headline, design: .rounded))
             Spacer(minLength: 0)
             Image(systemName: "chevron.right").font(.system(size: 14, weight: .heavy))

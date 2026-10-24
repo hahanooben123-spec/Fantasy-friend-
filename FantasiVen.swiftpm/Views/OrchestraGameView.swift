@@ -8,10 +8,10 @@ struct OrchestraGameView:View {
     @State private var playing=false
     @State private var recording=false
     @State private var editing=false
+    @State private var tempo=0
     @State private var beat = -1
     @State private var saved=false
     @State private var signals=[0,0,0]
-    @State private var celebration=0
     @State private var preset=0
     @State private var beforeRecording:OrchestraPattern?
     private func performer(_ row:Int)->FantasyFriend {
@@ -46,7 +46,6 @@ struct OrchestraGameView:View {
                             }
                         }.position(x:proxy.size.width/2,y:proxy.size.height*0.77).allowsHitTesting(false)
                     }
-                    PlayCelebration(revision:celebration)
                     VStack {
                         Spacer()
                         if recording {
@@ -58,16 +57,8 @@ struct OrchestraGameView:View {
                         PlayDock {
                             PlayToken(symbol:playing ? "⏸️" : "▶️",label:store.t(playing ? "stopSong" : "playSong")) {playing.toggle()}
                             Spacer(minLength:0)
-                            PlayToken(symbol:"🔴",label:store.t("recordMusic"),selected:recording) {
-                                recording.toggle();if recording {beforeRecording=pattern;pattern=OrchestraPattern();saved=false;beat = -1;playing=true}
-                            }
-                            if beforeRecording != nil {
-                                RoundButton(icon:"arrow.uturn.backward",label:store.t("restoreSong")) {
-                                    if let previous=beforeRecording {pattern=previous}
-                                    beforeRecording=nil;recording=false
-                                }
-                            }
-                            PlayToken(symbol:"🎼",label:store.t("roomMore")) {editing=true}
+                            Spacer(minLength:0)
+                            RoundButton(icon:"tray.fill",label:store.t("musicToybox")) {editing=true}
                         }
                     }
                 }
@@ -81,7 +72,7 @@ struct OrchestraGameView:View {
                     for row in 0..<3 where pattern.rows[row][beat] {
                         SoundService.shared.instrument(row,beat:pattern.note(row:row,beat:beat),voice:performer(row).voice?.rawValue ?? 0);signals[row]+=1
                     }
-                    do {try await Task.sleep(nanoseconds:UInt64([0.55,0.42,0.32][store.settings.challengeLevel-1]*1_000_000_000))}
+                    do {try await Task.sleep(nanoseconds:UInt64([0.55,0.42,0.32][tempo]*1_000_000_000))}
                     catch {return}
                 }
             }
@@ -95,7 +86,7 @@ struct OrchestraGameView:View {
     }
     private func strike(_ row:Int,note:Int?=nil) {
         SoundService.shared.instrument(row,beat:note ?? max(0,beat),voice:performer(row).voice?.rawValue ?? 0);signals[row]+=1
-        if signals[row].isMultiple(of:4) {celebration+=1}
+        // Musical notes and the performer react locally; playing never triggers full-screen confetti.
         if recording {
             let column=max(0,beat)
             pattern.record(row:row,beat:column,note:note ?? column);saved=false
@@ -111,7 +102,33 @@ struct OrchestraGameView:View {
     private var editor:some View {
         ZStack {
             WorldBackdrop(world:.stars,animated:false)
+            ScrollView {
             VStack(spacing:20) {
+                HStack {
+                    VillageCaption(title:store.t("musicToybox"),size:24)
+                    Spacer();RoundButton(icon:"xmark",label:store.t("close")) {editing=false}
+                }
+                CandyButton(title:store.t(recording ? "stopSong" : "recordMusic"),icon:"record.circle.fill",color:StorybookStyle.coral) {
+                    recording.toggle()
+                    if recording {beforeRecording=pattern;pattern=OrchestraPattern();saved=false;beat = -1;playing=true}
+                    editing=false
+                }
+                if beforeRecording != nil {
+                    CandyButton(title:store.t("restoreSong"),icon:"arrow.uturn.backward") {
+                        if let previous=beforeRecording {pattern=previous}
+                        beforeRecording=nil;recording=false
+                    }
+                }
+                HStack(spacing:8) {
+                    ForEach(0..<3,id:\.self) {index in
+                        Button {tempo=index} label:{
+                            VStack(spacing:4) {
+                                ToyGlyph(kind:.music).frame(width:30,height:30)
+                                Text(store.t("musicTempo\(index)")).font(.system(size:14,weight:.heavy,design:.rounded))
+                            }.frame(maxWidth:.infinity,minHeight:60).background(GameChoiceSurface(selected:tempo == index))
+                        }.buttonStyle(SquishStyle())
+                    }
+                }
                 Text(store.t("songHint")).font(.system(.title3,design:.rounded).weight(.bold)).foregroundColor(.white)
                 ScrollView(.horizontal) {
                     VStack(spacing:12) {
@@ -133,6 +150,7 @@ struct OrchestraGameView:View {
                 CandyButton(title:store.t("newBeat"),icon:"shuffle") {preset+=1;seed();playing=true}
                 CandyButton(title:store.t("continue"),icon:"checkmark") {editing=false}
             }.padding(24).frame(maxWidth:600)
+            }
         }
     }
 }

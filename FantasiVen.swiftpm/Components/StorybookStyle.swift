@@ -6,6 +6,10 @@ enum StorybookStyle {
     static let honey = Color(red: 1, green: 0.74, blue: 0.12)
     static let timber = Color(red: 0.46, green: 0.25, blue: 0.22)
     static let teal = Color(red: 0.04, green: 0.49, blue: 0.56)
+    static let coral = Color(red:1,green:0.32,blue:0.48)
+    static let violet = Color(red:0.55,green:0.28,blue:0.88)
+    static let mint = Color(red:0.08,green:0.76,blue:0.64)
+    static let sky = Color(red:0.08,green:0.67,blue:0.96)
     static let plum = Color(red: 0.19, green: 0.12, blue: 0.26)
 }
 
@@ -50,19 +54,44 @@ struct PlayWorkspace<Scene:View,Tools:View>:View {
         self.scene=scene();self.tools=tools()
     }
     var body:some View {
-        Group {
+        GeometryReader {proxy in
             if wide {
-                HStack(spacing:8) {
+                HStack(spacing:10) {
                     scene.frame(maxWidth:.infinity,maxHeight:.infinity)
-                    tools.frame(width:toolWidth).frame(maxHeight:.infinity)
+                    tools.frame(width:min(toolWidth,proxy.size.width*0.44)).frame(maxHeight:.infinity)
                 }
             } else {
                 VStack(spacing:8) {
                     scene.frame(maxWidth:.infinity,maxHeight:.infinity)
-                    tools.frame(height:toolHeight)
+                    tools.frame(height:min(toolHeight,max(150,proxy.size.height*0.52)))
                 }
             }
         }.padding(.horizontal,8).padding(.bottom,8)
+    }
+}
+
+/// Every workshop uses the actual window dimensions, including Split View.
+enum WorkshopLayout {
+    static func sidebar(_ size:CGSize)->Bool {size.width>=680 && size.width>size.height*1.12 && size.height>=340}
+}
+
+struct WorkshopNextButton:View {
+    let title:String
+    var icon="checkmark"
+    var action:()->Void
+    @Environment(\.accessibilityReduceMotion) private var reduced
+    @State private var ready=false
+    var body:some View {
+        Button {SoundService.shared.play(.click);action()} label:{
+            HStack(spacing:12) {
+                StorybookIcon(symbol:icon).frame(width:32,height:32)
+                Text(title).font(.system(size:19,weight:.heavy,design:.rounded)).lineLimit(2)
+                Spacer(minLength:0)
+                StorybookIcon(symbol:"arrow.right").frame(width:32,height:32)
+            }.foregroundColor(StorybookStyle.plum).padding(.horizontal,18).frame(minHeight:64)
+                .background(CandySurface(color:StorybookStyle.honey))
+        }.buttonStyle(SquishStyle()).scaleEffect(ready || reduced ? 1 : 0.85)
+            .onAppear {withAnimation(reduced ? nil : .spring(response:0.45,dampingFraction:0.6)) {ready=true}}
     }
 }
 

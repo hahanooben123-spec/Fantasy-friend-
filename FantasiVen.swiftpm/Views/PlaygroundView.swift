@@ -1,7 +1,7 @@
 import SwiftUI
 
 private enum PlayPicker: Int, Identifiable {
-    case worlds, friends
+    case worlds, friends, toys
     var id: Int { rawValue }
 }
 
@@ -15,6 +15,7 @@ struct PlaygroundView: View {
     @State private var signal = 0
     @State private var paused = false
     @State private var picker: PlayPicker?
+    @State private var beforePicker=false
     private let toys: [ToyKind] = [.feather, .berry, .jump, .music, .moon, .heart]
     private var friend: FantasyFriend? {
         store.friends.first { $0.id == (selectedID ?? initialID) } ?? (store.friends.isEmpty ? guest : store.companion)
@@ -27,42 +28,16 @@ struct PlaygroundView: View {
                 RagdollPlayground(friend:friend,action:action,signal:signal,active:!paused).id(friend.id)
                 VStack {
                     PlayHUD(title:store.t("playRoom"),hint:store.t("ragdollHint"),paused:$paused)
-                    HStack(spacing:12) {
-                        ForEach(MiniGameKind.playgroundToys) {toy in
-                            NavigationLink(destination:PhysicsAdventureView(kind:toy,friend:friend)) {
-                                HStack(spacing:8) {
-                                    MiniGameArt(kind:toy).scaleEffect(0.4).frame(width:42,height:42)
-                                    Text(store.t(toy == .slide ? "buildTrackToy" : "game_trampoline"))
-                                        .font(.system(size:12,weight:.heavy,design:.rounded))
-                                }.padding(.horizontal,12).frame(minHeight:52)
-                                    .background(StorybookPanel(cornerRadius:24))
-                            }.buttonStyle(SquishStyle()).disabled(paused)
-                        }
-                        Spacer(minLength:0)
-                    }.padding(.horizontal,16)
                     Spacer().allowsHitTesting(false)
-                    HStack(spacing:8) {
-                        Button {if store.friends.isEmpty {onCreate()} else {picker = .friends}} label:{
-                            CharacterView(friend:friend).frame(width:48,height:50)
-                                .background(Circle().fill(.white))
-                        }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("chooseFriend"))
-                        Button {picker = .worlds} label:{
-                            WorldBackdrop(world:friend.world,immersive:false,animated:false)
-                                .frame(width:48,height:48).clipShape(Circle()).overlay(Circle().stroke(.white,lineWidth:3))
-                        }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("chooseWorld"))
-                        NavigationLink(destination:SharedToyYardView(initialFriend:friend)) {
-                            Image(systemName:"person.3.fill").font(.title2).frame(width:48,height:48).background(Circle().fill(.white))
-                        }.accessibilityLabel(store.t("sharedYard"))
-                        Spacer()
-                    }.padding(.horizontal,16)
                     PlayDock(spacing:0) {
-                        ForEach(Array(PlayAction.allCases.enumerated()),id:\.element.rawValue) { index,item in
+                        ForEach(Array(PlayAction.allCases.enumerated()).filter { [.jump,.tickle,.hug].contains($0.element) },id:\.element.rawValue) { index,item in
                             Button {action=item;signal+=1} label:{
                                 ToyGlyph(kind:toys[index]).frame(width:36,height:36)
                                     .frame(maxWidth:.infinity,minHeight:52)
                                     .background(CandySurface(color:StudioStyle.colors[index],cornerRadius:16))
                             }.buttonStyle(SquishStyle()).accessibilityLabel(store.t(item.rawValue))
                         }
+                        RoundButton(icon:"tray.fill",label:store.t("toybox")) {picker = .toys}
                     }.disabled(paused)
                 }
             } else {
@@ -74,8 +49,10 @@ struct PlaygroundView: View {
             if paused {PlayPauseOverlay(resume:{paused=false})}
         }.foregroundColor(GameStyle.ink).navigationBarHidden(true).statusBar(hidden:true)
             .onAppear {store.visit(.playground,friendID:friend?.id)}
-            .sheet(item:$picker) {choice in pickerContent(choice)}
-            .onChange(of:picker != nil) {value in paused=value}
+            .sheet(item:$picker) {choice in NavigationView {pickerContent(choice).navigationBarHidden(true)}.navigationViewStyle(.stack)}
+            .onChange(of:picker != nil) {value in
+                if value {beforePicker=paused;paused=true} else {paused=beforePicker}
+            }
     }
 
     private func pickerContent(_ choice: PlayPicker) -> some View {
@@ -83,13 +60,40 @@ struct PlaygroundView: View {
             WorldBackdrop(world: .clouds)
             VStack(spacing: 12) {
                 HStack {
-                    Text(store.t(choice == .worlds ? "chooseWorld" : "chooseFriend")).font(.system(.title2, design: .rounded).weight(.heavy))
+                    Text(store.t(choice == .worlds ? "chooseWorld" : choice == .toys ? "toybox" : "chooseFriend")).font(.system(.title2, design: .rounded).weight(.heavy))
                     Spacer()
                     RoundButton(icon: "xmark", label: store.t("close")) { picker = nil }
                 }.padding(20)
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), spacing: 15)], spacing: 18) {
-                        if choice == .worlds {
+                        if choice == .toys {
+                            LazyVGrid(columns:[GridItem(.adaptive(minimum:120))],spacing:16) {
+                                ForEach(Array(PlayAction.allCases.enumerated()),id:\.element.rawValue) {index,item in
+                                    Button {action=item;signal+=1;picker=nil} label:{
+                                        VStack(spacing:8) {
+                                            ToyGlyph(kind:toys[index]).frame(width:58,height:58)
+                                            Text(store.t(item.rawValue)).font(.system(size:16,weight:.heavy,design:.rounded))
+                                        }.frame(maxWidth:.infinity,minHeight:110).background(GameChoiceSurface(selected:false))
+                                    }.buttonStyle(SquishStyle())
+                                }
+                            }.padding(18)
+                            CandyButton(title:store.t("chooseWorld"),icon:"sparkles") {picker = .worlds}.padding(.horizontal,18)
+                            CandyButton(title:store.t("chooseFriend"),icon:"heart.fill") {
+                                if store.friends.isEmpty {picker=nil;onCreate()} else {picker = .friends}
+                            }.padding(.horizontal,18)
+                            ForEach(MiniGameKind.playgroundToys) {toy in
+                                NavigationLink(destination:PhysicsAdventureView(kind:toy,friend:friend ?? guest)) {
+                                    HStack {
+                                        MiniGameArt(kind:toy).frame(width:75,height:65)
+                                        Text(store.t(toy == .slide ? "buildTrackToy" : "game_trampoline")).font(.system(size:18,weight:.heavy,design:.rounded))
+                                        Spacer()
+                                    }.padding(12).background(StorybookShelf())
+                                }.buttonStyle(SquishStyle()).padding(.horizontal,18)
+                            }
+                            NavigationLink(destination:SharedToyYardView(initialFriend:friend ?? guest)) {
+                                Label(store.t("sharedYard"),systemImage:"person.3.fill").font(.system(size:18,weight:.heavy,design:.rounded)).padding(18).background(StorybookShelf())
+                            }.buttonStyle(SquishStyle()).padding(18)
+                        } else if choice == .worlds {
                             ForEach(World.allCases, id: \.rawValue) { world in
                                 Button {
                                     guard var value = friend else { return }

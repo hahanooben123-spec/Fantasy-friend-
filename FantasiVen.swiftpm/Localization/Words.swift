@@ -13,6 +13,21 @@ enum Words {
     }
 
     static let entries: [String: (String, String)] = [
+        "unfinishedFriends": ("Dine ufærdige venner", "Your unfinished friends"),
+        "saveRetry": ("Kunne ikke gemme – tryk for at prøve igen", "Could not save – tap to try again"),
+        "savingLocal": ("Gemmer…", "Saving…"),
+        "lanternNextScoop": ("Lad os udhule!", "Let’s scoop!"),
+        "lanternNextCarve": ("Lav et sjovt ansigt!", "Make a funny face!"),
+        "lanternNextLight": ("Vælg dit lys!", "Choose your light!"),
+        "lanternNextReveal": ("Se mit græskar!", "Show my pumpkin!"),
+        "bubbleSimpleHint": ("Tryk: pop! Hold: pust!", "Tap to pop! Hold to grow!"),
+        "bubbleDragPlay": ("Flyt og bland bobler", "Move and mix bubbles"),
+        "toybox": ("Legekasse", "Toy box"),
+        "musicToybox": ("Musikkasse", "Music box"),
+        "musicTempo0": ("Roligt", "Gentle"),
+        "musicTempo1": ("Hoppende", "Bouncy"),
+        "musicTempo2": ("Hurtigt", "Quick"),
+
 
         "roomSizeHint": ("Flyt møblet, og vælg en størrelse", "Move the furniture and choose a size"),
 

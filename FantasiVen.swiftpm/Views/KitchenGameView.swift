@@ -43,7 +43,7 @@ struct KitchenGameView:View {
     var body:some View {
         AdventureGameShell(kind:.kitchen) {active in
             GeometryReader {proxy in
-                let wide=proxy.size.width>=900 && proxy.size.width>proxy.size.height
+                let wide=WorkshopLayout.sidebar(proxy.size)
                 let large=proxy.size.width>=650
                 ZStack {
                     PizzaKitchenBackdrop()
@@ -132,7 +132,7 @@ struct KitchenGameView:View {
     }
     private func restore() {
         guard !loaded else {return}
-        if let draft=store.sessions.pizza,draft.isValid,draft.companion.id == friend.id {
+        if let draft=store.sessions.pizza(for:friend.id),draft.isValid {
             recipe=draft.recipe;spice=draft.spice;topping=draft.topping
             inserted=draft.inserted;baked=draft.baked;served=draft.served
             step=inserted ? 3 : draft.step == 0 ? 0 : 1
@@ -203,22 +203,7 @@ struct KitchenGameView:View {
         SoundService.shared.play(.reaction)
     }
     private var continueButton:some View {
-        Button(action:continueCooking) {
-            HStack(spacing:10) {
-                Image(systemName:continueIcon)
-                    .font(.system(size:25,weight:.heavy))
-                    .frame(width:46,height:46)
-                    .background(Circle().fill(Color.white.opacity(0.3)))
-                Text(store.t(continueKey))
-                    .font(.system(size:19,weight:.heavy,design:.rounded))
-                    .minimumScaleFactor(0.75).lineLimit(2)
-                    .frame(maxWidth:.infinity,alignment:.leading)
-                Image(systemName:"arrow.right.circle.fill")
-                    .font(.system(size:30,weight:.bold))
-            }.foregroundColor(GameStyle.ink).padding(.horizontal,12)
-                .frame(maxWidth:.infinity,minHeight:68)
-                .background(CandySurface(color:Color(red:1,green:0.77,blue:0.12),cornerRadius:25))
-        }.buttonStyle(SquishStyle())
+        WorkshopNextButton(title:store.t(continueKey),icon:continueIcon,action:continueCooking)
             .accessibilityHint(store.t("pizzaContinueHint"))
             .transition(.asymmetric(insertion:.scale(scale:reduced ? 1 : 0.8).combined(with:.opacity),removal:.opacity))
     }

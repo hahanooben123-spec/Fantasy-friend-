@@ -10,19 +10,6 @@ struct GalleryView: View {
                 AdventureHeading(title: store.t("friendVillage"), subtitle: store.t("villageSubtitle"))
                 if store.friends.isEmpty { EmptyCollectionView { onEdit(FantasyFriend.studioStarter(), false) } }
                 else {
-                    NavigationLink(destination:FriendRoomView(friendID:store.companion.id)) {
-                        HStack(spacing:12) {
-                            ZStack {
-                                RoomInterior(design:store.companion.roomDesign ?? RoomDesign())
-                                    .clipShape(RoundedRectangle(cornerRadius:17))
-                                CharacterView(friend:store.companion).padding(4)
-                            }.frame(width:82,height:72).accessibilityHidden(true)
-                            Text(store.t("villageMyHome")+" "+store.companion.name)
-                                .font(.system(size:18,weight:.heavy,design:.rounded))
-                                .lineLimit(2).frame(maxWidth:.infinity,alignment:.leading)
-                            Image(systemName:"door.left.hand.open").font(.system(size:26,weight:.bold))
-                        }.padding(10).background(StorybookPanel(cornerRadius:26))
-                    }.buttonStyle(SquishStyle()).padding(.horizontal,20).frame(maxWidth:800)
                     ScrollView {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 148, maximum: 235), spacing: 16)], spacing: 22) {
                             Button { onEdit(FantasyFriend.studioStarter(), false) } label: {
@@ -35,9 +22,19 @@ struct GalleryView: View {
                                     .overlay(RoundedRectangle(cornerRadius: 38).stroke(.white, style: StrokeStyle(lineWidth: 3, dash: [9, 6])))
                             }.buttonStyle(SquishStyle())
                             ForEach(store.friends) { friend in
-                                NavigationLink(destination: FriendDetailView(friendID: friend.id, onEdit: onEdit)) {
-                                    FriendHomeCard(friend: friend)
-                                }.buttonStyle(SquishStyle()).accessibilityLabel(friend.name)
+                                VStack(spacing:8) {
+                                    NavigationLink(destination:FriendRoomView(friendID:friend.id)) {
+                                        FriendHomeCard(friend:friend)
+                                    }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("myRoom")+" "+friend.name)
+                                    HStack(spacing:12) {
+                                        RoundButton(icon:"paintbrush.fill",label:store.t("editLook")) {onEdit(friend,true)}
+                                        Spacer(minLength:0)
+                                        NavigationLink(destination:FriendDetailView(friendID:friend.id,onEdit:onEdit)) {
+                                            StorybookIcon(symbol:"ellipsis").frame(width:30,height:30).frame(width:54,height:54)
+                                                .background(CandySurface(color:StorybookStyle.cream))
+                                        }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("roomMore"))
+                                    }.padding(.horizontal,8)
+                                }
                             }
                         }.padding(.horizontal, 20).padding(.vertical, 10).frame(maxWidth: 1150).frame(maxWidth: .infinity)
                     }

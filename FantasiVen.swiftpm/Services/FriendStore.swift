@@ -32,17 +32,16 @@ final class FriendStore: ObservableObject {
 
     private func load() {
         let settingsURL = directory.appendingPathComponent("settings.json")
-        if FileManager.default.fileExists(atPath: settingsURL.path) {
-            do { settings = try JSONDecoder().decode(GameSettings.self, from: Data(contentsOf: settingsURL)) }
-            catch { self.error = t("loadError") }
+        if LocalSaveQueue.shared.hasSnapshot(settingsURL) || FileManager.default.fileExists(atPath:settingsURL.path) || FileManager.default.fileExists(atPath:settingsURL.appendingPathExtension("bak").path) {
+            if let value=LocalSaveQueue.read(GameSettings.self,from:settingsURL,valid:{_ in true}) {settings=value}
+            else {self.error=t("loadError")}
         }
         let url = directory.appendingPathComponent("friends.json")
-        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        guard LocalSaveQueue.shared.hasSnapshot(url) || FileManager.default.fileExists(atPath: url.path) || FileManager.default.fileExists(atPath:url.appendingPathExtension("bak").path) else { return }
         do {
-            let archive = try JSONDecoder().decode(Archive.self, from: Data(contentsOf: url))
-            guard archive.version == 1, archive.friends.allSatisfy(\.isValid), Set(archive.friends.map(\.id)).count == archive.friends.count else {
-                throw CocoaError(.fileReadCorruptFile)
-            }
+            guard let archive=LocalSaveQueue.read(Archive.self,from:url,valid:{
+                $0.version == 1 && $0.friends.allSatisfy(\.isValid) && Set($0.friends.map(\.id)).count == $0.friends.count
+            }) else {throw CocoaError(.fileReadCorruptFile)}
             friends = archive.friends
         } catch {
             collectionReadable = false
@@ -53,10 +52,9 @@ final class FriendStore: ObservableObject {
 
     private func loadSessions() {
         let url=directory.appendingPathComponent("sessions.json")
-        guard FileManager.default.fileExists(atPath:url.path) else {return}
+        guard LocalSaveQueue.shared.hasSnapshot(url) || FileManager.default.fileExists(atPath:url.path) || FileManager.default.fileExists(atPath:url.appendingPathExtension("bak").path) else {return}
         do {
-            let value=try JSONDecoder().decode(PlaySessions.self,from:Data(contentsOf:url))
-            guard value.isValid else {throw CocoaError(.fileReadCorruptFile)}
+            guard let value=LocalSaveQueue.read(PlaySessions.self,from:url,valid:{$0.isValid}) else {throw CocoaError(.fileReadCorruptFile)}
             sessions=value
         } catch {sessionsReadable=false;self.error=t("loadError")}
     }
@@ -70,15 +68,23 @@ final class FriendStore: ObservableObject {
     }
     @discardableResult func saveEditorDraft(_ friend:FantasyFriend,existing:Bool)->Bool {
         updateSessions {
+            $0.editorDrafts=$0.allEditors.filter {$0.friend.id != friend.id}
             $0.editor=EditorDraft(friend:friend,existing:existing)
             $0.recent=ActivityBookmark(kind:.creator,friendID:friend.id)
         }
     }
     func clearEditorDraft(_ id:UUID) {
-        updateSessions {if $0.editor?.friend.id == id {$0.editor=nil;$0.recent=ActivityBookmark(kind:.playground,friendID:id)}}
+        updateSessions {
+            $0.editorDrafts=$0.allEditors.filter {$0.friend.id != id}
+            if $0.editor?.friend.id == id {$0.editor=$0.editorDrafts?.first}
+            $0.recent=ActivityBookmark(kind:.playground,friendID:id)
+        }
     }
     @discardableResult func savePizzaDraft(_ draft:PizzaDraft)->Bool {
-        updateSessions {$0.pizza=draft;$0.recent=ActivityBookmark(kind:.pizza,friendID:draft.companion.id)}
+        updateSessions {
+            $0.pizzaDrafts=$0.allPizzas.filter {$0.companion.id != draft.companion.id}
+            $0.pizza=draft;$0.recent=ActivityBookmark(kind:.pizza,friendID:draft.companion.id)
+        }
     }
     @discardableResult func recordAppleStreak(_ streak:Int)->Bool {
         guard streak>(sessions.appleBestStreak ?? 0) else {return true}
@@ -92,10 +98,7 @@ final class FriendStore: ObservableObject {
     }
 
     private func write<T: Encodable>(_ value: T, to file: String) throws {
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        try encoder.encode(value).write(to: directory.appendingPathComponent(file), options: .atomic)
+        LocalSaveQueue.shared.enqueue(value,to:directory.appendingPathComponent(file))
     }
 
     @discardableResult
@@ -113,7 +116,16 @@ final class FriendStore: ObservableObject {
     func delete(_ friend: FantasyFriend) -> Bool {
         guard collectionReadable else { error = t("loadError"); return false }
         let updated = friends.filter { $0.id != friend.id }
-        do { try write(Archive(friends: updated), to: "friends.json"); friends = updated; return true }
+        do { try write(Archive(friends: updated), to: "friends.json"); friends = updated
+            updateSessions {
+                $0.editorDrafts=$0.allEditors.filter {$0.friend.id != friend.id}
+                $0.pizzaDrafts=$0.allPizzas.filter {$0.companion.id != friend.id}
+                if $0.editor?.friend.id == friend.id {$0.editor=$0.editorDrafts?.first}
+                if $0.pizza?.companion.id == friend.id {$0.pizza=$0.pizzaDrafts?.first}
+                if $0.companionID == friend.id {$0.companionID=updated.first?.id}
+                if $0.recent?.friendID == friend.id {$0.recent=nil}
+            }
+            return true }
         catch { self.error = t("error"); return false }
     }
 

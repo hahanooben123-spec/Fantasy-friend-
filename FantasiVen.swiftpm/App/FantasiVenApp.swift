@@ -25,10 +25,13 @@ struct FantasiVenApp: App {
     @Environment(\.scenePhase) private var scenePhase
     var body: some Scene {
         WindowGroup {
-            root.environmentObject(store)
+            root.overlay(LocalSaveStatus().environmentObject(store)).environmentObject(store)
                 .environment(\.locale, Locale(identifier: store.settings.language.rawValue))
                 .preferredColorScheme(.light)
-                .onChange(of: scenePhase) { SoundService.shared.setActive($0 == .active) }
+                .onChange(of: scenePhase) {
+                    SoundService.shared.setActive($0 == .active)
+                    if $0 != .active {LocalSaveQueue.shared.flush()}
+                }
         }
     }
 }

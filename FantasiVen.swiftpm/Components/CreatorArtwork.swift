@@ -2,9 +2,9 @@ import SwiftUI
 
 enum WorkshopLook {
     static let sea = StorybookStyle.teal
-    static let blue = Color(red: 0.02, green: 0.55, blue: 0.72)
+    static let blue = StorybookStyle.sky
     static let cream = StorybookStyle.cream
-    static let yellow = Color(red: 1, green: 0.77, blue: 0.12)
+    static let yellow = StorybookStyle.honey
 }
 
 enum CreatorMark: Equatable { case close, undo, redo, done, shuffle, duplicate, mirror, trash, rotate, resize, help, voice, add }

@@ -1,13 +1,8 @@
 import SwiftUI
 
 enum StudioStyle {
-    static let colors: [Color] = [
-        Color(red: 1, green: 0.72, blue: 0.04), Color(red: 1, green: 0.32, blue: 0.53),
-        Color(red: 0.04, green: 0.75, blue: 0.67), Color(red: 0.65, green: 0.36, blue: 0.96),
-        Color(red: 1, green: 0.49, blue: 0.12), Color(red: 0.12, green: 0.68, blue: 1),
-        Color(red: 0.62, green: 0.86, blue: 0.12), Color(red: 0.94, green: 0.36, blue: 0.78),
-        Color(red: 1, green: 0.78, blue: 0.02)
-    ]
+    static let colors:[Color]=[StorybookStyle.coral,StorybookStyle.mint,StorybookStyle.violet,
+        .orange,StorybookStyle.sky,GameStyle.palette[4],GameStyle.palette[8],StorybookStyle.honey]
     static func color(_ part: Part) -> Color { colors[part.rawValue % colors.count] }
 }
 

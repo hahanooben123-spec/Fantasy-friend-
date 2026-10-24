@@ -38,17 +38,6 @@ struct SettingsView: View {
                             volumeControl("musicVolume", value: Binding(get: { store.settings.musicLevel }, set: { value in store.updateSettings { $0.musicVolume = value } }), enabled: store.settings.music)
                             Text(store.t("musicAtmosphere")).font(.system(.caption, design: .rounded)).foregroundColor(GameStyle.ink.opacity(0.65))
                         }.toggleStyle(SwitchToggleStyle(tint: GameStyle.purple)).padding(22).background(StorybookPanel(cornerRadius: 32))
-                        VStack(spacing: 14) {
-                            Text(store.t("challenge")).font(.headline)
-                            HStack {
-                                ForEach(1...3, id: \.self) { level in
-                                    Button { store.updateSettings { $0.challenge = level } } label: {
-                                        Text(String(repeating: "🌼", count: level)).font(.title2).frame(maxWidth: .infinity, minHeight: 52)
-                                            .background(CandySurface(color: store.settings.challengeLevel == level ? StudioStyle.colors[0] : .white, cornerRadius: 20)).contentShape(Rectangle())
-                                    }.accessibilityLabel(store.t("challenge") + " \(level)")
-                                }
-                            }
-                        }.padding(20).background(StorybookPanel(cornerRadius: 28))
                         VStack(alignment: .leading, spacing: 12) {
                             Text(store.t("language")).font(.system(.headline, design: .rounded))
                             HStack(spacing: 14) {
