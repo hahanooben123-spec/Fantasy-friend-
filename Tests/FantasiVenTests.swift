@@ -160,16 +160,25 @@ final class FantasiVenTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = FriendStore(directory: directory)
         var friend = FantasyFriend(); friend.name = "Zippi"
+        friend.accessories = [1] // Ears add one flexible physics body.
         friend.setPlacement(PartPlacement(x: 0.1, rotation: 45), for: .hat)
         XCTAssertTrue(store.save(friend))
         let simulation = RagdollSimulation()
         simulation.configure(friend, reducedMotion: false)
+        let originalPhysicsBodies = simulation.scene.children.compactMap { $0.physicsBody }
+        let initialBodies = Set(originalPhysicsBodies.map { ObjectIdentifier($0) })
+        XCTAssertEqual(initialBodies.count, 7) // Boundary, torso, four limbs and ears.
         simulation.beginDrag(at: CGPoint(x: 300, y: 235))
         XCTAssertTrue(simulation.isDragging)
         simulation.react(.dance)
         simulation.configure(friend, reducedMotion: false)
         XCTAssertFalse(simulation.isDragging)
-        XCTAssertEqual(simulation.scene.children.count, 6)
+        XCTAssertEqual(simulation.scene.children.count, 7)
+        let resetBodies = Set(simulation.scene.children.compactMap { $0.physicsBody }.map { ObjectIdentifier($0) })
+        XCTAssertEqual(resetBodies.count, initialBodies.count)
+        withExtendedLifetime(originalPhysicsBodies) {
+            XCTAssertTrue(initialBodies.isDisjoint(with: resetBodies))
+        }
         XCTAssertEqual(FriendStore(directory: directory).friends, [friend])
         XCTAssertEqual(simulation.frame.friend.placement(for: .hat), friend.placement(for: .hat))
         simulation.setActive(false)
@@ -391,7 +400,9 @@ extension FantasiVenTests {
         XCTAssertEqual(enlarged.facePlacements?["mouth"]?.scale, 1.5)
         XCTAssertEqual(enlarged.facePlacements?["mouth"]?.rotation, 40)
         XCTAssertTrue(enlarged.isValid)
-        XCTAssertNil(original.facePlacements)
+        XCTAssertNil(original.facePlacements?["mouth"])
+        XCTAssertEqual(enlarged.facePlacements?["eyes"], original.facePlacements?["eyes"])
+        XCTAssertEqual(original.facePlacements, FantasyFriend.studioStarter().facePlacements)
     }
     func testWorkshopRejectsUnknownPartEditsAndReadsOlderFriends() throws {
         var friend = FantasyFriend.studioStarter()
