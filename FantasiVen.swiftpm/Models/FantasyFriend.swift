@@ -50,22 +50,13 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
     func placement(for attachment: Attachment) -> PartPlacement {
         if let explicit=placements?[attachment.rawValue] {return explicit}
         var pose=PartPlacement()
-        if let sculpt=bodySculpt {
-            let shift=sculpt.limbShift(attachment,friend:self)
-            pose.x=shift.x/300;pose.y=shift.y/320
-        }
+        let shift=(bodySculpt ?? BodySculpt()).limbShift(attachment,friend:self)
+        pose.x=shift.x/300;pose.y=shift.y/320
         if attachment.category == .arms {pose.scale=armSize ?? 1}
         if attachment.category == .legs {pose.scale=legSize ?? 1}
         if (attachment.category == .arms || attachment.category == .legs) && pose.scale != 1 {
             let rect=AttachmentLayout.bounds(for:attachment,friend:self)
-            let anchor:CGPoint
-            switch attachment {
-            case .leftArm:anchor=CGPoint(x:rect.maxX-15,y:179)
-            case .rightArm:anchor=CGPoint(x:rect.minX+15,y:179)
-            case .leftLeg:anchor=CGPoint(x:110,y:237)
-            case .rightLeg:anchor=CGPoint(x:180,y:237)
-            default:anchor=CGPoint(x:rect.midX,y:rect.midY)
-            }
+            let anchor=CreatureLimbArtwork.anchor(attachment,body:body)
             let factor=CGFloat(1)-CGFloat(pose.scale)
             pose.x+=Double((anchor.x-rect.midX)*factor/CGFloat(300))
             pose.y+=Double((anchor.y-rect.midY)*factor/CGFloat(320))

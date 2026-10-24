@@ -94,13 +94,7 @@ final class RagdollSimulation: ObservableObject {
             limbs[attachment] = node
 
             // The pin follows the saved placement, including rotated/scaled limbs.
-            let localPin: CGPoint
-            switch attachment {
-            case .leftArm: localPin = CGPoint(x: bounds.maxX - 15, y: 179)
-            case .rightArm: localPin = CGPoint(x: bounds.minX + 15, y: 179)
-            case .leftLeg,.rightLeg: localPin = CGPoint(x: bounds.midX, y: 237)
-            default: localPin=CreatureRig.pivot(attachment,friend:friend)
-            }
+            let localPin=CreatureRig.pivot(attachment,friend:friend)
             let angle = CGFloat(pose.rotation) * .pi / 180
             let dx = (localPin.x - bounds.midX) * CGFloat(pose.scale)
             let dy = (localPin.y - bounds.midY) * CGFloat(pose.scale)

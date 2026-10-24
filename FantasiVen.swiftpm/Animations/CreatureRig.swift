@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum CreatureMotion: Equatable {
-    case idle, walk, jump, laugh, eat, dance, hug, sleep
+    case idle, walk, wave, jump, laugh, eat, dance, hug, sleep
     init(_ action: PlayAction) {
         switch action {
         case .tickle: self = .laugh
@@ -19,6 +19,7 @@ enum CreatureMotion: Equatable {
         case .laugh: return 2.1
         case .dance: return 3.2
         case .hug: return 2.4
+        case .wave:return 1.15
         case .sleep, .idle, .walk: return .infinity
         }
     }
@@ -86,7 +87,7 @@ enum CreatureRig {
         var p=CreaturePose()
         guard !reduced else {
             p.asleep=motion == .sleep
-            p.happy=motion == .hug || motion == .laugh
+            p.happy=motion == .hug || motion == .laugh || motion == .wave
             p.expression=motion == .eat ? .chew : motion == .jump ? .wonder : .normal
             return p
         }
@@ -160,6 +161,11 @@ enum CreatureRig {
             liftL = -max(0,cos(beat))*8*envelope
             liftR = -max(0,-cos(beat))*8*envelope
             p.happy=true; secondary=sin(beat-0.8)*15*envelope
+        case .wave:
+            let lift=key(t,[(0,0),(0.18,1),(0.84,1),(1.15,0)])
+            armR=(-105+sin(t*19)*19)*lift
+            armL=8*lift;p.headTilt = -5*lift;p.happy=true
+            secondary=sin(t*9)*4*lift
         case .hug:
             let embrace=key(t,[(0,0),(0.35,1),(1.5,1),(2.4,0)])
             armL = -embrace*72; armR=embrace*72
@@ -194,10 +200,7 @@ enum CreatureRig {
     static func pivot(_ part: Attachment, friend: FantasyFriend) -> CGPoint {
         let rect=AttachmentLayout.bounds(for:part,friend:friend)
         switch part {
-        case .leftArm: return CGPoint(x:CreatureShape(kind:friend.body).shoulder+6,y:179)
-        case .rightArm: return CGPoint(x:294-CreatureShape(kind:friend.body).shoulder,y:179)
-        case .leftLeg: return CGPoint(x:110,y:237)
-        case .rightLeg: return CGPoint(x:180,y:237)
+        case .leftArm,.rightArm,.leftLeg,.rightLeg:return CreatureLimbArtwork.anchor(part,body:friend.body)
         case .ears,.antennae,.horns,.hat,.crown: return CGPoint(x:150,y:rect.maxY)
         case .tail: return CGPoint(x:211,y:220)
         case .wings: return CGPoint(x:150,y:172)

@@ -2,6 +2,14 @@
 
 Et originalt, lokalt iPhone-spil til børn på 3–8 år. Swift 6, SwiftUI og iOS 15+. Ingen tredjepartspakker, login, netværkskald eller køb.
 
+## Nuttede figurer og enklere aktivitetsværktøjer
+
+Otte armtyper og otte fodtyper er tegnet om som bløde poter, luffer, svømmefødder, vanter, støvler og små tøfler. Den samme vektorgeometri bruges i figuren, previews, bounds og fysik. Skuldre og hofter afledes af de otte kropssilhuetter, og størrelse/formning følges af delenes fæste. Glade ansigter beholder store åbne øjne; kinder, smil og tunge er blødere. Nye armvalg får et lille vink, benvalg får en kort gangbevægelse, og hop får tid til at lande.
+
+Pizza bruger de samme markerede billedvalg og værktøjsbakker som skaberen. Græskar har Tilbage/Fortryd/Mere/Færdig, automatisk overgang efter tømning og tre lysstyrker i stedet for skydere. Værelset har tre størrelsesvalg direkte ved det valgte møbel; tekniske trækhåndtag er fjernet, og rotation ligger under Mere.
+
+Detaljer: [Documentation/Cuddly-Characters-and-Tools.md](Documentation/Cuddly-Characters-and-Tools.md). Projektgeneratoren registrerer den nye Swift-fil. Ingen build, tests eller UI-kontrol kørt efter brugerens ønske.
+
 ## Enkel skaber og fælles børnevenligt UI
 
 Arme og ben vælges som ét par af hver: tryk på en type for at udskifte parret, og vælg Små, Mellem eller Store. Fæstet ved skuldre og hofter følger størrelsen automatisk. Løse ekstra arme/ben og fri flytning/rotation er fjernet fra den primære skaber. Tilbehør slås til/fra som standarddele. Kroppens formning og tegning er bevaret.

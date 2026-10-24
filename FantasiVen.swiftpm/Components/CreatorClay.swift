@@ -12,23 +12,8 @@ struct BodySculpt: Codable, Equatable {
         (0.72...1.25).contains(lower) && (-16...16).contains(lean)
     }
     func limbShift(_ part:Attachment,friend:FantasyFriend)->CGPoint {
-        let shoulder:Double
-        switch friend.body {
-        case .oval:shoulder=82
-        case .pear:shoulder=88
-        case .drop:shoulder=79
-        case .cloud:shoulder=49
-        case .bean:shoulder=89
-        default:shoulder=65
-        }
-        let anchor:CGPoint
-        switch part {
-        case .leftArm:anchor=CGPoint(x:shoulder+6,y:179)
-        case .rightArm:anchor=CGPoint(x:294-shoulder,y:179)
-        case .leftLeg:anchor=CGPoint(x:110,y:237)
-        case .rightLeg:anchor=CGPoint(x:180,y:237)
-        default:return .zero
-        }
+        guard part.category == .arms || part.category == .legs else {return .zero}
+        let anchor=CreatureLimbArtwork.anchor(part,body:friend.body)
         let molded=point(anchor)
         return CGPoint(x:150+(molded.x-150)*friend.widthFactor-anchor.x,
                        y:175+(molded.y-175)*friend.heightFactor-anchor.y)

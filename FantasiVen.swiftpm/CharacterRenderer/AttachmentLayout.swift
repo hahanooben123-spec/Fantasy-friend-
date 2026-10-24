@@ -9,29 +9,8 @@ enum AttachmentLayout {
 
     static func bounds(for attachment: Attachment, friend: FantasyFriend) -> CGRect {
         switch attachment {
-        case .leftArm, .rightArm:
-            let left = attachment == .leftArm
-            let shoulder: CGFloat
-            switch friend.body {
-            case .oval: shoulder = 82
-            case .pear: shoulder = 88
-            case .drop: shoulder = 79
-            case .cloud: shoulder = 49
-            case .bean: shoulder = 89
-            default: shoulder = 65
-            }
-            let start = left ? shoulder + 6 : 294 - shoulder
-            let hand = start + (left ? -1 : 1) * CGFloat(20 + friend.arms * 3)
-            let handY = CGFloat(208 - friend.arms % 4 * 16)
-            return CGRect(x: min(start, hand) - 15, y: min(165, handY - 20),
-                          width: abs(hand - start) + 30, height: max(195, handY + 15) - min(165, handY - 20))
-        case .leftLeg, .rightLeg:
-            let left = attachment == .leftLeg
-            let x: CGFloat = left ? 110 : 180
-            let foot = x + (left ? -1 : 1) * CGFloat(friend.legs * 2)
-            return CGRect(x: min(x - 12, foot - 20), y: 228,
-                          width: max(x + 12, foot + 26) - min(x - 12, foot - 20),
-                          height: CGFloat(58 + friend.legs % 4 * 4))
+        case .leftArm,.rightArm,.leftLeg,.rightLeg:
+            return CreatureLimbArtwork.bounds(attachment,friend:friend)
         case .horns: return CGRect(x: 90, y: 40, width: 122, height: 56)
         case .ears: return CGRect(x: 99, y: 9, width: 103, height: 96)
         case .antennae: return CGRect(x: 93, y: 21, width: 103, height: 70)

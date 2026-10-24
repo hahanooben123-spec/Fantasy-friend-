@@ -122,8 +122,8 @@ struct FriendRoomView:View {
                 onSelect:{selected=$0},onTap:tap,onMove:move,onFriendMove:moveFriend,
                 onDropItem:{item,point in add(item,at:point)},toyPreview:toyPreview,
                 onSpawnToy:spawnToy,onMoveToy:moveToy,onUseToy:useToy,onCover:cover)
-            if editing || full {
-            Text(store.t(full ? "roomFull" : editing ? (draggingItem != nil ? "roomDropHere" : choice != nil && !trayOpen ? "roomSelectedHint" : "roomSimpleHint") : "roomLivingHint"))
+            if full {
+            Text(store.t(full ? "roomFull" : editing ? (draggingItem != nil ? "roomDropHere" : choice != nil && !trayOpen ? "roomSizeHint" : "roomSimpleHint") : "roomLivingHint"))
                 .font(.system(size:12,weight:.bold,design:.rounded)).multilineTextAlignment(.center)
                 .padding(.horizontal,14).padding(.vertical,9)
                 .background(StorybookPanel(cornerRadius:24)).padding(10).allowsHitTesting(false)
@@ -177,6 +177,14 @@ struct FriendRoomView:View {
         }
     }
     private var selectionTools:some View {
+        VStack(spacing:5) {
+            if !trayOpen {
+                if choice != nil {roomSizeChoices}
+                else {
+                    Text(store.t("roomSimpleHint")).font(.system(size:13,weight:.bold,design:.rounded))
+                        .multilineTextAlignment(.center).frame(height:62).padding(.horizontal,16)
+                }
+            }
         HStack(spacing:10) {
             if trayOpen {
                 Image(systemName:"hand.draw.fill").font(.system(size:23,weight:.bold)).foregroundColor(.white)
@@ -205,6 +213,23 @@ struct FriendRoomView:View {
                 }.buttonStyle(SquishStyle())
             }
         }.padding(.horizontal,12).padding(.vertical,10).frame(maxWidth:680).frame(maxWidth:.infinity)
+            }
+    }
+    private var roomSizeChoices:some View {
+        HStack(spacing:10) {
+            if let item=choice {
+                ForEach(Array([0.75,1.0,1.25].enumerated()),id:\.offset) {index,size in
+                    Button {transform {$0.scale=size}} label:{
+                        VStack(spacing:2) {
+                            RoomFurniture(kind:item.kind,tint:item.color,isOn:item.isOn)
+                                .frame(width:CGFloat(32)*CGFloat(size),height:36).frame(height:40)
+                            Text(store.t("creatorSize\(index)")).font(.system(size:11,weight:.heavy,design:.rounded))
+                        }.frame(maxWidth:.infinity,minHeight:62)
+                            .background(GameChoiceSurface(selected:abs(item.sizeFactor-size)<0.02))
+                    }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("creatorLimbSize")+" "+store.t("creatorSize\(index)"))
+                }
+            }
+        }.frame(maxWidth:340).padding(.horizontal,12)
     }
     private func simpleTool(_ icon:String,_ key:String,action:@escaping()->Void)->some View {
         Button(action:action) {
@@ -226,8 +251,7 @@ struct FriendRoomView:View {
                 LazyVGrid(columns:[GridItem(.flexible()),GridItem(.flexible())],spacing:14) {
                     simpleTool("square.on.square","copyPiece") {duplicate()}
                     simpleTool("arrow.left.and.right","roomMirror") {transform {$0.mirrored = !($0.mirrored ?? false)}}
-                    simpleTool("plus.magnifyingglass","roomBigger") {transform {$0.scale=min(1.6,$0.sizeFactor+0.15)}}
-                    simpleTool("minus.magnifyingglass","roomSmaller") {transform {$0.scale=max(0.6,$0.sizeFactor-0.15)}}
+                    simpleTool("rotate.right","roomRotate") {transform {$0.rotation=$0.angle>=150 ? -180 : $0.angle+30}}
                     simpleTool("square.3.layers.3d","roomFront") {transform {$0.layer=2}}
                     simpleTool("square.3.layers.3d.bottom.filled","roomBack") {transform {$0.layer = -1}}
                 }
@@ -300,7 +324,7 @@ struct FriendRoomView:View {
         var value=RoomObject(kind:item.rawValue,x:0.25+slot*0.16,y:item.isWall ? 0.32 : 0.73)
         if let point=point {value.move(x:Double(point.x),y:Double(point.y))}
         next.objects.append(value)
-        if commit(next) {selected=value.id}
+        if commit(next) {selected=value.id;if point == nil {trayOpen=false}}
     }
     private func move(_ value:RoomObject,_ finished:Bool) {
         selected=value.id

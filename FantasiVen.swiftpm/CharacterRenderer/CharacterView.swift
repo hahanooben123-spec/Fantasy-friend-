@@ -157,8 +157,8 @@ private struct CreaturePainter {
         canvas.rotate(by: .degrees(piece.rotation))
         let joint = preview ? CreatureJoint() : pose.creativeJoint(piece)
         // Creative pieces follow their own saved anchor, including duplicates.
-        let pivot = piece.kind == .arm ? CGPoint(x:rect.maxX-8,y:179) :
-            piece.kind == .leg ? CGPoint(x:rect.midX,y:237) : CGPoint(x:rect.midX,y:rect.maxY)
+        let pivot = piece.kind == .arm ? CreatureLimbArtwork.anchor(.leftArm,body:sample.body) :
+            piece.kind == .leg ? CreatureLimbArtwork.anchor(.leftLeg,body:sample.body) : CGPoint(x:rect.midX,y:rect.maxY)
         let scale = preview ? min(210 / rect.width, 250 / rect.height) : CGFloat(piece.scale)
         canvas.scaleBy(x: (piece.mirrored ? -1 : 1) * scale, y: scale)
         canvas.translateBy(x: -rect.midX, y: -rect.midY)
@@ -209,7 +209,12 @@ private struct CreaturePainter {
         sheen.addQuadCurve(to:CGPoint(x:119,y:94),control:CGPoint(x:98,y:94))
         clipped.stroke(sheen,with:.color(.white.opacity(0.34)),style:StrokeStyle(lineWidth:7,lineCap:.round))
         clipped.fill(Path(ellipseIn:CGRect(x:124,y:91,width:8,height:5)),with:.color(.white.opacity(0.65)))
-        ellipse(87, 180, 27, 15, Color(red: 1, green: 0.23, blue: 0.42).opacity(0.48)); ellipse(190, 180, 27, 15, Color(red: 1, green: 0.23, blue: 0.42).opacity(0.48))
+        for x in [CGFloat(101),CGFloat(204)] {
+            let cheek=CGPoint(x:x,y:185+pose.cheek*2)
+            context.fill(Path(ellipseIn:CGRect(x:x-17,y:cheek.y-11,width:34,height:22)),
+                with:.radialGradient(Gradient(colors:[Color(red:1,green:0.36,blue:0.51).opacity(0.47),.clear]),
+                    center:cheek,startRadius:0,endRadius:18))
+        }
         if !friend.isHidden("eyes") { drawEyes(closed: blink || asleep, happy: happy) }
         if !friend.isHidden("mouth") { drawMouth(happy: happy, asleep: asleep) }
     }
@@ -249,86 +254,12 @@ private struct CreaturePainter {
     }
 
     func drawArm(side:Int) {
-        let sign:CGFloat=side == 0 ? -1 : 1
-        let shoulder=CreatureShape(kind:friend.body).shoulder
-        let start=CGPoint(x:side == 0 ? shoulder+6 : 294-shoulder,y:179)
-        let reach=CGFloat(20+friend.arms*3)
-        let hand=CGPoint(x:start.x+sign*reach,y:208-CGFloat(friend.arms%4)*16)
-        let joint=pose.joint(side == 0 ? .leftArm : .rightArm)
-        let bend=CGPoint(x:hand.x+joint.bend*sign,y:start.y-CGFloat(friend.arms%3)*15-joint.bend)
-        let thickness=CGFloat(15+friend.arms%3*3)
-        var arm=Path();arm.move(to:CGPoint(x:start.x,y:start.y-thickness/2))
-        arm.addQuadCurve(to:CGPoint(x:hand.x,y:hand.y-8),control:CGPoint(x:bend.x,y:bend.y-thickness/2))
-        arm.addQuadCurve(to:CGPoint(x:hand.x,y:hand.y+8),control:CGPoint(x:hand.x+sign*9,y:hand.y))
-        arm.addQuadCurve(to:CGPoint(x:start.x,y:start.y+thickness/2),control:CGPoint(x:bend.x,y:bend.y+thickness/2))
-        arm.closeSubpath()
-        ToyFinish.paint(context,path:arm,color:primary,edge:1.7)
-        var palm=context
-        palm.translateBy(x:hand.x,y:hand.y);palm.scaleBy(x:sign,y:1)
-        var mitten=Path()
-        mitten.move(to:CGPoint(x:-8,y:6))
-        if friend.arms == 6 {
-            mitten.addCurve(to:CGPoint(x:13,y:-13),control1:CGPoint(x:-8,y:-17),control2:CGPoint(x:3,y:-23))
-            mitten.addQuadCurve(to:CGPoint(x:15,y:9),control:CGPoint(x:28,y:-1))
-        } else if friend.arms >= 4 {
-            mitten.addCurve(to:CGPoint(x:-2,y:-11),control1:CGPoint(x:-17,y:-2),control2:CGPoint(x:-9,y:-22))
-            mitten.addCurve(to:CGPoint(x:7,y:-13),control1:CGPoint(x:-2,y:-23),control2:CGPoint(x:8,y:-25))
-            mitten.addCurve(to:CGPoint(x:14,y:-6),control1:CGPoint(x:15,y:-22),control2:CGPoint(x:20,y:-15))
-            mitten.addCurve(to:CGPoint(x:15,y:9),control1:CGPoint(x:26,y:-10),control2:CGPoint(x:28,y:8))
-        } else {
-            mitten.addCurve(to:CGPoint(x:8,y:-11),control1:CGPoint(x:-17,y:-8),control2:CGPoint(x:-3,y:-17))
-            mitten.addCurve(to:CGPoint(x:15,y:9),control1:CGPoint(x:23,y:-11),control2:CGPoint(x:25,y:9))
-        }
-        mitten.addQuadCurve(to:CGPoint(x:-8,y:6),control:CGPoint(x:3,y:18));mitten.closeSubpath()
-        ToyFinish.paint(palm,path:mitten,color:primary,edge:1.7)
-        if friend.arms == 2 || friend.arms == 7 {
-            for i in 0..<3 {
-                let dot=Path(ellipseIn:CGRect(x:CGFloat(i)*6-4,y:-7-CGFloat(i%2)*3,width:5,height:6))
-                ToyFinish.paint(palm,path:dot,color:accent,edge:0.6)
-            }
-            ToyFinish.paint(palm,path:Path(ellipseIn:CGRect(x:-1,y:0,width:13,height:10)),color:accent,edge:0.7)
-        } else if friend.arms == 3 {
-            var seam=Path();seam.move(to:CGPoint(x:-7,y:7));seam.addQuadCurve(to:CGPoint(x:14,y:7),control:CGPoint(x:3,y:12))
-            palm.stroke(seam,with:.color(accent.opacity(0.65)),style:StrokeStyle(lineWidth:2,lineCap:.round,dash:[2,3]))
-        }
-        if friend.arms == 1 || friend.arms == 5 {
-            palm.fill(Path(ellipseIn:CGRect(x:-1,y:-2,width:11,height:9)),with:.color(accent.opacity(0.55)))
-        }
+        let part:Attachment=side == 0 ? .leftArm : .rightArm
+        CreatureLimbArtwork.paint(context,part:part,friend:friend,bend:pose.joint(part).bend)
     }
-
     func drawLeg(side:Int) {
-        let sign:CGFloat=side == 0 ? -1 : 1
-        let footX:CGFloat=side == 0 ? 110 : 180
-        let footY=CGFloat(265+friend.legs%4*4)
-        curve(CGPoint(x:footX,y:237),CGPoint(x:footX+sign*CGFloat(friend.legs*2),y:footY),
-              CGPoint(x:footX+sign*(10+pose.joint(side == 0 ? .leftLeg : .rightLeg).bend),y:257),
-              primary,CGFloat(16-friend.legs%3*2))
-        let x=footX-19+sign*CGFloat(friend.legs*2)
-        let width=CGFloat(32+friend.legs%3*5)
-        var foot=Path();foot.move(to:CGPoint(x:x,y:footY+7))
-        foot.addCurve(to:CGPoint(x:x+width*0.5,y:footY-7),control1:CGPoint(x:x-3,y:footY-5),control2:CGPoint(x:x+width*0.25,y:footY-13))
-        foot.addCurve(to:CGPoint(x:x+width,y:footY+5),control1:CGPoint(x:x+width*0.78,y:footY-12),control2:CGPoint(x:x+width+5,y:footY-4))
-        foot.addQuadCurve(to:CGPoint(x:x,y:footY+7),control:CGPoint(x:x+width*0.55,y:footY+18));foot.closeSubpath()
-        ToyFinish.paint(context,path:foot,color:friend.legs>=4 ? accent : primary,edge:1.7)
-        if friend.legs == 2 || friend.legs == 7 {
-            let pad=Path(ellipseIn:CGRect(x:x+width*0.27,y:footY-3,width:width*0.48,height:8))
-            ToyFinish.paint(context,path:pad,color:friend.legs == 7 ? primary : accent,edge:0.7)
-        }
-        if friend.legs>=4 {
-            for i in 0..<2 {
-                let y=footY-4+CGFloat(i)*4
-                line([CGPoint(x:x+width*0.34,y:y),CGPoint(x:x+width*0.61,y:y+1)],StorybookStyle.cream.opacity(0.8),1.8)
-            }
-        }
-        if friend.legs == 0 || friend.legs == 3 || friend.legs == 6 {
-            for i in 0..<2 {
-                let toe=x+width*(0.3+CGFloat(i)*0.27)
-                curve(CGPoint(x:toe,y:footY-3),CGPoint(x:toe+1,y:footY+2),CGPoint(x:toe-2,y:footY),ink.opacity(0.3),1.3)
-            }
-        } else if friend.legs>=4 {
-            curve(CGPoint(x:x+4,y:footY+8),CGPoint(x:x+width-3,y:footY+7),
-                  CGPoint(x:x+width*0.5,y:footY+13),GameStyle.mixed(accent,with:ink,amount:0.3),2.5)
-        }
+        let part:Attachment=side == 0 ? .leftLeg : .rightLeg
+        CreatureLimbArtwork.paint(context,part:part,friend:friend,bend:pose.joint(part).bend)
     }
 
     func drawExtra(_ index: Int) {
@@ -487,10 +418,10 @@ private struct CreaturePainter {
         let ink = friend.partColors?["eyes"].map { GameStyle.palette[$0] } ?? self.ink
         let kind = friend.eyes
         let centers: [CGFloat] = singleEye || kind == 5 ? [150] : (kind == 6 ? [110, 150, 190] : [120, 181])
-        let radius: CGFloat = kind == 1 ? 13 : (kind == 5 ? 35 : (kind == 6 && !singleEye ? 17 : 30))
+        let radius: CGFloat = kind == 1 ? 17 : (kind == 5 ? 36 : (kind == 6 && !singleEye ? 18 : 30))
         for x in centers {
             let y: CGFloat = 157
-            if closed || kind == 3 || happy || (expression == .wink && x == centers[0]) {
+            if closed || kind == 3 || (expression == .wink && x == centers[0]) {
                 curve(CGPoint(x: x - radius * 0.65, y: y), CGPoint(x: x + radius * 0.65, y: y), CGPoint(x: x, y: y + (closed ? 9 : -13)), ink, 5)
                 continue
             }
@@ -551,9 +482,13 @@ private struct CreaturePainter {
         let kind = happy ? 1 : friend.mouth
         if asleep || kind == 3 { ellipse(142, 192, 17, 23, ink); ellipse(146, 196, 7, 5, .white.opacity(0.45)); return }
         if kind == 0 || kind == 2 || kind == 6 || kind == 9 {
-            let width: CGFloat = kind == 2 ? 10 : 28
-            curve(CGPoint(x: 151 - width, y: 196), CGPoint(x: 151 + width, y: kind == 6 ? 189 : 196), CGPoint(x: 151, y: kind == 9 ? 204 : 221), ink, 5)
-            if kind == 9 { ellipse(173, 191, 6, 6, ink) }
+            let width: CGFloat = kind == 2 ? 12 : 27
+            curve(CGPoint(x: 151 - width, y: 196), CGPoint(x: 151 + width, y: kind == 6 ? 189 : 196), CGPoint(x: 151, y: kind == 9 ? 204 : 218), ink, 4)
+            if kind != 2 {
+                curve(CGPoint(x:121,y:195),CGPoint(x:126,y:190),CGPoint(x:121,y:189),ink,2)
+                curve(CGPoint(x:176,y:190),CGPoint(x:181,y:195),CGPoint(x:181,y:189),ink,2)
+            }
+            if kind == 9 {ellipse(174,191,5,5,ink)}
         } else {
             var mouth = Path(); mouth.move(to: CGPoint(x: 118, y: 195))
             mouth.addQuadCurve(to: CGPoint(x: 184, y: 195), control: CGPoint(x: 151, y: 201))
@@ -570,6 +505,11 @@ private struct CreaturePainter {
                 for x in [136, 150, 164] as [CGFloat] { clipped.fill(Path(roundedRect: CGRect(x: x, y: 191, width: 10, height: kind == 7 ? 14 : 8), cornerRadius: 3), with: .color(.white)) }
             }
             if kind == 8 { line([CGPoint(x: 133, y: 195), CGPoint(x: 169, y: 195)], .white, 5) }
+            if kind == 4 {
+                let tongue=Path(roundedRect:CGRect(x:142,y:216,width:25,height:22),cornerRadius:11)
+                ToyFinish.paint(context,path:tongue,color:Color(red:1,green:0.47,blue:0.60),edge:0.8)
+                curve(CGPoint(x:154,y:218),CGPoint(x:154,y:228),CGPoint(x:153,y:222),Color(red:0.82,green:0.25,blue:0.42),1.3)
+            }
         }
     }
 }

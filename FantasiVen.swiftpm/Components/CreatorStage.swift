@@ -29,8 +29,9 @@ struct CreatorStage: View {
     private let zoom: CGFloat = 1.1
 
     private func editorPose(time:Double,clock:Double)->CreaturePose {
-        let motion:CreatureMotion=part == .legs ? .walk : part == .arms ? .hug : .jump
-        var rig=CreatureRig.sample(reactingParts ? motion : .idle,time:time,clock:clock,reduced:reduced)
+        let motion:CreatureMotion=part == .legs ? .walk : part == .arms ? .wave : .jump
+        let energy=part == .legs ? CreatureRig.key(time,[(0,0),(0.16,1),(0.82,1),(1.15,0)]) : 1
+        var rig=CreatureRig.sample(reactingParts ? motion : .idle,time:time,clock:clock,energy:energy,reduced:reduced)
         // Hands and handles must coincide while a child positions a part.
         if origin != nil || handleOrigin != nil || pinchOrigin != nil || (selection != nil && !reactingParts) {
             rig.x=0;rig.y=0;rig.roll=0;rig.scaleX=1;rig.scaleY=1;rig.headTilt=0;rig.headY=0;rig.joints=[:]
@@ -126,10 +127,10 @@ struct CreatorStage: View {
         .task(id:revision) {
             guard revision>0 else {return}
             reactingParts=true;rigStarted=Date()
-            expression=part == .extras || part == .color ? .wonder : .wink
+            expression=part == .extras || part == .color ? .wonder : .normal
             gaze=part == .legs ? CGPoint(x:0,y:0.7) : part == .extras ? CGPoint(x:0,y:-0.7) : .zero
             do {
-                try await Task.sleep(nanoseconds:950_000_000)
+                try await Task.sleep(nanoseconds:part == .arms || part == .legs ? 1_150_000_000 : 1_550_000_000)
                 reactingParts=false;expression = .normal;gaze = .zero
             } catch {reactingParts=false;expression = .normal}
         }

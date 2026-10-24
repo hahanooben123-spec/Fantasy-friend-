@@ -167,14 +167,14 @@ struct KitchenGameView:View {
                     Text(store.t("pizzaFlow\(index)"))
                 }.font(.system(size:13,weight:.heavy,design:.rounded))
                     .frame(maxWidth:.infinity,minHeight:38)
-                    .background(CandySurface(color:(step == 0 ? 0 : step == 1 ? 1 : 2) == index ? WorkshopLook.yellow : WorkshopLook.cream,cornerRadius:16))
+                    .background(GameChoiceSurface(selected:(step == 0 ? 0 : step == 1 ? 1 : 2) == index))
             }
         }.accessibilityElement(children:.combine)
     }
     private var panelHeight:CGFloat {
         if served {return 112}
         if step == 3 {return 105}
-        if step == 0 {return 210}
+        if step == 0 {return 218}
         return 270
     }
     private var instruction:String {
@@ -228,10 +228,7 @@ struct KitchenGameView:View {
                                 PizzaIngredientArt(kind:index).frame(width:42,height:48)
                                 Text(store.t("pizzaIngredient\(index)")).font(.system(size:12,weight:.heavy,design:.rounded))
                             }.frame(maxWidth:.infinity,minHeight:80)
-                                .background(CandySurface(color:recipe.ingredients.contains(index) ? GameStyle.palette[11] : .white,cornerRadius:16))
-                                .overlay(alignment:.topTrailing) {
-                                    if recipe.ingredients.contains(index) {Image(systemName:"checkmark.circle.fill").foregroundColor(.green).padding(5)}
-                                }
+                                .background(GameChoiceSurface(selected:recipe.ingredients.contains(index),tint:GameStyle.palette[11]))
                         }.buttonStyle(SquishStyle()).disabled(recipe.ingredients.contains(index) || pouringIngredient != nil)
                             .highPriorityGesture(dragGesture(.ingredient(index)))
                     }
@@ -265,7 +262,7 @@ struct KitchenGameView:View {
                 CandyButton(title:store.t("pizzaAgain"),icon:"arrow.clockwise",color:.orange,action:reset)
             }
         }.padding(14).frame(maxWidth:.infinity,maxHeight:.infinity)
-            .background(CandySurface(color:WorkshopLook.cream,cornerRadius:26))
+            .background(StorybookShelf())
     }
     private var toolTabs:some View {
         HStack(spacing:5) {
@@ -276,10 +273,17 @@ struct KitchenGameView:View {
                     tool=value;SoundService.shared.play(.click)
                 } label:{
                     VStack(spacing:4) {
-                        Image(systemName:["hand.draw.fill","paintbrush.fill","circle.grid.2x2.fill","leaf.fill"][value.rawValue]).font(.system(size:20,weight:.bold))
+                        Group {
+                            switch value {
+                            case .shape:PizzaDoughSwatch(form:PizzaDoughForm.allCases[0])
+                            case .sauce:ToyGlyph(kind:.brush)
+                            case .toppings:PizzaToppingArt(kind:.cheese)
+                            case .herbs:PizzaIngredientArt(kind:0,spice:true)
+                            }
+                        }.frame(width:32,height:32)
                         Text(store.t("pizzaTool\(value.rawValue)")).font(.system(size:11,weight:.heavy,design:.rounded))
-                    }.frame(maxWidth:.infinity,minHeight:52)
-                        .background(RoundedRectangle(cornerRadius:16).fill(tool == value ? WorkshopLook.yellow : .white))
+                    }.frame(maxWidth:.infinity,minHeight:60)
+                        .background(GameChoiceSurface(selected:tool == value))
                 }.buttonStyle(SquishStyle()).accessibilityAddTraits(tool == value ? .isSelected : [])
             }
         }
@@ -293,7 +297,7 @@ struct KitchenGameView:View {
                         shaped=true;interaction+=1
                     } label:{
                         PizzaDoughSwatch(form:form).frame(width:55,height:55).padding(4)
-                            .background(RoundedRectangle(cornerRadius:16).fill(recipe.doughForm == form ? WorkshopLook.yellow.opacity(0.5) : .white))
+                            .background(GameChoiceSurface(selected:recipe.doughForm == form))
                     }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("pizzaForm\(form.rawValue)"))
                 }
             }.padding(.vertical,3)
@@ -309,7 +313,7 @@ struct KitchenGameView:View {
                                 PizzaIngredientArt(kind:index,spice:true).frame(width:31,height:37)
                                 Text(store.t("pizzaSpice\(index)")).font(.system(size:11,weight:.bold,design:.rounded))
                             }.frame(maxWidth:.infinity,minHeight:67)
-                                .background(CandySurface(color:spice == index ? WorkshopLook.yellow : .white,cornerRadius:17))
+                                .background(GameChoiceSurface(selected:spice == index))
                         }.buttonStyle(SquishStyle()).highPriorityGesture(dragGesture(.herb(index)))
                     }
                 }
@@ -322,7 +326,7 @@ struct KitchenGameView:View {
                                 ZStack {PizzaServingDish();PizzaToppingArt(kind:kind).padding(7)}.frame(height:39)
                                 Text(store.t(kind.key)).font(.system(size:10,weight:.heavy,design:.rounded)).lineLimit(1).minimumScaleFactor(0.65)
                             }.frame(width:74,height:67)
-                                .background(RoundedRectangle(cornerRadius:16).fill(topping == kind ? WorkshopLook.yellow : .white.opacity(0.5)))
+                                .background(GameChoiceSurface(selected:topping == kind))
                         }.buttonStyle(SquishStyle()).accessibilityLabel(store.t(kind.key))
                             .simultaneousGesture(dragGesture(.topping(kind)))
                     }

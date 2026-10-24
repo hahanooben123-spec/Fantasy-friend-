@@ -16,6 +16,7 @@ struct PumpkinWorkshopView:View {
     @State private var stamp=PumpkinCutKind.triangle
     @State private var selected:UUID?
     @State private var warning=false
+    @State private var showTools=false
     @State private var revealing=false
     @State private var saved=false
     @State private var prompt:Int?
@@ -41,7 +42,7 @@ struct PumpkinWorkshopView:View {
                         }
                     } else {
                         workspace.frame(maxWidth:.infinity,maxHeight:.infinity)
-                        controls.frame(height:step == .light ? 235 : step == .carve ? 184 : step == .choose ? 170 : 112)
+                        controls.frame(height:step == .light ? 235 : step == .carve ? (tool == .stamp ? 184 : 102) : step == .choose ? 170 : 112)
                     }
                 }
                 if revealing {reveal.transition(.opacity)}
@@ -53,6 +54,28 @@ struct PumpkinWorkshopView:View {
                 library.saveDraft(lantern)
             }
             .onChange(of:phase) {value in if value != .active && !saved {library.saveDraft(lantern)}}
+            .sheet(isPresented:$showTools) {
+                VStack(spacing:18) {
+                    HStack {
+                        VillageCaption(title:words.t("roomMore"),size:24)
+                        Spacer();RoundButton(icon:"xmark",label:words.t("close")) {showTools=false}
+                    }
+                    CandyButton(title:words.t("redo"),icon:"arrow.uturn.forward") {redo();showTools=false}
+                        .disabled(future.isEmpty)
+                    CandyButton(title:words.t("lanternGarden"),icon:"leaf.fill") {
+                        if library.saveDraft(lantern) {showTools=false;onGarden()}
+                    }
+                    if step == .carve && selected != nil {
+                        CandyButton(title:words.t("copyPiece"),icon:"square.on.square") {duplicate();showTools=false}
+                    }
+                }.padding(26).background(StorybookShelf())
+            }
+            .task(id:step == .scoop && lantern.scooped>=1) {
+                guard step == .scoop,lantern.scooped>=1 else {return}
+                do {try await Task.sleep(nanoseconds:400_000_000)} catch {return}
+                guard step == .scoop else {return}
+                go(.carve);SoundService.shared.play(.complete)
+            }
             .task(id:warning) {
                 guard warning else {return}
                 do {try await Task.sleep(nanoseconds:2_800_000_000)} catch {return}
@@ -61,12 +84,16 @@ struct PumpkinWorkshopView:View {
     }
     private var header:some View {
         HStack(spacing:8) {
-            CreatorToolButton(mark:.close,label:words.t("close")) {if library.saveDraft(lantern) {onClose()}}
+            RoundButton(icon:"chevron.left",label:words.t("back")) {if library.saveDraft(lantern) {onClose()}}
             CreatorToolButton(mark:.undo,label:words.t("undo"),action:undo).disabled(history.isEmpty)
-            CreatorToolButton(mark:.redo,label:words.t("redo"),action:redo).disabled(future.isEmpty)
             Spacer(minLength:0)
-            RoundButton(icon:"leaf.fill",label:words.t("lanternGarden")) {if library.saveDraft(lantern) {onGarden()}}
-            CreatorToolButton(mark:.done,label:words.t("lanternReveal"),tint:.orange) {showReveal()}
+            RoundButton(icon:"ellipsis",label:words.t("roomMore")) {finish();showTools=true}
+            Button {showReveal()} label:{
+                Label(words.t("done"),systemImage:"checkmark")
+                    .font(.system(size:15,weight:.heavy,design:.rounded))
+                    .padding(.horizontal,16).frame(minHeight:52)
+                    .background(CandySurface(color:.orange,cornerRadius:26))
+            }.buttonStyle(SquishStyle())
         }.padding(.horizontal,12).padding(.top,8)
     }
     private var workspace:some View {
@@ -76,7 +103,7 @@ struct PumpkinWorkshopView:View {
                     Button {go(item)} label:{
                         Text(["🍊","🥄","✂️","🕯️"][item.rawValue]).font(.system(size:24))
                             .frame(maxWidth:.infinity,minHeight:46)
-                            .background(Capsule().fill(step == item ? PumpkinLook.cream : .white.opacity(0.35)))
+                            .background(GameChoiceSurface(selected:step == item,tint:.orange))
                     }.buttonStyle(SquishStyle()).accessibilityLabel(words.t("lanternStep\(item.rawValue)"))
                         .accessibilityAddTraits(step == item ? .isSelected : [])
                 }
@@ -95,13 +122,6 @@ struct PumpkinWorkshopView:View {
                 Text(words.t(step == .carve ? "lanternCarveHint" : "lanternStep\(step.rawValue)"))
                     .font(.system(size:12,weight:.bold,design:.rounded)).multilineTextAlignment(.center)
                 Spacer(minLength:0)
-                if step == .carve,selected != nil {
-                    CreatorToolButton(mark:.duplicate,label:words.t("copyPiece"),action:duplicate)
-                } else if step != .light {
-                    CreatorToolButton(mark:.done,label:words.t("continue"),tint:PumpkinLook.cream) {
-                        go(PumpkinStep(rawValue:min(3,step.rawValue+1)) ?? .light)
-                    }
-                }
             }.padding(.horizontal,16).padding(.bottom,8).foregroundColor(lantern.darkness>0.5 ? PumpkinLook.cream : PumpkinLook.ink)
         }
     }
@@ -115,7 +135,7 @@ struct PumpkinWorkshopView:View {
                             Button {change {$0.form=form}} label:{
                                 PumpkinIllustration(lantern:preview(form),animated:false)
                                     .frame(width:65,height:70).padding(3)
-                                    .background(RoundedRectangle(cornerRadius:19).fill(form == lantern.form ? Color.orange.opacity(0.35) : .white))
+                                    .background(GameChoiceSurface(selected:form == lantern.form,tint:.orange))
                             }.buttonStyle(SquishStyle()).accessibilityLabel(words.t("lanternForm\(form.rawValue)"))
                         }
                     }.padding(.horizontal,14)
@@ -135,6 +155,7 @@ struct PumpkinWorkshopView:View {
                     Label(words.t("lanternSkipScoop"),systemImage:"arrow.right").font(.system(.headline,design:.rounded)).frame(minHeight:48)
                 }.buttonStyle(SquishStyle())
             case .carve:
+                ScrollView(.horizontal,showsIndicators:false) {
                 HStack(spacing:7) {
                     ForEach(PumpkinTool.allCases,id:\.rawValue) {item in
                         PlayToken(symbol:["🔺","✏️","✋","🍊"][item.rawValue],label:words.t("lanternTool\(item.rawValue)"),selected:tool == item) {finish();tool=item}
@@ -143,6 +164,8 @@ struct PumpkinWorkshopView:View {
                     PlayToken(symbol:"😊",label:words.t("lanternFace")) {change {$0.addFace()};tool = .move}
                         .disabled(lantern.cuts.count>77)
                 }.padding(.horizontal,14)
+                }
+                if tool == .stamp {
                 ScrollView(.horizontal,showsIndicators:false) {
                     HStack(spacing:10) {
                         ForEach(PumpkinCutKind.allCases.filter {$0 != .freehand},id:\.rawValue) {kind in
@@ -151,39 +174,48 @@ struct PumpkinWorkshopView:View {
                                     let path=PumpkinGeometry.stencil(kind).applying(CGAffineTransform(a:size.width-14,b:0,c:0,d:size.height-14,tx:7,ty:7))
                                     context.fill(path,with:.color(PumpkinLook.ink))
                                 }.frame(width:54,height:54)
-                                    .background(RoundedRectangle(cornerRadius:17).fill(stamp == kind && tool == .stamp ? .orange.opacity(0.4) : .white))
+                                    .background(GameChoiceSurface(selected:stamp == kind && tool == .stamp,tint:.orange))
                             }.buttonStyle(SquishStyle()).disabled(lantern.cuts.count>=80)
                                 .accessibilityLabel(words.t("lanternStamp\(kind.rawValue)"))
                         }
                     }.padding(.horizontal,14)
                 }
+                }
             case .light:
-                LazyVGrid(columns:Array(repeating:GridItem(.flexible()),count:4),spacing:5) {
+                LazyVGrid(columns:Array(repeating:GridItem(.flexible()),count:4),spacing:7) {
                     ForEach(PumpkinLight.allCases,id:\.rawValue) {kind in
                         Button {change {$0.light=kind;$0.lit=true};SoundService.shared.instrument(1,beat:kind.rawValue)} label:{
-                            VStack(spacing:1) {
-                                Circle().fill(PumpkinLook.light(kind,time:2)).frame(width:28,height:28)
-                                    .overlay(Text(kind == .candle ? "🕯️" : kind == .fireflies ? "✦" : kind == .rainbow ? "🌈" : "").font(.system(size:20)))
-                                Text(words.t(kind.key)).font(.system(size:10,weight:.bold,design:.rounded)).lineLimit(1)
-                            }.frame(maxWidth:.infinity,minHeight:51)
-                                .background(RoundedRectangle(cornerRadius:15).fill(lantern.light == kind ? .orange.opacity(0.25) : .white))
+                            VStack(spacing:3) {
+                                Circle().fill(PumpkinLook.light(kind,time:2)).frame(width:29,height:29)
+                                Text(words.t(kind.key)).font(.system(size:10,weight:.heavy,design:.rounded)).lineLimit(1)
+                            }.frame(maxWidth:.infinity,minHeight:57)
+                                .background(GameChoiceSurface(selected:lantern.light == kind,tint:.orange))
                         }.buttonStyle(SquishStyle())
                     }
                     Button {change {$0.lit.toggle()}} label:{
-                        Text(lantern.lit ? "💡" : "🌑").font(.system(size:28)).frame(maxWidth:.infinity,minHeight:51)
+                        Image(systemName:lantern.lit ? "lightbulb.fill" : "lightbulb.slash")
+                            .font(.system(size:25,weight:.bold)).frame(maxWidth:.infinity,minHeight:57)
+                            .background(GameChoiceSurface(selected:lantern.lit,tint:.orange))
                     }.buttonStyle(SquishStyle()).accessibilityLabel(words.t("lanternToggle"))
                 }.padding(.horizontal,14)
-                HStack {Text("☀️");Slider(value:Binding(get:{lantern.darkness},set:{value in lantern.darkness=value}),in:0...1,onEditingChanged:{editing in if editing {begin()} else {finish()}});Text("🌙")}
-                    .padding(.horizontal,18).accessibilityLabel(words.t("lanternNight"))
-                HStack {Text("◔");Slider(value:Binding(get:{lantern.brightness},set:{lantern.brightness=$0}),in:0.2...1,onEditingChanged:{editing in if editing {begin()} else {finish()}});Text("☀︎")}
-                    .padding(.horizontal,18).accessibilityLabel(words.t("lanternBrightness"))
+                HStack(spacing:7) {
+                    RoundButton(icon:lantern.darkness>0.5 ? "moon.fill" : "sun.max.fill",label:words.t("lanternNight")) {
+                        change {$0.darkness=$0.darkness>0.5 ? 0.05 : 0.85}
+                    }
+                    ForEach(Array([0.4,0.7,1.0].enumerated()),id:\.offset) {index,value in
+                        Button {change {$0.brightness=value}} label:{
+                            VStack(spacing:2) {
+                                Circle().fill(PumpkinLook.light(lantern.light,time:2))
+                                    .frame(width:CGFloat(16+index*5),height:CGFloat(16+index*5)).opacity(value)
+                                Text(words.t("glowSize\(index)")).font(.system(size:10,weight:.heavy,design:.rounded))
+                            }.frame(maxWidth:.infinity,minHeight:54)
+                                .background(GameChoiceSurface(selected:abs(lantern.brightness-value)<0.02,tint:.orange))
+                        }.buttonStyle(SquishStyle())
+                    }
+                }.padding(.horizontal,14)
             }
         }.padding(.vertical,12).frame(maxWidth:.infinity,maxHeight:.infinity)
-            .background(RoundedRectangle(cornerRadius:26).fill(LinearGradient(colors:[
-                Color(red:1,green:0.98,blue:0.87),PumpkinLook.cream,Color(red:1,green:0.84,blue:0.53)],
-                startPoint:.topLeading,endPoint:.bottomTrailing)))
-            .overlay(RoundedRectangle(cornerRadius:26).stroke(Color.white.opacity(0.7),lineWidth:2).allowsHitTesting(false))
-            .shadow(color:PumpkinLook.ink.opacity(0.22),radius:12,x:0,y:6)
+            .background(StorybookShelf())
     }
     private var reveal:some View {
         GeometryReader {proxy in
