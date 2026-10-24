@@ -39,7 +39,6 @@ struct SettingsView: View {
                             Text(store.t("musicAtmosphere")).font(.system(.caption, design: .rounded)).foregroundColor(GameStyle.ink.opacity(0.65))
                         }.toggleStyle(SwitchToggleStyle(tint: GameStyle.purple)).padding(22).background(StorybookPanel(cornerRadius: 32))
                         VStack(spacing: 14) {
-                            Toggle(store.t("speech"), isOn: Binding(get: { store.settings.speechEnabled }, set: { value in store.updateSettings { $0.speech = value } }))
                             Text(store.t("challenge")).font(.headline)
                             HStack {
                                 ForEach(1...3, id: \.self) { level in

@@ -6,6 +6,7 @@ struct FreeStudioView: View {
     @Environment(\.presentationMode) private var presentation
     @Environment(\.accessibilityReduceMotion) private var reducedMotion
     @Binding var friend: FantasyFriend
+    @State private var showHelp=false
     @State private var selected: UUID?
     @State private var kind = PieceKind.eye
     @State private var variant = 0
@@ -30,7 +31,7 @@ struct FreeStudioView: View {
                         RoundButton(icon: "arrow.uturn.backward", label: store.t("undo")) {
                             if let old = localHistory.popLast() { friend = old }
                         }.disabled(localHistory.isEmpty)
-                        RoundButton(icon: "speaker.wave.2.fill", label: store.t("help")) { help() }
+                        RoundButton(icon: "hand.draw.fill", label: store.t("help")) { showHelp=true }
                         RoundButton(icon: "checkmark", label: store.t("done")) { presentation.wrappedValue.dismiss() }
                     }
                     Text(store.t(pending ? "tapPlace" : "freeHint")).font(.system(.subheadline, design: .rounded).weight(.bold)).multilineTextAlignment(.center)
@@ -74,7 +75,20 @@ struct FreeStudioView: View {
                 }.padding(20).frame(maxWidth: 850).frame(maxWidth: .infinity)
             }
         }.foregroundColor(GameStyle.ink)
-            .onDisappear { SoundService.shared.stopSpeech() }
+            .sheet(isPresented:$showHelp) {
+                VStack(spacing:20) {
+                    HStack {
+                        Text(store.t("help")).font(.system(.title2,design:.rounded).weight(.heavy))
+                        Spacer()
+                        RoundButton(icon:"xmark",label:store.t("close")) {showHelp=false}
+                    }
+                    CharacterView(friend:friend).frame(height:220)
+                        .overlay(TouchDemonstration(activity:0))
+                    Text(store.t("tapPlace")).font(.system(.title3,design:.rounded).weight(.bold))
+                        .multilineTextAlignment(.center)
+                    CandyButton(title:store.t("done"),icon:"checkmark") {showHelp=false}
+                }.padding(28).background(StorybookShelf())
+            }
     }
 
     private var stage: some View {
@@ -254,5 +268,4 @@ struct FreeStudioView: View {
         copy.bodyWidth = nil; copy.bodyHeight = nil
         commit(copy)
     }
-    private func help() { SoundService.shared.speak(store.t("tapPlace"), language: store.settings.language) }
 }

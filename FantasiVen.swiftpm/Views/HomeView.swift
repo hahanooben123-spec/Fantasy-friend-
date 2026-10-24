@@ -26,19 +26,15 @@ struct HomeView:View {
         NavigationView {
             GeometryReader {proxy in
                 let tablet=proxy.size.width>=700
-                let wide=proxy.size.width>=900 && proxy.size.width>proxy.size.height
+                let wide=proxy.size.width>=650 && proxy.size.width>proxy.size.height
                 ZStack {
                     WelcomeGardenBackdrop(dusk:dusk,active:homeVisible && journey == nil)
                     VStack(spacing:0) {
                         header(tablet:tablet).padding(.horizontal,tablet ? 28 : 16).padding(.vertical,12)
-                        ScrollView(showsIndicators:false) {
-                            VillageSquare(friend:mascot,lanterns:pumpkins.lanterns,pizza:store.sessions.pizza,
-                                wide:wide,dusk:dusk,active:homeVisible && journey == nil && phase == .active,
-                                visit:beginVisit,chooseFriend:{choosingFriend=true})
-                                .frame(height:wide ? max(650,proxy.size.height-175) :
-                                    tablet ? max(1000,proxy.size.height-175) : 740)
-                                .frame(maxWidth:1400).frame(maxWidth:.infinity)
-                        }
+                        VillageSquare(friend:mascot,lanterns:pumpkins.lanterns,pizza:store.sessions.pizza,
+                            wide:wide,dusk:dusk,active:homeVisible && journey == nil && phase == .active,
+                            visit:beginVisit,chooseFriend:{choosingFriend=true})
+                            .frame(maxWidth:1400,maxHeight:.infinity).frame(maxWidth:.infinity)
                         if recent != nil {
                             resumeCard.padding(.horizontal,tablet ? 28 : 16).padding(.vertical,8).frame(maxWidth:850)
                         }
@@ -75,17 +71,8 @@ struct HomeView:View {
     }
     private func header(tablet:Bool)->some View {
         HStack(spacing:12) {
-            if tablet {
-                VillageArtwork.image("BrandMascotCartoon").resizable().scaledToFit()
-                    .frame(width:52,height:52)
-                    .clipShape(RoundedRectangle(cornerRadius:18,style:.continuous))
-                    .accessibilityHidden(true)
-            }
-            VStack(alignment:.leading,spacing:5) {
-                BrandTitle(size:tablet ? 40 : 28)
-                Text(store.t("villageInvitation")).font(.system(size:tablet ? 15 : 12,weight:.bold,design:.rounded))
-                    .foregroundColor(WorkshopLook.sea)
-            }
+            BrandTitle(size:tablet ? 42 : 29)
+                .minimumScaleFactor(0.75)
             Spacer(minLength:0)
             Button {
                 withAnimation(reduced ? nil : .easeInOut(duration:0.5)) {dusk.toggle()}
@@ -93,14 +80,13 @@ struct HomeView:View {
             } label: {
                 Image(systemName:dusk ? "moon.stars.fill" : "sun.max.fill")
                     .font(.system(size:21,weight:.bold)).frame(width:44,height:44)
-                    .background(StorybookPanel(cornerRadius:23))
+                    .background(CandySurface(color:StorybookStyle.honey,cornerRadius:22))
             }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("villageLights"))
             NavigationLink(destination:SettingsView()) {
                 Image(systemName:"gearshape.fill").font(.system(size:21,weight:.bold))
-                    .frame(width:44,height:44).background(StorybookPanel(cornerRadius:23))
+                    .frame(width:44,height:44).background(CandySurface(color:StorybookStyle.honey,cornerRadius:22))
             }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("settings"))
-        }.padding(.horizontal,12).padding(.vertical,10)
-            .background(StorybookPanel(cornerRadius:28))
+        }.padding(.horizontal,4).padding(.vertical,7)
     }
     private func beginVisit(_ place:VillagePlace) {
         guard journey == nil,!visitNavigation else {return}
@@ -136,25 +122,12 @@ struct HomeView:View {
     }
     private var resumeCard:some View {
         Button(action:resume) {
-            HStack(spacing:14) {
-                Group {
-                    switch recent?.kind {
-                    case .creator:CharacterView(friend:store.sessions.editor?.friend ?? mascot)
-                    case .pizza:PizzaIllustration(recipe:store.sessions.pizza?.recipe ?? .sample,baked:store.sessions.pizza?.baked ?? 1)
-                    case .pumpkin:PumpkinIllustration(lantern:pumpkins.draft ?? pumpkins.lanterns.first ?? PumpkinDoor.sample,animated:false)
-                    default:CharacterView(friend:recentFriend)
-                    }
-                }.frame(width:48,height:51).accessibilityHidden(true)
-                VStack(alignment:.leading,spacing:5) {
-                    Text(store.t("resumePlay")).font(.system(size:17,weight:.heavy,design:.rounded))
-                    Text(store.t("resume_"+(recent?.kind.rawValue ?? "creator")))
-                        .font(.system(size:14,weight:.bold,design:.rounded))
-                }
-                Spacer(minLength:0)
-                Image(systemName:"play.fill").font(.system(size:25,weight:.bold))
-                    .frame(width:42,height:42).background(Circle().fill(.white.opacity(0.7)))
-            }.padding(10).foregroundColor(GameStyle.ink)
-                .background(CandySurface(color:WorkshopLook.yellow,cornerRadius:28))
+            HStack(spacing:10) {
+                Image(systemName:"play.circle.fill").font(.system(size:28,weight:.heavy))
+                    .foregroundColor(StorybookStyle.teal)
+                    .background(Circle().fill(.white).padding(3))
+                VillageCaption(title:store.t("resumePlay"),size:17)
+            }.padding(.horizontal,14).frame(minHeight:44).contentShape(Rectangle())
         }.buttonStyle(SquishStyle())
     }
     private func resume() {

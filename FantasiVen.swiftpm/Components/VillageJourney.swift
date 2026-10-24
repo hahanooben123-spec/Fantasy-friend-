@@ -17,10 +17,7 @@ struct VillageJourney: View {
                 PaintedVillageBackdrop(active:phase == .active).ignoresSafeArea()
                 StorybookStyle.teal.opacity(0.18).ignoresSafeArea()
                 VStack(spacing:14) {
-                    Text(store.t(place.titleKey)).font(.system(size:29,weight:.heavy,design:.rounded))
-                        .foregroundColor(GameStyle.ink).multilineTextAlignment(.center)
-                        .padding(.horizontal,22).padding(.vertical,10)
-                        .background(StorybookPanel(cornerRadius:24))
+                    VillageCaption(title:store.t("villageShort_\(place.rawValue)"),size:30)
                     ZStack(alignment:.bottom) {
                         VillageBuilding(place:place,opening:open ? 1 : 0)
                             .scaleEffect(closeUp && !reduced ? 1.25 : 1,anchor:.bottom)
@@ -31,9 +28,6 @@ struct VillageJourney: View {
                             .opacity(closeUp && !reduced ? 0 : 1)
                     }.frame(width:min(440,proxy.size.width*0.88))
                 }.frame(maxWidth:.infinity,maxHeight:.infinity)
-                VStack {Spacer();Text(store.t("villageEnter")).font(.system(size:15,weight:.bold,design:.rounded))
-                    .foregroundColor(GameStyle.ink).padding(.horizontal,18).padding(.vertical,10)
-                    .background(StorybookPanel(cornerRadius:22)).padding(20)}
             }.contentShape(Rectangle()).onTapGesture(perform:finish)
                 .accessibilityElement(children:.ignore)
                 .accessibilityLabel(store.t(place.titleKey))

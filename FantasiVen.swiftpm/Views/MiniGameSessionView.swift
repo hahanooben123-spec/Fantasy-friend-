@@ -130,7 +130,7 @@ struct MiniGameSessionView: View {
             if paused {PlayPauseOverlay(resume:{paused=false;lastTick=nil})}
         }.foregroundColor(GameStyle.ink).navigationBarHidden(true).statusBar(hidden:true)
             .onAppear {visible=true;lastTick=nil;if kind == .apples || kind == .bubbles {store.visit(kind == .apples ? .apples : .bubbles,friendID:friend.id)}}
-            .onDisappear {visible=false;lastTick=nil;SoundService.shared.stopSpeech()}
+            .onDisappear {visible=false;lastTick=nil}
             .onChange(of:scenePhase) {_ in
                 lastTick=nil
                 bubbleOffsets=[:]

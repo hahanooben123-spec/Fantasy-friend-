@@ -32,11 +32,11 @@ enum VillagePlace: Int, CaseIterable, Identifiable {
             }
         }
         switch self {
-        case .studio: return UnitPoint(x:0.25,y:0.22)
-        case .pizza: return UnitPoint(x:0.75,y:0.22)
-        case .games: return UnitPoint(x:0.25,y:0.51)
-        case .homes: return UnitPoint(x:0.75,y:0.51)
-        case .pumpkins: return UnitPoint(x:0.25,y:0.81)
+        case .studio: return UnitPoint(x:0.25,y:0.19)
+        case .pizza: return UnitPoint(x:0.75,y:0.19)
+        case .games: return UnitPoint(x:0.25,y:0.49)
+        case .homes: return UnitPoint(x:0.75,y:0.49)
+        case .pumpkins: return UnitPoint(x:0.25,y:0.79)
         }
     }
 }
@@ -70,7 +70,8 @@ struct VillageSquare: View {
     var body: some View {
         GeometryReader { proxy in
             let s=proxy.size
-            let buildingWidth=min(wide ? 260 : 235,s.width*(wide ? 0.27 : 0.44))
+            let buildingWidth=min(wide ? 250 : 205,min(s.width*(wide ? 0.25 : 0.40),s.height*(wide ? 0.40 : 0.26)))
+            let friendWidth=min(wide ? 210 : 170,min(s.width*0.34,s.height*(wide ? 0.28 : 0.25)))
             ZStack {
                 VillageLandscape(wide:wide,dusk:dusk,active:active)
                 ForEach(VillagePlace.allCases) { place in
@@ -79,26 +80,27 @@ struct VillageSquare: View {
                         VStack(spacing:-4) {
                             VillageBuilding(place:place,tint:place == .homes ?
                                 RoomPalette.walls[friend.roomDesign?.wallpaper ?? 0] : nil)
-                            Text(store.t(place.titleKey))
-                                .font(.system(size:wide ? 19 : 16,weight:.heavy,design:.rounded))
-                                .lineLimit(2).multilineTextAlignment(.center).minimumScaleFactor(0.8)
-                                .padding(.horizontal,12).padding(.vertical,8)
-                                .background(StorybookPanel(cornerRadius:18))
+                            VillageCaption(title:store.t("villageShort_\(place.rawValue)"),size:wide ? 20 : 17)
+                                .padding(.top,2).padding(.bottom,5)
                         }.frame(width:buildingWidth)
+                            // The artwork is decorative; this label owns one continuous house-sized hit target.
+                            .background(Color.white.opacity(0.001))
+                            .contentShape(Rectangle())
                     }.buttonStyle(SquishStyle()).accessibilityLabel(store.t(place.titleKey))
+                        .accessibilityHint(store.t("villageEnter"))
                         .position(x:s.width*point.x,y:s.height*point.y)
                 }
                 keepsakes(size:s,width:buildingWidth)
                 VStack(spacing:0) {
                     LivingFriend(friend:friend,audible:true,active:active)
-                        .frame(width:min(wide ? 230 : 180,s.width*0.43),height:wide ? 245 : 195)
+                        .frame(width:friendWidth,height:friendWidth*CGFloat(320)/CGFloat(300))
                     Button(action:chooseFriend) {
                         HStack(spacing:6) {
-                            Text(friend.name.isEmpty ? store.t("villageCompanion") : friend.name)
-                                .font(.system(size:14,weight:.heavy,design:.rounded)).lineLimit(1)
-                            Image(systemName:"arrow.triangle.2.circlepath").font(.system(size:13,weight:.bold))
-                        }.padding(.horizontal,12).frame(minHeight:44)
-                            .background(StorybookPanel(cornerRadius:20))
+                            VillageCaption(title:friend.name.isEmpty ? store.t("chooseFriend") : friend.name,size:15)
+                            Image(systemName:"arrow.triangle.2.circlepath")
+                                .font(.system(size:15,weight:.heavy)).foregroundColor(.white)
+                                .shadow(color:GameStyle.purple,radius:0,y:2)
+                        }.padding(.horizontal,10).frame(minHeight:44).contentShape(Rectangle())
                     }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("chooseFriend"))
                 }.position(x:s.width*(wide ? 0.50 : 0.75),y:s.height*(wide ? 0.66 : 0.81))
                 Button {
@@ -177,5 +179,22 @@ struct VillageLandscape: View {
                 }
             }.allowsHitTesting(false)
         }.allowsHitTesting(false).accessibilityHidden(true)
+    }
+}
+
+
+/// Short outlined lettering belongs to the scene, without a separate UI bubble.
+struct VillageCaption:View {
+    let title:String
+    var size:CGFloat=18
+    var body:some View {
+        Text(title).font(.system(size:size,weight:.black,design:.rounded))
+            .foregroundColor(GameStyle.purple)
+            .lineLimit(1).minimumScaleFactor(0.7)
+            .shadow(color:.white,radius:0,x:-2,y:0)
+            .shadow(color:.white,radius:0,x:2,y:0)
+            .shadow(color:.white,radius:0,x:0,y:-2)
+            .shadow(color:.white,radius:0,x:0,y:2)
+            .shadow(color:GameStyle.ink.opacity(0.18),radius:1,y:3)
     }
 }

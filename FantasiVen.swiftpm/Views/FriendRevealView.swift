@@ -62,7 +62,6 @@ struct FriendRevealView:View {
                 if reduced {
                     curtainsOpen=true;entered=true;introduced=true
                     SoundService.shared.play(.complete)
-                    SoundService.shared.speak(store.t("revealHello")+" "+friend.name,language:store.settings.language)
                     return
                 }
                 do {
@@ -73,10 +72,8 @@ struct FriendRevealView:View {
                     try await Task.sleep(nanoseconds:650_000_000)
                     withAnimation(.easeOut(duration:0.3)) {introduced=true}
                     SoundService.shared.play(.complete)
-                    SoundService.shared.speak(store.t("revealHello")+" "+friend.name,language:store.settings.language)
                 } catch {return}
             }
-            .onDisappear {SoundService.shared.stopSpeech()}
     }
     private func door(_ key:String,_ icon:String,color:Color)->some View {
         HStack(spacing:14) {

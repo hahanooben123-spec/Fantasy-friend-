@@ -24,9 +24,6 @@ struct PlayHUD: View {
                         Text(title).font(.system(.title,design:.rounded).weight(.heavy))
                         Text(hint).font(.system(.title3,design:.rounded)).multilineTextAlignment(.center)
                         FlowerDifficulty()
-                        CandyButton(title:store.t("help"),icon:"speaker.wave.2.fill") {
-                            SoundService.shared.speak(hint,language:store.settings.language)
-                        }
                         CandyButton(title:store.t("continue"),icon:"checkmark") {settings=false}
                     }.padding(28).frame(maxWidth:480)
                 }

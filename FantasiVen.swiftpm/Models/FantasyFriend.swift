@@ -114,6 +114,7 @@ struct GameSettings: Codable {
         let value = effectsVolume ?? 0.65
         return value.isFinite ? min(1, max(0, value)) : 0.65
     }
+    // Legacy archive field only; the app no longer synthesizes speech.
     var speech: Bool?
     var challenge: Int?
     var speechEnabled: Bool { speech ?? true }

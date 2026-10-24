@@ -2,6 +2,14 @@
 
 Et originalt, lokalt iPhone-spil til børn på 3–8 år. Swift 6, SwiftUI og iOS 15+. Ingen tredjepartspakker, login, netværkskald eller køb.
 
+## Tryk direkte på husene og leg uden robotoplæsning
+
+Hvert hus på forsiden har ét samlet rektangulært trykområde omkring illustration og navn. Tegningerne er fortsat dekorative under dette trykområde. Fem korte navne står direkte i scenen med afrundet cartoon-skrift og hvid kontur. Store tekstpaneler, invitationsteksten og den ekstra maskotboks er fjernet fra forsiden. Landsbyen tilpasser huse og ven til den tilgængelige højde uden en intern rulleliste, også på liggende telefon. Dørovergangen bruger samme korte skrift.
+
+AVSpeechSynthesizer, oplæsningsopgaver og alle oplæsningskald er fjernet fra appen. Gamle gemte taleindstillinger aktiverer derfor ikke oplæsning. Indstillingen vises ikke længere. Værkstedshjælp viser en håndbevægelse og en tekstinstruktion; minispilhjælp viser sin instruktion direkte. Afsløringen beholder sin glade lyd, og bogreolen giver en kort musikalsk reaktion. Musik, øvrige lyde og systemets tilgængelighedsmærkater bevares.
+
+Ingen build eller tests kørt efter brugerens ønske.
+
 ## Samlet nuttet cartoon-grafik
 
 De nitten tidligere malede illustrationer er udskiftet: landskab, fem huse, figurværksted, otte pizzaillustrationer samt seng, dyne, lampe og legetøjsskab. Et nyt græskarmiljø bruger turkis aftenhimmel, lilla tage og varme lys inspireret af brugerens reference. Forsiden på iPad har en ny nuttet maskotillustration. Alle 21 illustrationer er bundtet lokalt.

@@ -19,7 +19,6 @@ struct AdventureGameShell<Content: View>: View {
             }
             if paused { PlayPauseOverlay(resume:{paused=false}) }
         }.foregroundColor(GameStyle.ink).navigationBarHidden(true).statusBar(hidden:true)
-            .onDisappear { SoundService.shared.stopSpeech() }
             .alert(store.t("error"),isPresented:Binding(get:{store.error != nil},set:{if !$0 {store.error=nil}})) {
                 Button("OK") {store.error=nil}
             } message:{Text(store.error ?? "")}

@@ -72,7 +72,6 @@ struct FriendRoomView:View {
                 do {try await Task.sleep(nanoseconds:220_000_000)} catch {return}
                 trayDragged=false
             }
-            .onDisappear {SoundService.shared.stopSpeech()}
             .sheet(isPresented:$styles) {
                 RoomDesignSheet(design:layout.design,onDesign:{value in
                     var next=layout;next.design=value;commit(next)
@@ -358,7 +357,7 @@ struct FriendRoomView:View {
             react(.dance);SoundService.shared.instrument(1,beat:pulse%8)
         case .ball,.stool:react(.jump)
         case .shelf:
-            SoundService.shared.speak(store.t("roomStory"),language:store.settings.language);react(.hug)
+            react(.hug);SoundService.shared.instrument(1,beat:pulse%8)
         case .plant:react(.tickle)
         default:SoundService.shared.instrument(1,beat:value.kind%8)
         }

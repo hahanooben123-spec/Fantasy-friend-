@@ -9,8 +9,6 @@ final class SoundService {
     private var effects: [AVAudioPlayer] = []
     private var music: AVAudioPlayer?
     private var fadingMusic: [AVAudioPlayer] = []
-    private let speech = AVSpeechSynthesizer()
-    private var speechTask: Task<Void, Never>?
     private var cache: [String: Data] = [:]
     private var active = true
     private var performing = false
@@ -25,20 +23,18 @@ final class SoundService {
         }
     }
     private var musicLevel: Float {
-        Float(settings.musicLevel) * (speech.isSpeaking ? 0.07 : 0.32)
+        Float(settings.musicLevel) * 0.32
     }
 
     func configure(_ settings: GameSettings) {
         self.settings = settings
         if !settings.sound { effects.forEach { $0.stop() }; effects.removeAll() }
-        if !settings.speechEnabled { stopSpeech() }
         updateMusic()
     }
     func setActive(_ value: Bool) {
         active = value
         if !value {
             effects.forEach { $0.stop() }; effects.removeAll()
-            stopSpeech()
         }
         updateMusic()
     }
@@ -156,29 +152,6 @@ final class SoundService {
             if cache.count < 64 { cache[key] = data }
         }
         playData(data)
-    }
-    func speak(_ text: String, language: Language) {
-        guard settings.speechEnabled && active else { return }
-        stopSpeech()
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: language == .da ? "da-DK" : "en-GB")
-        utterance.rate = 0.43; utterance.volume = 0.7
-        music?.setVolume(Float(settings.musicLevel) * 0.07, fadeDuration: 0.15)
-        speech.speak(utterance)
-        speechTask = Task { [weak self] in
-            do {
-                try await Task.sleep(nanoseconds: 300_000_000)
-                while self?.speech.isSpeaking == true {
-                    try await Task.sleep(nanoseconds: 200_000_000)
-                }
-                self?.updateMusic()
-            } catch { return }
-        }
-    }
-    func stopSpeech() {
-        speechTask?.cancel(); speechTask = nil
-        speech.stopSpeaking(at: .immediate)
-        if settings.music && active && !performing { music?.setVolume(musicLevel, fadeDuration: 0.4) }
     }
     private static func wave(notes: [Double], noteDuration: Double, timbre: Int) -> Data {
         let sampleRate = 22050
