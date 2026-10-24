@@ -6,6 +6,12 @@ enum Words {
         return language == .da ? pair.0 : pair.1
     }
     static let entries: [String: (String, String)] = [
+        "roomLivingHint": ("Prøv sengen, lampen, gardinerne og legetøjsskabet!", "Try the bed, lamp, curtains and toy cupboard!"),
+        "roomPullQuilt": ("Træk dynen op eller ned", "Pull the quilt up or down"),
+        "roomTidyToys": ("Ryd op", "Tidy up"),
+        "roomToy_blocks": ("Klodser", "Blocks"),
+        "roomToy_bubbles": ("Sæbebobler", "Bubbles"),
+        "roomToy_flashlight": ("Lommelygte", "Flashlight"),
         "homeInvitation": ("Hvad skal vi lege i dag?", "What shall we play today?"),
         "homeCreateHint": ("Din fantasi bestemmer", "Your imagination decides"),
         "homePlayGames": ("Leg og spil", "Play and explore"),

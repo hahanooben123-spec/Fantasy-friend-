@@ -50,6 +50,11 @@ struct RoomInterior:View {
             }
             c.fill(Path(CGRect(x:0,y:floorY-9,width:w,height:12)),with:.color(Color(red:1,green:0.91,blue:0.7)))
             c.fill(Path(CGRect(x:0,y:floorY+3,width:w,height:3)),with:.color(GameStyle.ink.opacity(0.15)))
+            let door=CGRect(x:w*0.84,y:floorY-min(160,h*0.29),width:w*0.12,height:min(160,h*0.29))
+            ToyFinish.paint(c,path:Path(roundedRect:door,cornerRadius:door.width*0.4),
+                color:Color(red:0.52,green:0.31,blue:0.24),edge:2)
+            c.fill(Path(ellipseIn:CGRect(x:door.minX+door.width*0.17,y:door.midY,width:5,height:5)),
+                with:.color(StorybookStyle.honey))
             let light=CGPoint(x:w*0.48,y:h*0.16)
             c.fill(Path(CGRect(origin:.zero,size:size)),with:.radialGradient(
                 Gradient(colors:[.white.opacity(0.18),.clear]),center:light,startRadius:0,endRadius:w*0.65))
@@ -61,10 +66,23 @@ struct RoomFurniture:View {
     var tint:Int?
     var isOn=true
     var night=false
+    var curtainsClosed=false
+    var showQuilt=true
+    @Environment(\.accessibilityReduceMotion) private var reduced
     var body:some View {
+        ZStack {
+        if [0,2,12].contains(kind) {
+            PaintedRoomFurniture(kind:kind,tint:tint,isOn:isOn,showQuilt:showQuilt)
+        } else {
         Canvas {c,size in
             c.scaleBy(x:size.width/100,y:size.height/110)
             RoomPropPainter(c:c,kind:kind,tint:tint,isOn:isOn,night:night).draw()
+        }
+        if kind == RoomItem.window.rawValue {
+            RoomCurtains(amount:curtainsClosed ? 1 : 0)
+                .animation(reduced ? nil : .easeInOut(duration:0.35),value:curtainsClosed)
+        }
+        }
         }.accessibilityHidden(true)
     }
 }

@@ -45,7 +45,7 @@ struct RoomObject:Identifiable,Codable,Equatable {
     var layer:Int?
     var sizeFactor:Double {scale ?? 1}
     var angle:Double {rotation ?? 0}
-    var isOn:Bool {on ?? true}
+    var isOn:Bool {on ?? (kind != RoomItem.toybox.rawValue)}
     var level:Int {layer ?? (kind == 4 ? -1 : RoomItem(rawValue:kind)?.isWall == true ? 0 : 1)}
     var isValid:Bool {
         (0..<18).contains(kind) && x.isFinite && y.isFinite &&
@@ -73,10 +73,18 @@ struct RoomDesign:Codable,Equatable {
     var wallpaper=0
     var floor=0
     var night=false
+    var sleepingBed:UUID?
+    var blanket:Double?
+    var curtainsClosed:Bool?
+    var playthings:[RoomPlaything]?
     var friendX=0.52
     var friendY=0.72
     var isValid:Bool {
         (0..<6).contains(wallpaper) && (0..<4).contains(floor) &&
+        (blanket.map {$0.isFinite && (0...1).contains($0)} ?? true) &&
+        (playthings ?? []).count<=24 && (playthings ?? []).allSatisfy(\.isValid) &&
+        Set((playthings ?? []).map(\.id)).count == (playthings ?? []).count &&
+
         friendX.isFinite && friendY.isFinite && (0.1...0.9).contains(friendX) && (0.2...0.9).contains(friendY)
     }
 }
@@ -87,7 +95,7 @@ struct RoomLayout:Equatable {
         var value=RoomLayout()
         value.design.wallpaper=[0,2,4][min(2,max(0,style))]
         value.design.floor=style == 1 ? 1 : 0
-        let beds=[0,6,8],toys=[3,15,1]
+        let beds=[0,0,0],toys=[12,12,12]
         value.objects=[
             RoomObject(kind:5,x:0.5,y:0.28),
             RoomObject(kind:4,x:0.5,y:0.79,color:style == 0 ? 9 : 11,scale:1.3),

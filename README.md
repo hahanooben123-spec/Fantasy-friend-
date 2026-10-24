@@ -2,6 +2,16 @@
 
 Et originalt, lokalt iPhone-spil til børn på 3–8 år. Swift 6, SwiftUI og iOS 15+. Ingen tredjepartspakker, login, netværkskald eller køb.
 
+## Et levende værelse: Leg og Indret
+
+Værelset åbner i **Leg**. **Indret** bruges til at flytte, dreje, farve og ændre størrelsen på møbler. Fortryd og gentag vises kun under indretning. Tryk i indretning vælger et møbel; i leg udløses dets handling.
+
+Fire originale malede illustrationer giver seng, separat dyne, lampe og legetøjsskab samme varme materialer som figurværkstedet og pizzabageriet. Skabets illustrerede låger åbner med hængselanimation. Tryk på sengen lægger vennen til at sove; træk dynen op og ned med fingeren. Et nyt tryk på sengen eller kram/dans vækker vennen. Lampen kan tændes, og vinduets gardiner lukker med animation og dæmper rummet.
+
+Åbn legetøjsskabet, og træk klodser, sæbebobler og lommelygter ud på gulvet. Klodser kan stables ved at slippe dem tæt på hinanden. Tryk på bobleflasken giver bobler og en reaktion; en flytbar lommelygte kaster lys og kan slukkes. Ryd op samler legetøjet og lukker skabene. Op til 24 løse legeting gemmes lokalt sammen med rummets indretning. Valgfrie Codable-felter bevarer gamle gemte rum. Vennens egne tegnestreger vises i billedrammen, og op til to gemte græskar står ved døren.
+
+De fire billeder er lavet med det indbyggede image_gen-værktøj. Filplaceringer og endelige prompts: [Documentation/Art/Room-Art.md](Documentation/Art/Room-Art.md). Projektgeneratoren registrerer den nye Swift-fil. Ingen build, tests eller afprøvning på iPad er kørt.
+
 ## Åbent figurværksted, formbar krop og prøvescene
 
 Figurværkstedet har en ny original malet studiebaggrund og mere plads omkring vennen: smallere sidebakke på iPad, lavere kategori-/deleområde på stående skærme og ingen obligatorisk starterskærm. Startere er stadig tilgængelige fra scenen. Farverige kategorier, store previews og detaljer som trædepuder, sømme og snørebånd gør delene lettere at skelne.

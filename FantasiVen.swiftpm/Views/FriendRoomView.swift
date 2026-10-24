@@ -12,7 +12,8 @@ struct FriendRoomView:View {
     @State private var pending:RoomItem?
     @State private var history:[RoomLayout]=[]
     @State private var future:[RoomLayout]=[]
-    @State private var editing=true
+    @State private var editing=false
+    @State private var toyPreview:RoomPlaything?
     @State private var category=0
     @State private var trayOpen=false
     @State private var trayDragged=false
@@ -65,7 +66,7 @@ struct FriendRoomView:View {
         }.foregroundColor(GameStyle.ink).navigationBarHidden(true).statusBar(hidden:true)
             .onAppear {load();store.visit(.room,friendID:friendID);SoundService.shared.setWorld(layout.design.night ? .stars : .castle)}
             .onChange(of:layout.design.night) {night in SoundService.shared.setWorld(night ? .stars : .castle)}
-            .onChange(of:phase) {value in if value != .active {draggingItem=nil;trayDragged=false;moving=nil;friendPreview=nil}}
+            .onChange(of:phase) {value in if value != .active {draggingItem=nil;trayDragged=false;moving=nil;friendPreview=nil;toyPreview=nil}}
             .task(id:draggingItem == nil && trayDragged) {
                 guard draggingItem == nil,trayDragged else {return}
                 do {try await Task.sleep(nanoseconds:220_000_000)} catch {return}
@@ -94,8 +95,10 @@ struct FriendRoomView:View {
         HStack(spacing:6) {
             RoundButton(icon:"chevron.left",label:store.t("close")) {presentation.wrappedValue.dismiss()}
             if wide {Text(store.t("myRoom")).font(.system(size:20,weight:.heavy,design:.rounded)).foregroundColor(.white).lineLimit(1)}
-            CreatorToolButton(mark:.undo,label:store.t("undo"),action:undo).disabled(history.isEmpty)
-            if !future.isEmpty {CreatorToolButton(mark:.redo,label:store.t("redo"),action:redo)}
+            if editing {
+                CreatorToolButton(mark:.undo,label:store.t("undo"),action:undo).disabled(history.isEmpty)
+                if !future.isEmpty {CreatorToolButton(mark:.redo,label:store.t("redo"),action:redo)}
+            }
             Spacer(minLength:0)
             HStack(spacing:3) {modeButton(build:true,wide:wide);modeButton(build:false,wide:wide)}
                 .padding(3).background(StorybookPanel(cornerRadius:25))
@@ -103,7 +106,7 @@ struct FriendRoomView:View {
     }
     private func modeButton(build:Bool,wide:Bool)->some View {
         Button {
-            moving=nil;friendPreview=nil;pending=nil;draggingItem=nil;selected=nil
+            moving=nil;friendPreview=nil;toyPreview=nil;pending=nil;draggingItem=nil;selected=nil
             editing=build;if !build {trayOpen=false}
         } label:{
             VStack(spacing:1) {
@@ -118,8 +121,9 @@ struct FriendRoomView:View {
             RoomScene(friend:friend,layout:layout,editing:editing,selected:selected,moving:moving,
                 friendPreview:friendPreview,action:action,signal:signal,activeID:activeID,pulse:pulse,pending:pending,
                 onSelect:{selected=$0},onTap:tap,onMove:move,onFriendMove:moveFriend,
-                onDropItem:{item,point in add(item,at:point)})
-            Text(store.t(full ? "roomFull" : editing ? (draggingItem != nil ? "roomDropHere" : choice != nil && !trayOpen ? "roomSelectedHint" : "roomSimpleHint") : "roomPlayHint"))
+                onDropItem:{item,point in add(item,at:point)},toyPreview:toyPreview,
+                onSpawnToy:spawnToy,onMoveToy:moveToy,onUseToy:useToy,onCover:cover)
+            Text(store.t(full ? "roomFull" : editing ? (draggingItem != nil ? "roomDropHere" : choice != nil && !trayOpen ? "roomSelectedHint" : "roomSimpleHint") : "roomLivingHint"))
                 .font(.system(size:12,weight:.bold,design:.rounded)).multilineTextAlignment(.center)
                 .padding(.horizontal,14).padding(.vertical,9)
                 .background(StorybookPanel(cornerRadius:24)).padding(10).allowsHitTesting(false)
@@ -233,8 +237,9 @@ struct FriendRoomView:View {
         HStack(spacing:12) {
             simpleTool("heart.fill","hug") {react(.hug)}
             simpleTool("music.note","dance") {react(.dance)}
+            simpleTool("tray.and.arrow.down.fill","roomTidyToys") {putAwayToys()}
             simpleTool("sun.max.fill","roomDayNight") {var next=layout;next.design.night.toggle();commit(next)}
-        }.padding(12).frame(maxWidth:500).frame(maxWidth:.infinity)
+        }.padding(12).frame(maxWidth:620).frame(maxWidth:.infinity)
     }
     private var colorSheet:some View {
         VStack(spacing:20) {
@@ -268,7 +273,9 @@ struct FriendRoomView:View {
         current.room=next.objects;current.roomDesign=next.design
         return store.save(current)
     }
-    @discardableResult private func commit(_ next:RoomLayout)->Bool {
+    @discardableResult private func commit(_ proposed:RoomLayout)->Bool {
+        var next=proposed
+        if let bed=next.design.sleepingBed,!next.objects.contains(where:{$0.id == bed && $0.kind == RoomItem.bed.rawValue}) {next.design.sleepingBed=nil}
         guard next != layout else {return true}
         guard persist(next) else {return false}
         history.append(layout);if history.count>50 {history.removeFirst()}
@@ -277,12 +284,12 @@ struct FriendRoomView:View {
     private func undo() {
         guard let previous=history.last,persist(previous) else {return}
         future.append(layout);layout=previous;history.removeLast()
-        moving=nil;friendPreview=nil;selected=nil
+        moving=nil;friendPreview=nil;toyPreview=nil;selected=nil
     }
     private func redo() {
         guard let next=future.last,persist(next) else {return}
         history.append(layout);layout=next;future.removeLast()
-        moving=nil;friendPreview=nil;selected=nil
+        moving=nil;friendPreview=nil;toyPreview=nil;selected=nil
     }
     private func add(_ item:RoomItem,at point:CGPoint?) {
         pending=nil
@@ -304,14 +311,14 @@ struct FriendRoomView:View {
     private func moveFriend(_ point:CGPoint,_ finished:Bool) {
         guard finished else {friendPreview=point;return}
         var next=layout;next.design.friendX=Double(point.x);next.design.friendY=Double(point.y)
-        commit(next);friendPreview=nil
+        next.design.sleepingBed=nil
+        if commit(next) {action = .hug;signal+=1};friendPreview=nil
     }
     private func tap(_ value:RoomObject) {
         pending=nil
         if editing {
             selected=value.id
-            if !trayOpen {use(value)}
-            else {SoundService.shared.play(.click)}
+            SoundService.shared.play(.click)
         } else {use(value)}
     }
     private func transform(_ update:(inout RoomObject)->Void) {
@@ -332,7 +339,19 @@ struct FriendRoomView:View {
         case .lamp,.toybox:
             var next=layout
             if let i=next.objects.firstIndex(where:{$0.id == value.id}) {next.objects[i].on = !value.isOn;commit(next)}
-        case .bed:react(.sleep,near:value)
+        case .bed:
+            var next=layout
+            if next.design.sleepingBed == value.id {
+                next.design.sleepingBed=nil
+                next.design.friendX=min(0.9,max(0.1,value.x+0.12))
+                next.design.friendY=min(0.9,max(0.2,value.y))
+                if commit(next) {action = .hug;signal+=1}
+            } else {
+                next.design.sleepingBed=value.id;next.design.blanket=0.25
+                if commit(next) {action = .sleep;signal+=1}
+            }
+        case .window:
+            var next=layout;next.design.curtainsClosed = !(next.design.curtainsClosed ?? false);commit(next)
         case .sofa,.cushion:react(.hug,near:value)
         case .snack,.table:react(.feed,near:value)
         case .music:
@@ -345,12 +364,52 @@ struct FriendRoomView:View {
         }
     }
     private func react(_ value:PlayAction,near object:RoomObject?=nil) {
-        action=value;signal+=1
+        var next=layout
+        if value != .sleep {next.design.sleepingBed=nil}
         if let object=object {
-            var next=layout
             next.design.friendX=min(0.9,max(0.1,object.x))
             next.design.friendY=min(0.9,max(0.2,object.y-0.04))
-            commit(next)
         }
+        if commit(next) {action=value;signal+=1}
+    }
+    private func spawnToy(_ kind:RoomToyKind,_ point:CGPoint) {
+        var next=layout
+        var toys=next.design.playthings ?? []
+        guard toys.count<24 else {full=true;return}
+        var toy=RoomPlaything(kind:kind,color:(toys.count*3)%16)
+        toy.move(x:Double(point.x),y:Double(point.y))
+        toys.append(toy);next.design.playthings=toys
+        if commit(next) {SoundService.shared.play(.bounce)}
+    }
+    private func moveToy(_ toy:RoomPlaything,_ finished:Bool) {
+        guard finished else {toyPreview=toy;return}
+        defer {toyPreview=nil}
+        var next=layout
+        guard var toys=next.design.playthings,let index=toys.firstIndex(where:{$0.id == toy.id}) else {return}
+        var placed=toy
+        if toy.kind == .blocks,let base=toys.first(where:{
+            $0.id != toy.id && $0.kind == .blocks && abs($0.x-toy.x)<0.055 && abs($0.y-toy.y)<0.09
+        }) {placed.move(x:base.x,y:base.y-0.065)}
+        toys[index]=placed;next.design.playthings=toys;commit(next)
+    }
+    private func useToy(_ toy:RoomPlaything) {
+        switch toy.kind {
+        case .flashlight:
+            var next=layout
+            guard var toys=next.design.playthings,let index=toys.firstIndex(where:{$0.id == toy.id}) else {return}
+            toys[index].on.toggle();next.design.playthings=toys;commit(next)
+        case .bubbles:react(.tickle)
+        case .blocks:react(.jump);SoundService.shared.play(.bounce)
+        }
+    }
+    private func cover(_ amount:Double) {
+        var next=layout;next.design.blanket=min(1,max(0,amount));commit(next)
+    }
+    private func putAwayToys() {
+        var next=layout;next.design.playthings=[]
+        for index in next.objects.indices where next.objects[index].kind == RoomItem.toybox.rawValue {
+            next.objects[index].on=false
+        }
+        commit(next)
     }
 }
