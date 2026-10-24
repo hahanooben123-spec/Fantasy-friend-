@@ -178,3 +178,18 @@ struct StarterFriendsSheet:View {
         }
     }
 }
+
+
+struct CreatorEraserIcon:View {
+    var body:some View {
+        Canvas {c,s in
+            c.translateBy(x:s.width/2,y:s.height/2);c.scaleBy(x:s.width/36,y:s.height/36);c.rotate(by:.degrees(-30))
+            let shape=Path(roundedRect:CGRect(x:-14,y:-9,width:28,height:18),cornerRadius:5)
+            ToyFinish.paint(c,path:shape,color:GameStyle.palette[1],edge:1.5)
+            var end=c;end.clip(to:shape)
+            end.fill(Path(CGRect(x:0,y:-10,width:16,height:20)),with:.color(StorybookStyle.cream))
+            var seam=Path();seam.move(to:CGPoint(x:0,y:-8));seam.addLine(to:CGPoint(x:0,y:8))
+            c.stroke(seam,with:.color(GameStyle.ink.opacity(0.3)),lineWidth:1)
+        }.accessibilityHidden(true)
+    }
+}

@@ -138,6 +138,16 @@ enum Words {
 
         "pizzaEndlessToppings": ("Fyld på! Du bestemmer hvor meget.", "Pile it on! You choose how much."),
 
+        "creatorFace": ("Ansigt", "Face"),
+        "creatorShapes": ("Former", "Shapes"),
+        "creatorMold": ("Form selv", "Shape it"),
+        "creatorEraser": ("Viskelæder", "Eraser"),
+        "creatorMoreChoices": ("Flere valg", "More choices"),
+        "creatorExtraGroup0": ("Hoved", "Head"),
+        "creatorExtraGroup1": ("Krop", "Body"),
+        "creatorExtraGroup2": ("Bagpå", "Behind"),
+        "creatorRename": ("Skift navn", "Change name"),
+        "creatorReady": ("Min ven er klar!", "My friend is ready!"),
         "roomLittleDecorate": ("Pynt", "Decorate"),
         "roomLittleWalls": ("Vægge", "Walls"),
         "roomLittleLook": ("Vælg dette udseende", "Choose this look"),

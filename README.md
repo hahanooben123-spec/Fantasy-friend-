@@ -2,6 +2,12 @@
 
 Et originalt, lokalt iPhone-spil til børn på 3–8 år. Swift 6, SwiftUI og iOS 15+. Ingen tredjepartspakker, login, netværkskald eller køb.
 
+## Skaber med seks synlige kategorier
+
+Skaberen har samlet billedvalg for Krop, Farve, Ansigt, Arme, Ben og Pynt. Øjne/mund og pensel/viskelæder er samlet under de relevante kategorier. Varianten vælges i et stort gitter med tydelige bladreknapper; aktiv farve får flueben. Form selv er en særskilt tilstand, så almindelig berøring giver en nuttet reaktion uden at ændre figuren. Delstørrelser ligger i samme bakke som delvalgene.
+
+Maling har et lokalt viskelæder, og Færdig åbner et enkelt navneforslag med valgfri navneredigering og én stor afslutningsknap. Krops- og ansigtspreviews følger samme nulstillingsregel som de faktiske valg. [Detaljer](Documentation/Creator-Redesign.md). Ingen build eller tests kørt.
+
 ## Nuttede figurer og enklere aktivitetsværktøjer
 
 Otte armtyper og otte fodtyper er tegnet om som bløde poter, luffer, svømmefødder, vanter, støvler og små tøfler. Den samme vektorgeometri bruges i figuren, previews, bounds og fysik. Skuldre og hofter afledes af de otte kropssilhuetter, og størrelse/formning følges af delenes fæste. Glade ansigter beholder store åbne øjne; kinder, smil og tunge er blødere. Nye armvalg får et lille vink, benvalg får en kort gangbevægelse, og hop får tid til at lande.

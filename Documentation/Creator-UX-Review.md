@@ -1,5 +1,7 @@
 # Gennemgang af skaberen - 24. oktober 2026
 
+> Efterfølgende implementering: [Creator-Redesign.md](Creator-Redesign.md). Fundene nedenfor beskriver tilstanden før ombygningen.
+
 ## Afgrænsning
 
 Gennemgang af den aktuelle SwiftUI-kode, layoutmål, valg, gestusser og forløbet frem til gemning.
