@@ -117,3 +117,95 @@ struct PizzaServingSteam: View {
         }.allowsHitTesting(false).accessibilityHidden(true)
     }
 }
+
+
+/// A warm glass flap over the illustrated oven opening; hinges down for serving.
+struct PizzaOvenDoor:View {
+    let open:Bool
+    var body:some View {
+        GeometryReader {proxy in
+            let w=proxy.size.width,h=proxy.size.height
+            ZStack {
+                RoundedRectangle(cornerRadius:w*0.10)
+                    .fill(LinearGradient(colors:[Color(red:0.48,green:0.24,blue:0.30),StorybookStyle.plum],
+                        startPoint:.top,endPoint:.bottom))
+                RoundedRectangle(cornerRadius:w*0.075)
+                    .fill(LinearGradient(colors:[Color.orange.opacity(0.30),Color(red:0.23,green:0.12,blue:0.18)],
+                        startPoint:.topLeading,endPoint:.bottomTrailing)).padding(w*0.025)
+                Capsule().fill(StorybookStyle.honey)
+                    .frame(width:w*0.21,height:w*0.025).offset(y:-h*0.075)
+                Capsule().fill(Color.white.opacity(0.20))
+                    .frame(width:w*0.15,height:w*0.015).rotationEffect(.degrees(-25))
+                    .offset(x:-w*0.07,y:-h*0.025)
+            }.frame(width:w*0.46,height:h*0.28)
+                .overlay(RoundedRectangle(cornerRadius:w*0.10).stroke(StorybookStyle.honey.opacity(0.7),lineWidth:2))
+                .rotation3DEffect(.degrees(open ? 100 : 0),axis:(x:1,y:0,z:0),anchor:.bottom,perspective:0.5)
+                .position(x:w*0.5,y:h*0.57)
+        }.allowsHitTesting(false).accessibilityHidden(true)
+    }
+}
+
+/// Brief puffy steam, rather than a permanent particle emitter.
+struct PizzaRevealCloud:View {
+    let progress:Int
+    let active:Bool
+    @Environment(\.scenePhase) private var phase
+    @Environment(\.accessibilityReduceMotion) private var reduced
+    @State private var start=Date()
+    var body:some View {
+        TimelineView(.animation(minimumInterval:1.0/24,paused:!active || reduced || phase != .active)) {frame in
+            let t=min(1.5,max(0,frame.date.timeIntervalSince(start)))
+            Canvas {c,s in
+                guard !reduced else {return}
+                for i in 0..<9 {
+                    let side=Double(i-4)
+                    let spread=t*0.075
+                    let x=s.width*(0.5+CGFloat(side*spread))
+                    let y=s.height*(0.55-CGFloat(t)*0.26)+CGFloat(i%3)*7
+                    let radius=s.width*CGFloat(0.04+t*0.035)
+                    c.fill(Path(ellipseIn:CGRect(x:x-radius,y:y-radius,width:radius*2,height:radius*1.5)),
+                        with:.radialGradient(Gradient(colors:[.white.opacity(max(0,0.65-t*0.45)),.clear]),
+                            center:CGPoint(x:x,y:y),startRadius:0,endRadius:radius))
+                }
+            }
+        }.allowsHitTesting(false).accessibilityHidden(true)
+    }
+}
+
+/// Touch feedback follows the actual finger and dough geometry.
+struct PizzaTouchFeedback:View {
+    let point:PizzaPoint
+    let tool:PizzaWorkTool
+    let pressed:Bool
+    let release:Double
+    var body:some View {
+        Canvas {c,s in
+            let center=CGPoint(x:CGFloat(point.x)*s.width,y:CGFloat(point.y)*s.height)
+            if tool == .shape {
+                let opacity=pressed ? 1.0 : max(0,1-release)
+                let radius=s.width*0.065
+                c.fill(Path(ellipseIn:CGRect(x:center.x-radius,y:center.y-radius*0.65,width:radius*2,height:radius*1.3)),
+                    with:.radialGradient(Gradient(colors:[Color(red:0.63,green:0.35,blue:0.12).opacity(0.22*opacity),.clear]),
+                        center:center,startRadius:0,endRadius:radius))
+                if !pressed {
+                    for i in 0..<8 {
+                        let angle=Double(i)*Double.pi/4
+                        let distance=CGFloat(release)*s.width*0.12
+                        let x=center.x+CGFloat(cos(angle))*distance
+                        let y=center.y+CGFloat(sin(angle))*distance*0.65-CGFloat(release)*12
+                        c.fill(Path(ellipseIn:CGRect(x:x,y:y,width:4,height:3)),with:.color(.white.opacity(opacity*0.85)))
+                    }
+                }
+            } else if pressed {
+                let shine=CGRect(x:center.x-11,y:center.y-12,width:18,height:6)
+                c.fill(Path(ellipseIn:shine),with:.color(Color(red:1,green:0.8,blue:0.4).opacity(0.65)))
+                // A tiny round spoon points at the wet sauce, clear of the finger.
+                var spoon=c;spoon.translateBy(x:center.x+18,y:center.y-20);spoon.rotate(by:.degrees(35))
+                ToyFinish.paint(spoon,path:Path(roundedRect:CGRect(x:-3,y:-37,width:6,height:37),cornerRadius:3),
+                    color:StorybookStyle.honey,edge:1)
+                ToyFinish.paint(spoon,path:Path(ellipseIn:CGRect(x:-10,y:-6,width:20,height:25)),
+                    color:Color(red:1,green:0.39,blue:0.15),edge:1)
+            }
+        }.allowsHitTesting(false).accessibilityHidden(true)
+    }
+}

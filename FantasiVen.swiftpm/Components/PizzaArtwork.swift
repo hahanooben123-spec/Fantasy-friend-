@@ -108,7 +108,12 @@ struct PizzaIllustration:View {
         for stroke in recipe.sauce {
             guard let first=stroke.points.first else {continue}
             var path=Path();path.move(to:CGPoint(x:first.x*300,y:first.y*320))
-            for point in stroke.points.dropFirst() {path.addLine(to:CGPoint(x:point.x*300,y:point.y*320))}
+            for index in stroke.points.indices.dropFirst() {
+                let previous=stroke.points[index-1],point=stroke.points[index]
+                path.addQuadCurve(to:CGPoint(x:(previous.x+point.x)*150,y:(previous.y+point.y)*160),
+                    control:CGPoint(x:previous.x*300,y:previous.y*320))
+            }
+            if let last=stroke.points.last {path.addLine(to:CGPoint(x:last.x*300,y:last.y*320))}
             if stroke.points.count == 1 {path.addLine(to:CGPoint(x:first.x*300+0.1,y:first.y*320))}
             PizzaMaterialPainter.sauce(topping,path:path)
         }
@@ -124,7 +129,10 @@ struct PizzaIllustration:View {
                         for other in cells[(gx+dx)*1000+gy+dy] ?? [] {
                             if hypot(point.x-other.x,point.y-other.y)<36*baked {
                                 var bridge=Path();bridge.move(to:point);bridge.addLine(to:other)
-                                topping.stroke(bridge,with:.color(color),style:StrokeStyle(lineWidth:15*baked,lineCap:.round))
+                                topping.stroke(bridge,with:.color(color),style:StrokeStyle(lineWidth:18*baked,lineCap:.round))
+                                topping.stroke(bridge.applying(CGAffineTransform(translationX:-1,y:-2)),
+                                    with:.color(Color(red:1,green:0.97,blue:0.76).opacity(baked*0.5)),
+                                    style:StrokeStyle(lineWidth:3*baked,lineCap:.round))
                             }
                         }
                     }
@@ -585,7 +593,7 @@ struct PizzaBiteFlight:View {
                 .opacity(visible ? 1 : 0)
         }.task(id:revision) {
             var transaction=Transaction();transaction.disablesAnimations=true
-            withTransaction(transaction) {arrived=false;visible=true}
+            withTransaction(transaction) {arrived=false;visible=true;started=Date()}
             await Task.yield()
             withAnimation(reduced ? nil : .easeInOut(duration:0.65)) {arrived=true}
             do {try await Task.sleep(nanoseconds:650_000_000)} catch {return}
@@ -629,12 +637,15 @@ struct PizzaDoughSwatch:View {
     }
 }
 struct PizzaMouthfulFlight:View {
+    @Environment(\.scenePhase) private var phase
+    var active=true
     let recipe:PizzaRecipe
     let bite:PizzaBite
     let revision:Int
     let reduced:Bool
     @State private var arrived=false
     @State private var visible=true
+    @State private var started=Date()
     private var fragmentRecipe:PizzaRecipe {
         var value=recipe
         value.bites=recipe.bites?.filter {$0.id != bite.id}
@@ -648,6 +659,29 @@ struct PizzaMouthfulFlight:View {
             let x:CGFloat=(proxy.size.width-width)/CGFloat(2)+CGFloat(bite.point.x)*width
             let y:CGFloat=(proxy.size.height-height)/CGFloat(2)+CGFloat(bite.point.y)*height
             ZStack {
+                TimelineView(.animation(minimumInterval:1.0/30,paused:reduced || !active || !visible || phase != .active)) {frame in
+                    let elapsed=max(0,frame.date.timeIntervalSince(started))
+                    Canvas {c,s in
+                        guard !reduced,elapsed<0.36 else {return}
+                        let raw=min(1,elapsed/0.48),t=raw*raw*(3-2*raw)
+                        let end=CGPoint(x:x+(65-x)*CGFloat(t),y:y+(s.height-75-y)*CGFloat(t))
+                        let cheeses=recipe.toppings.lazy.filter {
+                            $0.kind == .cheese && hypot($0.point.x-bite.point.x,$0.point.y-bite.point.y)<bite.radius+0.045
+                        }.prefix(3)
+                        for item in cheeses {
+                            let anchor=CGPoint(x:x+CGFloat(item.point.x-bite.point.x)*width,
+                                               y:y+CGFloat(item.point.y-bite.point.y)*height)
+                            var strand=Path();strand.move(to:anchor)
+                            strand.addQuadCurve(to:end,control:CGPoint(x:(anchor.x+end.x)/2,
+                                y:(anchor.y+end.y)/2+CGFloat(t)*35))
+                            let opacity=min(1,max(0,(0.36-elapsed)/0.12))
+                            c.stroke(strand,with:.color(Color(red:1,green:0.87,blue:0.43).opacity(opacity)),
+                                style:StrokeStyle(lineWidth:3.5,lineCap:.round))
+                            c.stroke(strand,with:.color(Color(red:1,green:0.98,blue:0.82).opacity(opacity*0.7)),
+                                style:StrokeStyle(lineWidth:1,lineCap:.round))
+                        }
+                    }
+                }
                 Canvas {c,s in
                     for i in 0..<9 {
                         let a=Double(i)*Double.pi*2/Double(9)
@@ -666,7 +700,7 @@ struct PizzaMouthfulFlight:View {
             }
         }.task(id:revision) {
             var transaction=Transaction();transaction.disablesAnimations=true
-            withTransaction(transaction) {arrived=false;visible=true}
+            withTransaction(transaction) {arrived=false;visible=true;started=Date()}
             await Task.yield()
             withAnimation(reduced ? nil : .easeInOut(duration:0.48)) {arrived=true}
             do {try await Task.sleep(nanoseconds:480_000_000)} catch {return}

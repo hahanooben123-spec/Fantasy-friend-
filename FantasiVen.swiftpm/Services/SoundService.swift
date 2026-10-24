@@ -110,6 +110,9 @@ final class SoundService {
             playNotes(cue == .click ? [660] : [523.25, 659.25, 783.99], duration: cue == .click ? 0.055 : 0.14, timbre: 0)
         }
     }
+    func pizzaReveal() {
+        playNotes([392, 523.25, 659.25, 783.99], duration:0.11, timbre:1)
+    }
     func react(voice: Int) {
         let root = [523.25, 880, 261.63][min(2, max(0, voice))]
         playNotes([root, root * [1.25, 1.5, 0.75].randomElement()!], duration: 0.13, timbre: voice)

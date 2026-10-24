@@ -19,6 +19,9 @@ struct KitchenGameView:View {
     @State private var shaped=false
     @State private var inserted=false
     @State private var baked=0.0
+    @State private var servingReveal=false
+    @State private var revealPhase=0
+    @State private var adjustingToppings=false
     @State private var served=false
     @State private var signal=0
     @State private var pouringIngredient:Int?
@@ -84,6 +87,19 @@ struct KitchenGameView:View {
                         landingID=nil
                     }
             }
+            .task(id:active && servingReveal) {
+                guard active,servingReveal else {return}
+                withAnimation(.easeInOut(duration:0.4)) {revealPhase=1}
+                do {
+                    try await Task.sleep(nanoseconds:450_000_000)
+                    try Task.checkCancellation()
+                    withAnimation(.spring(response:0.65,dampingFraction:0.8)) {revealPhase=2}
+                    SoundService.shared.pizzaReveal()
+                    try await Task.sleep(nanoseconds:850_000_000)
+                    try Task.checkCancellation()
+                    withAnimation(.easeInOut(duration:0.25)) {served=true;servingReveal=false}
+                } catch {return}
+            }
             .task(id:active && inserted && !served) {
                 guard active,inserted,!served else {return}
                 do {
@@ -136,7 +152,7 @@ struct KitchenGameView:View {
     // Readiness offers a next step; it never interrupts a child's current gesture.
     private var canContinue:Bool {
         if step == 0 {return recipe.readyToShape && pouringIngredient == nil}
-        if step == 3 {return baked>=1 && !served}
+        if step == 3 {return baked>=1 && !served && !servingReveal}
         switch tool {
         case .shape:return shaped || recipe.formed>=0.8
         case .sauce:return recipe.sauceCoverage>=0.35
@@ -168,6 +184,9 @@ struct KitchenGameView:View {
         guard canContinue else {return}
         finish();dragItem=nil
         if step == 1 && tool == .herbs {bake();return}
+        if step == 3 && !reduced {
+            servingReveal=true;revealPhase=0;return
+        }
         withAnimation(reduced ? nil : .spring(response:0.45,dampingFraction:0.8)) {
             if step == 0 {
                 recipe.formed=max(0.72,recipe.formed);step=1;tool = .shape
@@ -223,18 +242,18 @@ struct KitchenGameView:View {
     }
     private var instruction:String {
         if step == 0 {return pouringIngredient != nil ? "pizzaPouring" : recipe.ingredients.count == 3 ? "pizzaQuickStir" : "pizzaMixHint"}
-        if step == 3 {return served ? (finishedEating ? "pizzaAllNibbled" : "pizzaFingerEat") : "pizzaBaking"}
+        if step == 3 {return servingReveal ? "pizzaRevealHint" : served ? (finishedEating ? "pizzaAllNibbled" : "pizzaFingerEat") : "pizzaBaking"}
         switch tool {
         case .shape:return "pizzaFreeDough"
         case .sauce:return "pizzaSauceHint"
-        case .toppings:return "pizzaEndlessToppings"
+        case .toppings:return adjustingToppings ? "pizzaMoveToppingsHint" : "pizzaEndlessToppings"
         case .herbs:return "pizzaHerbHint"
         }
     }
     @ViewBuilder private var stage:some View {
         if step<3 {
             PizzaWorkSurface(recipe:$recipe,mixing:step == 0,tool:tool,spice:spice,topping:topping,
-                landingID:landingID,targeted:validDropHover,onBegin:begin,onEnd:surfaceEnded)
+                landingID:landingID,targeted:validDropHover,adjusting:adjustingToppings,onBegin:begin,onEnd:surfaceEnded)
                 .accessibilityElement(children:.ignore).accessibilityLabel(store.t(instruction))
                 .accessibilityAction {assist()}
         } else if served {
@@ -243,7 +262,7 @@ struct KitchenGameView:View {
                 LivingFriend(friend:friend,action:.feed,signal:signal,feedingFood:nil,active:animationActive)
                     .frame(width:135,height:145).allowsHitTesting(false)
                 if let fragment=mouthful {
-                    PizzaMouthfulFlight(recipe:recipe,bite:fragment,revision:biteRevision,reduced:reduced)
+                    PizzaMouthfulFlight(active:animationActive,recipe:recipe,bite:fragment,revision:biteRevision,reduced:reduced)
                         .allowsHitTesting(false)
                 }
                 PlayCelebration(revision:finishedEating ? 1 : 0).allowsHitTesting(false)
@@ -252,10 +271,21 @@ struct KitchenGameView:View {
             GeometryReader {proxy in
                 let width=min(430,min(proxy.size.width,proxy.size.height*0.94))
                 ZStack {
-                    PizzaOvenArtwork(heat:reduced ? 0 : baked,active:animationActive).frame(width:width,height:width*320/300)
-                    PizzaHeatEffects(progress:baked,reduced:reduced).frame(width:width*0.9,height:width)
-                    PizzaIllustration(recipe:recipe,baked:baked,board:false)
-                        .frame(width:width*0.55,height:width*0.58).scaleEffect(x:1,y:0.48).offset(y:width*0.07)
+                    PizzaOvenArtwork(heat:baked,active:animationActive)
+                        .frame(width:width,height:width*320/300)
+                    PizzaHeatEffects(progress:baked,reduced:reduced || !animationActive)
+                        .frame(width:width*0.9,height:width)
+                    PizzaIllustration(recipe:recipe,baked:baked,board:false,serving:revealPhase>=2)
+                        .frame(width:width*(revealPhase>=2 ? 0.88 : 0.55),height:width*(revealPhase>=2 ? 0.94 : 0.58))
+                        .scaleEffect(x:1,y:revealPhase>=2 ? 0.85 : 0.48)
+                        .offset(y:width*(revealPhase>=2 ? 0.26 : 0.07))
+                    PizzaOvenDoor(open:revealPhase>0)
+                        .frame(width:width,height:width*320/300)
+                    if servingReveal {
+                        PizzaRevealCloud(progress:revealPhase,active:animationActive)
+                            .frame(width:width,height:width)
+                        PlayCelebration(revision:revealPhase>=2 ? 1 : 0)
+                    }
                 }.frame(maxWidth:.infinity,maxHeight:.infinity)
             }
         }
@@ -362,10 +392,20 @@ struct KitchenGameView:View {
                     }
                 }
             } else {
+                HStack(spacing:8) {
+                    Button {
+                        finish();adjustingToppings.toggle();SoundService.shared.play(.click)
+                    } label: {
+                        VStack(spacing:3) {
+                            Image(systemName:"hand.draw.fill").font(.system(size:25,weight:.bold))
+                            Text(store.t("pizzaMoveToppings")).font(.system(size:10,weight:.heavy,design:.rounded))
+                        }.frame(width:58,height:67)
+                            .background(GameChoiceSurface(selected:adjustingToppings,tint:GameStyle.palette[11]))
+                    }.buttonStyle(SquishStyle()).accessibilityAddTraits(adjustingToppings ? .isSelected : [])
                 ScrollView(.horizontal,showsIndicators:false) {
                 HStack(spacing:8) {
                     ForEach(PizzaToppingKind.allCases,id:\.rawValue) {kind in
-                        Button {topping=kind;SoundService.shared.play(.click)} label:{
+                        Button {topping=kind;adjustingToppings=false;SoundService.shared.play(.click)} label:{
                             VStack(spacing:2) {
                                 ZStack {PizzaServingDish();PizzaToppingArt(kind:kind).padding(7)}.frame(height:39)
                                 Text(store.t(kind.key)).font(.system(size:10,weight:.heavy,design:.rounded)).lineLimit(1).minimumScaleFactor(0.65)
@@ -375,6 +415,7 @@ struct KitchenGameView:View {
                             .simultaneousGesture(dragGesture(.topping(kind)))
                     }
                 }.padding(.vertical,3)
+                }
                 }
             }
         }
@@ -406,7 +447,7 @@ struct KitchenGameView:View {
             guard step == 0,bowlContains(location) else {return};startPour(index)
         case .topping(let kind):
             guard step == 1,recipe.contains(point) else {return}
-            tool = .toppings;topping=kind;change {$0.place(kind,at:point)}
+            tool = .toppings;topping=kind;adjustingToppings=false;change {$0.place(kind,at:point)}
             landingID=recipe.toppings.last?.id
         case .herb(let index):
             guard step == 1,recipe.contains(point) else {return}
@@ -454,6 +495,9 @@ struct KitchenGameView:View {
             if step == 0 && value.ingredients.count == 3 {value.mixed=1}
             else if step == 1 && tool == .shape {value.formed=1}
             else if step == 1 && tool == .sauce {value.spreadSauce()}
+            else if step == 1 && tool == .toppings && adjustingToppings {
+                if !value.toppings.isEmpty {value.toppings.removeLast()}
+            }
             else if step == 1 {
                 let count=tool == .herbs ? value.spices.count : value.toppings.count
                 let a=Double(count)*2.4
@@ -478,7 +522,7 @@ struct KitchenGameView:View {
     private func reset() {
         pouringIngredient=nil;dragItem=nil;mouthful=nil;recipe=PizzaRecipe();step=0;tool = .shape
         history=[];before=nil;touching=false;shaped=false
-        inserted=false;baked=0;served=false;signal=0;biteRevision=0;finishedEating=false;interaction+=1
+        inserted=false;baked=0;served=false;servingReveal=false;revealPhase=0;adjustingToppings=false;signal=0;biteRevision=0;finishedEating=false;interaction+=1
     }
 }
 
@@ -493,6 +537,7 @@ private struct PizzaWorkSurface:View {
     let topping:PizzaToppingKind
     let landingID:UUID?
     let targeted:Bool
+    let adjusting:Bool
     let onBegin:()->Void
     let onEnd:()->Void
     @State private var released=Date.distantPast
@@ -505,6 +550,8 @@ private struct PizzaWorkSurface:View {
     @State private var shapingBase:PizzaRecipe?
     @State private var shapingStart:PizzaPoint?
     @State private var pinchBase:Double?
+    @State private var movingTopping:UUID?
+    @State private var releasedPoint:PizzaPoint?
     var body:some View {
         GeometryReader {proxy in
             let width=max(1,min(proxy.size.width,proxy.size.height*300/320))
@@ -515,7 +562,14 @@ private struct PizzaWorkSurface:View {
                     TimelineView(.animation(minimumInterval:1.0/30,paused:reduced || !settling || phase != .active)) {frame in
                         let t=max(0,frame.date.timeIntervalSince(released))
                         let rebound=settling && !reduced ? sin(t*21)*exp(-t*5) : 0
-                        PizzaIllustration(recipe:recipe,landingID:landingID,elastic:rebound)
+                        ZStack {
+                            PizzaIllustration(recipe:recipe,landingID:landingID,elastic:rebound)
+                            if let point=last.map({PizzaPoint(x:Double($0.x/size.width),y:Double($0.y/size.height))}) ?? releasedPoint,
+                               tool == .shape || tool == .sauce {
+                                PizzaTouchFeedback(point:point,tool:tool,pressed:last != nil,
+                                    release:reduced ? 1 : min(1,t/0.7))
+                            }
+                        }
                     }
                 }
             }.frame(width:size.width,height:size.height).contentShape(Rectangle())
@@ -523,9 +577,24 @@ private struct PizzaWorkSurface:View {
                     Color.clear.preference(key:PizzaSurfaceFrameKey.self,value:frame.frame(in:.named("pizzaWorkshop")))
                 })
                 .overlay {
+                    if mixing && recipe.ingredients.count == 3 {
+                        GestureLesson(activity:recipe.mixed>0 ? 1 : 0,
+                            from:UnitPoint(x:0.38,y:0.46),to:UnitPoint(x:0.64,y:0.50))
+                    }
+                    if !mixing && tool == .sauce {
+                        GestureLesson(activity:recipe.sauce.isEmpty ? 0 : 1,
+                            from:UnitPoint(x:0.40,y:0.40),to:UnitPoint(x:0.65,y:0.55))
+                    }
                     if !mixing && tool == .shape {
                         GestureLesson(activity:(recipe.dents?.count ?? 0)+(recipe.doughStretch == nil ? 0 : 1),
                             from:UnitPoint(x:0.72,y:0.50),to:UnitPoint(x:0.85,y:0.43))
+                    }
+                    if let id=movingTopping,let item=recipe.toppings.first(where:{$0.id == id}) {
+                        Circle().stroke(Color.white,lineWidth:3)
+                            .shadow(color:GameStyle.purple.opacity(0.5),radius:2)
+                            .frame(width:size.width*0.12,height:size.width*0.12)
+                            .position(x:CGFloat(item.point.x)*size.width,y:CGFloat(item.point.y)*size.height)
+                            .allowsHitTesting(false)
                     }
                     if targeted {
                         Canvas {c,s in
@@ -540,8 +609,15 @@ private struct PizzaWorkSurface:View {
                         let end=PizzaPoint(x:Double(last.x/size.width),y:Double(last.y/size.height))
                         if hypot(start.x-end.x,start.y-end.y)<0.015 {recipe.press(at:end)}
                     }
-                    if !mixing && tool == .shape && !reduced {released=Date();settling=true}
-                    last=nil;lastStirTime=nil;strokeID=nil;travel=0;shapingBase=nil;shapingStart=nil;onEnd()
+                    if !mixing && tool == .toppings && adjusting,let id=movingTopping,let last=last {
+                        let end=PizzaPoint(x:Double(last.x/size.width),y:Double(last.y/size.height))
+                        if !recipe.contains(end) {recipe.toppings.removeAll {$0.id == id};SoundService.shared.play(.bubble)}
+                    }
+                    if !mixing && (tool == .shape || tool == .sauce) {
+                        releasedPoint=last.map {PizzaPoint(x:Double($0.x/size.width),y:Double($0.y/size.height))}
+                        released=Date();settling = !reduced
+                    }
+                    last=nil;lastStirTime=nil;strokeID=nil;travel=0;shapingBase=nil;shapingStart=nil;movingTopping=nil;onEnd()
                 })
                 .simultaneousGesture(MagnificationGesture().onChanged {scale in
                     guard !mixing,tool == .shape else {return}
@@ -558,12 +634,13 @@ private struct PizzaWorkSurface:View {
                 guard settling else {return}
                 do {try await Task.sleep(nanoseconds:1_100_000_000)} catch {return}
                 settling=false
-            }.onChange(of:tool) {_ in last=nil;strokeID=nil;shapingBase=nil;shapingStart=nil}
+            }.onChange(of:tool) {_ in last=nil;strokeID=nil;shapingBase=nil;shapingStart=nil;movingTopping=nil;releasedPoint=nil;settling=false}
+            .onChange(of:adjusting) {_ in last=nil;movingTopping=nil;onEnd()}
             .onChange(of:phase) {value in
                 if value != .active {
                     settling=false
                     let held=last != nil || pinchBase != nil
-                    last=nil;lastStirTime=nil;strokeID=nil;shapingBase=nil;shapingStart=nil;pinchBase=nil;travel=0
+                    last=nil;lastStirTime=nil;strokeID=nil;shapingBase=nil;shapingStart=nil;pinchBase=nil;travel=0;movingTopping=nil;releasedPoint=nil
                     if held {onEnd()}
                 }
             }
@@ -602,6 +679,13 @@ private struct PizzaWorkSurface:View {
                     recipe.sauce[i].points=recipe.sauce[i].points.enumerated().filter {$0.offset.isMultiple(of:2)}.map(\.element)
                 }
                 recipe.sauce[i].points.append(p)
+            }
+        } else if tool == .toppings && adjusting {
+            if first {
+                movingTopping=recipe.toppings.reversed().first {hypot($0.point.x-p.x,$0.point.y-p.y)<0.10}?.id
+            }
+            if let id=movingTopping,recipe.contains(p),let index=recipe.toppings.firstIndex(where:{$0.id == id}) {
+                recipe.toppings[index].point=p
             }
         } else if tool == .toppings || tool == .herbs {
             travel+=Double(distance)
