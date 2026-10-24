@@ -148,6 +148,7 @@ enum Words {
         "creatorExtraGroup2": ("Bagpå", "Behind"),
         "creatorRename": ("Skift navn", "Change name"),
         "creatorReady": ("Min ven er klar!", "My friend is ready!"),
+        "roomArrangeHint": ("Flyt tingene med fingeren. Tryk på + for at vælge flere.", "Move things with your finger. Tap + to choose more."),
         "roomLittleDecorate": ("Pynt", "Decorate"),
         "roomLittleWalls": ("Vægge", "Walls"),
         "roomLittleLook": ("Vælg dette udseende", "Choose this look"),

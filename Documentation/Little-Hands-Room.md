@@ -1,5 +1,7 @@
 # A room for little hands
 
+> Historical implementation. Free arrangement now replaces fixed positions: [Room-Free-Arrangement.md](Room-Free-Arrangement.md).
+
 FriendRoomView now opens directly into play, with one Decorate button and a day/night
 switch. Decorating uses six picture categories: bed, rug, lamp, toy cabinet, picture
 and walls. Each offers four large picture choices that apply immediately. Tapping

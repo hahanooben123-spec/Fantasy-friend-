@@ -251,3 +251,23 @@ private struct RoomPropPainter {
         p.closeSubpath();ToyFinish.paint(c,path:p,color:color,edge:0.8)
     }
 }
+
+
+/// One scale and placement rule shared by room furniture and its interaction bounds.
+enum RoomPlacement {
+    static func baseSize(in size:CGSize)->CGFloat {
+        min(155,min(max(58,size.width*0.18),size.height*0.34))
+    }
+    static func constrain(_ object:RoomObject,in size:CGSize)->RoomObject {
+        guard size.width>0,size.height>0 else {return object}
+        var copy=object
+        let kind=RoomItem(rawValue:object.kind)
+        let width=baseSize(in:size)*CGFloat(kind?.widthFactor ?? 1)*CGFloat(object.sizeFactor)
+        let halfX=min(0.4,Double(width/size.width/2)+0.02)
+        let halfY=min(0.25,Double(width*1.1/size.height/2))
+        let lowY=kind?.isWall == true ? max(0.2,halfY+0.02) : min(0.82,0.58+halfY*0.4)
+        let highY=kind?.isWall == true ? max(lowY,0.57-halfY*0.6) : max(lowY,min(0.9,0.98-halfY))
+        copy.move(x:min(1-halfX,max(halfX,object.x)),y:min(highY,max(lowY,object.y)))
+        return copy
+    }
+}

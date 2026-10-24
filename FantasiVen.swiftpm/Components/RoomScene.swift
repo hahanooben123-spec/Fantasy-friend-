@@ -23,9 +23,6 @@ struct RoomScene:View {
     let onMoveToy:(RoomPlaything,Bool)->Void
     let onUseToy:(RoomPlaything)->Void
     let onCover:(Double)->Void
-    @ObservedObject var pumpkins:PumpkinStore
-    var onPizza:()->Void = {}
-    var onLantern:(PumpkinLantern)->Void = {_ in}
     var fixedLayout=false
     @EnvironmentObject private var store:FriendStore
     @Environment(\.accessibilityReduceMotion) private var reduced
@@ -63,25 +60,6 @@ struct RoomScene:View {
                         sleepingFriend(bed,size:size).zIndex(2300)
                     }
                 }
-                ForEach(Array(pumpkins.lanterns.prefix(2).enumerated()),id:\.element.id) {i,lantern in
-                    Button {onLantern(lantern)} label: {
-                        PumpkinIllustration(lantern:lantern,animated:false)
-                            .frame(width:64,height:70).contentShape(Rectangle())
-                    }.buttonStyle(SquishStyle()).disabled(editing)
-                        .accessibilityLabel(store.t("roomOpenLantern"))
-                        .position(x:size.width*(0.90-Double(i)*0.11),y:size.height*0.62)
-                        .zIndex(2200)
-                }
-                if let draft=store.sessions.pizza,draft.companion.id == friend.id,draft.served,draft.recipe.hasFood {
-                    let table=layout.objects.first {$0.kind == RoomItem.table.rawValue}
-                    Button(action:onPizza) {
-                        PizzaIllustration(recipe:draft.recipe,baked:1,board:false,serving:true)
-                            .frame(width:90,height:96).contentShape(Rectangle())
-                    }.buttonStyle(SquishStyle()).disabled(editing)
-                        .accessibilityLabel(store.t("roomTastePizza"))
-                        .position(x:size.width*(table?.x ?? 0.76),y:size.height*(table.map {$0.y-0.055} ?? 0.82))
-                        .zIndex(2250)
-                }
                 if !fixedLayout {
                     GestureLesson(activity:pulse+(selected == nil ? 0 : 1),from:UnitPoint(x:0.25,y:0.65),to:UnitPoint(x:0.4,y:0.6)).zIndex(4500)
                 }
@@ -107,7 +85,6 @@ struct RoomScene:View {
                 }
             }.frame(width:size.width,height:size.height)
                 .coordinateSpace(name:"friendRoomScene").clipped()
-                .onAppear {pumpkins.reload()}
                 .task(id:toyPick == nil && toyDragged) {
                     guard toyPick == nil,toyDragged else {return}
                     do {try await Task.sleep(nanoseconds:220_000_000)} catch {return}
@@ -120,7 +97,7 @@ struct RoomScene:View {
         }
     }
     private func sleepingFriend(_ bed:RoomObject,size:CGSize)->some View {
-        let width=min(155,max(76,size.width*0.2))*RoomItem.bed.widthFactor*bed.sizeFactor
+        let width=RoomPlacement.baseSize(in:size)*RoomItem.bed.widthFactor*bed.sizeFactor
         let cover=blanketPreview ?? layout.design.blanket ?? 0.25
         return ZStack {
             LivingFriend(friend:friend,action:.sleep,signal:max(1,signal),audible:false)
@@ -181,8 +158,11 @@ struct RoomScene:View {
         }.blendMode(.screen)
     }
     private func companion(_ size:CGSize)->some View {
-        let point=friendPreview ?? CGPoint(x:layout.design.friendX,y:layout.design.friendY)
-        let width=min(205,max(100,size.width*0.27))
+        let width=min(205,min(max(90,size.width*0.24),size.height*0.42))
+        let raw=friendPreview ?? CGPoint(x:layout.design.friendX,y:layout.design.friendY)
+        let marginX=width/max(1,size.width)*0.5+0.02
+        let marginY=width*320/300/max(1,size.height)*0.5+0.02
+        let point=CGPoint(x:min(1-marginX,max(marginX,raw.x)),y:min(1-marginY,max(marginY,raw.y)))
         return LivingFriend(friend:friend,action:action,signal:signal,locomotion:friendPreview == nil ? 0 : 0.65,greetOnArrival:true)
             .frame(width:width,height:width*320/300)
             .position(x:point.x*size.width,y:point.y*size.height)
@@ -234,7 +214,7 @@ private struct RoomPlacedObject:View {
     @State private var lifted=false
     private var width:CGFloat {
         let ratio=RoomItem(rawValue:object.kind)?.widthFactor ?? 1
-        return min(155,max(76,roomSize.width*0.2))*ratio*object.sizeFactor
+        return RoomPlacement.baseSize(in:roomSize)*ratio*object.sizeFactor
     }
     var body:some View {
         ZStack {
@@ -276,6 +256,7 @@ private struct RoomPlacedObject:View {
                 guard var next=origin else {return}
                 next.move(x:next.x+Double(event.translation.width/max(1,roomSize.width)),
                     y:next.y+Double(event.translation.height/max(1,roomSize.height)))
+                next=RoomPlacement.constrain(next,in:roomSize)
                 gestureValue=next;onMove(next,false)
             }.onEnded {event in
                 guard canMove else {onTap();return}
@@ -286,7 +267,7 @@ private struct RoomPlacedObject:View {
                         next.move(x:next.x+dx,y:next.y+dy)
                         withAnimation(reduced ? nil : .interpolatingSpring(stiffness:130,damping:11)) {onMove(next,true)}
                         SoundService.shared.play(.bounce)
-                    } else {onMove(next,true)}
+                    } else {onMove(RoomPlacement.constrain(next,in:roomSize),true)}
                 }
                 origin=nil;gestureValue=nil
             })
@@ -295,8 +276,8 @@ private struct RoomPlacedObject:View {
             .accessibilityAction {onTap()}
             .accessibilityAdjustableAction {direction in
                 guard editing,canMove else {return}
-                var next=object;next.scale=min(1.6,max(0.6,next.sizeFactor+(direction == .increment ? 0.1 : -0.1)))
-                onMove(next,true)
+                var next=object;next.move(x:next.x+(direction == .increment ? 0.06 : -0.06),y:next.y)
+                onMove(RoomPlacement.constrain(next,in:roomSize),true)
             }
             .task(id:pulse) {
                 guard pulse>0,!reduced else {return}
