@@ -43,16 +43,13 @@ struct BuilderView: View {
                 StorybookWorkshopWall().ignoresSafeArea()
                 VStack(spacing:0) {
                     header(wide:wide)
-                    if wide {
-                        HStack(spacing:0) {
-                            categoryRail(vertical:true).frame(width:84)
-                            scene
-                            drawer(wide:true).frame(width:min(260,geometry.size.width*0.27))
-                        }
-                    } else {
-                        scene.frame(maxWidth:.infinity,maxHeight:.infinity)
-                        categoryRail(vertical:false).frame(height:68)
-                        drawer(wide:false).frame(height:168)
+                    PlayWorkspace(wide:wide,toolWidth:min(310,geometry.size.width*0.35),toolHeight:244) {
+                        scene
+                    } tools: {
+                        VStack(spacing:0) {
+                            categoryRail(vertical:false).frame(height:74)
+                            drawer(wide:wide)
+                        }.background(StorybookShelf())
                     }
                 }
                 if let pick=dragPick {
@@ -215,7 +212,6 @@ struct BuilderView: View {
                 }.id(part)
             }
         }.padding(.top,12).padding(.bottom,10).frame(maxWidth:.infinity,maxHeight:.infinity)
-            .background(StorybookShelf())
     }
     private func choices(wide:Bool)->some View {
         ForEach(0..<optionCount,id:\.self) { index in

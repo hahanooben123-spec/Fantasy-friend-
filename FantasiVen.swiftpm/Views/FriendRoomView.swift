@@ -39,15 +39,11 @@ struct FriendRoomView:View {
                 VStack(spacing:0) {
                     header(wide)
                     if let friend=friend {
-                        if wide && editing && trayOpen {
-                            HStack(spacing:0) {
-                                room(friend).frame(maxWidth:.infinity,maxHeight:.infinity)
-                                tray(vertical:true).frame(width:270)
-                            }
-                        } else {
-                            room(friend).frame(maxWidth:.infinity,maxHeight:.infinity)
-                            if editing && trayOpen {tray(vertical:false).frame(height:245)}
-                        }
+                        if editing && trayOpen {
+                            PlayWorkspace(wide:wide,toolWidth:290,toolHeight:245) {
+                                room(friend)
+                            } tools: {tray(vertical:wide)}
+                        } else {room(friend).frame(maxWidth:.infinity,maxHeight:.infinity)}
                         if editing {selectionTools}
                         else {playTools}
                     } else {

@@ -42,16 +42,16 @@ struct KitchenGameView:View {
                     PizzaKitchenBackdrop()
                     VStack(spacing:8) {
                         phaseRibbon
-                        if wide {
-                            HStack(spacing:14) {
-                                stage.frame(maxWidth:.infinity,maxHeight:.infinity)
-                                ScrollView(.vertical,showsIndicators:false) {controls.fixedSize(horizontal:false,vertical:true)}.frame(width:290)
-                            }
-                        } else {
-                            stage.frame(maxWidth:.infinity,maxHeight:.infinity)
-                            controls.frame(height:panelHeight)
+                        PlayWorkspace(wide:wide,toolWidth:300,toolHeight:panelHeight) {
+                            stage
+                        } tools: {
+                            if wide {
+                                ScrollView(.vertical,showsIndicators:false) {
+                                    controls.fixedSize(horizontal:false,vertical:true)
+                                }.background(StorybookShelf())
+                            } else {controls}
                         }
-                    }.padding(.top,77).padding(.horizontal,12).padding(.bottom,12)
+                    }.padding(.top,77).padding(.horizontal,4)
                     if step == 0 && recipe.ingredients.isEmpty && pouringIngredient == nil {
                         GestureLesson(activity:pourRevision,from:UnitPoint(x:wide ? 0.86 : 0.25,y:wide ? 0.50 : 0.78),
                             to:UnitPoint(x:surfaceFrame.midX/max(1,proxy.size.width),

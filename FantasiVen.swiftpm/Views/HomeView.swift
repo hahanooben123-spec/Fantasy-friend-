@@ -30,7 +30,7 @@ struct HomeView:View {
                 ZStack {
                     WelcomeGardenBackdrop(dusk:dusk,active:homeVisible && journey == nil)
                     VStack(spacing:0) {
-                        header(tablet:tablet).padding(.horizontal,tablet ? 28 : 16).padding(.vertical,12)
+                        header(tablet:tablet).padding(.horizontal,tablet ? 28 : 16).padding(.vertical,4)
                         VillageSquare(friend:mascot,lanterns:pumpkins.lanterns,pizza:store.sessions.pizza,
                             wide:wide,dusk:dusk,active:homeVisible && journey == nil && phase == .active,
                             visit:beginVisit,chooseFriend:{choosingFriend=true})
@@ -79,12 +79,12 @@ struct HomeView:View {
                 SoundService.shared.play(.click)
             } label: {
                 Image(systemName:dusk ? "moon.stars.fill" : "sun.max.fill")
-                    .font(.system(size:21,weight:.bold)).frame(width:44,height:44)
-                    .background(CandySurface(color:StorybookStyle.honey,cornerRadius:22))
+                    .font(.system(size:21,weight:.bold)).frame(width:52,height:52)
+                    .background(CandySurface(color:StorybookStyle.honey,cornerRadius:26))
             }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("villageLights"))
             NavigationLink(destination:SettingsView()) {
                 Image(systemName:"gearshape.fill").font(.system(size:21,weight:.bold))
-                    .frame(width:44,height:44).background(CandySurface(color:StorybookStyle.honey,cornerRadius:22))
+                    .frame(width:52,height:52).background(CandySurface(color:StorybookStyle.honey,cornerRadius:26))
             }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("settings"))
         }.padding(.horizontal,4).padding(.vertical,7)
     }
@@ -122,12 +122,14 @@ struct HomeView:View {
     }
     private var resumeCard:some View {
         Button(action:resume) {
-            HStack(spacing:10) {
-                Image(systemName:"play.circle.fill").font(.system(size:28,weight:.heavy))
+            HStack(spacing:12) {
+                CharacterView(friend:recentFriend).frame(width:48,height:50).allowsHitTesting(false)
+                VillageCaption(title:store.t("resumePlay"),size:18)
+                Image(systemName:"play.circle.fill").font(.system(size:32,weight:.heavy))
                     .foregroundColor(StorybookStyle.teal)
-                    .background(Circle().fill(.white).padding(3))
-                VillageCaption(title:store.t("resumePlay"),size:17)
-            }.padding(.horizontal,14).frame(minHeight:44).contentShape(Rectangle())
+            }.padding(.horizontal,18).frame(minHeight:58)
+                .background(CandySurface(color:StorybookStyle.cream,cornerRadius:29))
+                .contentShape(Capsule())
         }.buttonStyle(SquishStyle())
     }
     private func resume() {

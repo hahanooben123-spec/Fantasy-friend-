@@ -46,6 +46,7 @@ struct CandySurface: View {
 
 /// Picture choices share a clear selected state across the creator and games.
 struct GameChoiceSurface:View {
+    @Environment(\.accessibilityReduceMotion) private var reduced
     var selected:Bool
     var tint=StorybookStyle.honey
     var body:some View {
@@ -60,7 +61,8 @@ struct GameChoiceSurface:View {
                         .background(Circle().fill(GameStyle.purple)).padding(5)
                 }
             }
-            .shadow(color:GameStyle.ink.opacity(0.10),radius:3,y:3)
+            .shadow(color:GameStyle.ink.opacity(selected ? 0.18 : 0.10),radius:selected ? 5 : 3,y:3)
+            .animation(reduced ? nil : .spring(response:0.3,dampingFraction:0.7),value:selected)
             .allowsHitTesting(false)
     }
 }

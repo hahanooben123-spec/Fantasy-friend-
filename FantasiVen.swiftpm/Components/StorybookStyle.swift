@@ -22,16 +22,47 @@ struct StorybookPanel: View {
     }
 }
 
-/// Edge-to-edge tool shelf, with the same wood and inlay as the workshop.
+/// A shared toy tray: pictures sit on a light surface with a soft turquoise rim.
 struct StorybookShelf: View {
     var body:some View {
-        LinearGradient(colors:[.white,Color(red:0.89,green:0.97,blue:0.97)],
-            startPoint:.top,endPoint:.bottom)
-            .overlay(alignment:.top) {
-                Rectangle().fill(StorybookStyle.teal.opacity(0.16)).frame(height:2)
-            }
-            .shadow(color:StorybookStyle.plum.opacity(0.08),radius:5,y:-3)
+        RoundedRectangle(cornerRadius:28,style:.continuous)
+            .fill(LinearGradient(colors:[.white,Color(red:0.89,green:0.97,blue:0.97)],
+                startPoint:.top,endPoint:.bottom))
+            .overlay(RoundedRectangle(cornerRadius:28,style:.continuous)
+                .strokeBorder(.white.opacity(0.95),lineWidth:3))
+            .overlay(RoundedRectangle(cornerRadius:28,style:.continuous)
+                .strokeBorder(StorybookStyle.teal.opacity(0.16),lineWidth:1))
+            .shadow(color:StorybookStyle.plum.opacity(0.12),radius:6,y:4)
             .allowsHitTesting(false)
+    }
+}
+
+/// Keep the play surface large; the same tools move beside it on larger screens.
+struct PlayWorkspace<Scene:View,Tools:View>:View {
+    let wide:Bool
+    var toolWidth:CGFloat=300
+    let toolHeight:CGFloat
+    let scene:Scene
+    let tools:Tools
+    init(wide:Bool,toolWidth:CGFloat=300,toolHeight:CGFloat,
+         @ViewBuilder scene:()->Scene,@ViewBuilder tools:()->Tools) {
+        self.wide=wide;self.toolWidth=toolWidth;self.toolHeight=toolHeight
+        self.scene=scene();self.tools=tools()
+    }
+    var body:some View {
+        Group {
+            if wide {
+                HStack(spacing:8) {
+                    scene.frame(maxWidth:.infinity,maxHeight:.infinity)
+                    tools.frame(width:toolWidth).frame(maxHeight:.infinity)
+                }
+            } else {
+                VStack(spacing:8) {
+                    scene.frame(maxWidth:.infinity,maxHeight:.infinity)
+                    tools.frame(height:toolHeight)
+                }
+            }
+        }.padding(.horizontal,8).padding(.bottom,8)
     }
 }
 

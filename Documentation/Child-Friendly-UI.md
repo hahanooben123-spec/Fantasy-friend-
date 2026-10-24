@@ -21,3 +21,21 @@ The following design decisions are our interpretation of those references and th
 - Game selection uses adaptive picture cards. Room play hides the editing instruction strip. Back navigation returns immediately without a separate goodbye bubble.
 
 No build, automated tests or runtime UI checks were run, at the user's request.
+
+
+## Shared play workspace and village navigation
+
+The creator, pizza, pumpkin workshop and room furniture tray now use `PlayWorkspace`.
+Tools sit below the play surface on narrow screens and beside it on wide screens, with
+a shared rounded turquoise and white tray. The creator keeps categories and their
+choices together in that one tray, freeing the former left rail for the character.
+Existing coordinate spaces continue to own drag positions.
+
+Village houses use more of the available screen, with larger outlined captions and
+one continuous house-sized touch target. Pressing a house gives it a small spring
+squash, tilt and warm glow; Reduce Motion suppresses the movement. Fewer keepsakes
+and no separate flower button leave clearer routes to the five activities. Resume
+shows the saved activity's friend beside its play button. Picture selections animate
+their border, material and shadow, respecting Reduce Motion.
+
+No build, simulator run or tests were performed for this pass, as requested.

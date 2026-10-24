@@ -66,11 +66,10 @@ struct VillageSquare: View {
     let active: Bool
     let visit: (VillagePlace) -> Void
     let chooseFriend: () -> Void
-    @State private var flower = 0
     var body: some View {
         GeometryReader { proxy in
             let s=proxy.size
-            let buildingWidth=min(wide ? 250 : 205,min(s.width*(wide ? 0.25 : 0.40),s.height*(wide ? 0.40 : 0.26)))
+            let buildingWidth=min(wide ? 320 : 270,min(s.width*(wide ? 0.29 : 0.45),s.height*(wide ? 0.42 : 0.30)-(wide ? 0 : 30)))
             let friendWidth=min(wide ? 210 : 170,min(s.width*0.34,s.height*(wide ? 0.28 : 0.25)))
             ZStack {
                 VillageLandscape(wide:wide,dusk:dusk,active:active)
@@ -80,13 +79,13 @@ struct VillageSquare: View {
                         VStack(spacing:-4) {
                             VillageBuilding(place:place,tint:place == .homes ?
                                 RoomPalette.walls[friend.roomDesign?.wallpaper ?? 0] : nil)
-                            VillageCaption(title:store.t("villageShort_\(place.rawValue)"),size:wide ? 20 : 17)
+                            VillageCaption(title:store.t("villageShort_\(place.rawValue)"),size:wide ? 24 : 20)
                                 .padding(.top,2).padding(.bottom,5)
                         }.frame(width:buildingWidth)
                             // The artwork is decorative; this label owns one continuous house-sized hit target.
                             .background(Color.white.opacity(0.001))
                             .contentShape(Rectangle())
-                    }.buttonStyle(SquishStyle()).accessibilityLabel(store.t(place.titleKey))
+                    }.buttonStyle(VillageHousePressStyle()).accessibilityLabel(store.t(place.titleKey))
                         .accessibilityHint(store.t("villageEnter"))
                         .position(x:s.width*point.x,y:s.height*point.y)
                 }
@@ -103,24 +102,17 @@ struct VillageSquare: View {
                         }.padding(.horizontal,10).frame(minHeight:44).contentShape(Rectangle())
                     }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("chooseFriend"))
                 }.position(x:s.width*(wide ? 0.50 : 0.75),y:s.height*(wide ? 0.66 : 0.81))
-                Button {
-                    flower += 1;SoundService.shared.play(.bubble)
-                } label: {
-                    FlowerArtwork(index:flower%7).frame(width:48,height:54)
-                        .rotationEffect(.degrees(Double(flower%2)*18-9))
-                        .animation(reduced ? nil : .spring(response:0.35,dampingFraction:0.45),value:flower)
-                }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("villageFlower"))
-                    .position(x:s.width*(wide ? 0.42 : 0.49),y:s.height*0.93)
+
             }
         }.foregroundColor(GameStyle.ink)
     }
 
     @ViewBuilder private func keepsakes(size s:CGSize,width:CGFloat) -> some View {
         let garden=VillagePlace.pumpkins.point(wide:wide)
-        ForEach(Array(lanterns.prefix(3).enumerated()),id:\.element.id) { index, lantern in
+        ForEach(Array(lanterns.prefix(2).enumerated()),id:\.element.id) { index, lantern in
             PumpkinIllustration(lantern:lantern,animated:false)
-                .frame(width:48,height:55).rotationEffect(.degrees(Double(index-1)*9))
-                .position(x:s.width*garden.x+CGFloat(index-1)*43,y:s.height*garden.y+width*0.21)
+                .frame(width:48,height:55).rotationEffect(.degrees(Double(index)*12-6))
+                .position(x:s.width*garden.x+(CGFloat(index)-0.5)*43,y:s.height*garden.y+width*0.21)
                 .allowsHitTesting(false).accessibilityHidden(true)
         }
         if let pizza=pizza,pizza.served {
@@ -131,20 +123,14 @@ struct VillageSquare: View {
                 .allowsHitTesting(false).accessibilityHidden(true)
         }
         let homes=VillagePlace.homes.point(wide:wide)
-        ForEach(Array(store.friends.filter {$0.id != friend.id}.prefix(2).enumerated()),id:\.element.id) { index, other in
+        ForEach(Array(store.friends.filter {$0.id != friend.id}.prefix(1).enumerated()),id:\.element.id) { index, other in
             CharacterView(friend:other)
                 .frame(width:52,height:57)
                 .position(x:s.width*homes.x+CGFloat(index == 0 ? -1 : 1)*width*0.32,
                           y:s.height*homes.y+width*0.18)
                 .allowsHitTesting(false).accessibilityHidden(true)
         }
-        if !(friend.doodles ?? []).isEmpty {
-            let studio=VillagePlace.studio.point(wide:wide)
-            CharacterView(friend:friend).padding(3).frame(width:41,height:48)
-                .background(StorybookPanel(cornerRadius:6)).rotationEffect(.degrees(-8))
-                .position(x:s.width*studio.x-width*0.33,y:s.height*studio.y+width*0.20)
-                .allowsHitTesting(false).accessibilityHidden(true)
-        }
+
     }
 }
 
@@ -196,5 +182,22 @@ struct VillageCaption:View {
             .shadow(color:.white,radius:0,x:0,y:-2)
             .shadow(color:.white,radius:0,x:0,y:2)
             .shadow(color:GameStyle.ink.opacity(0.18),radius:1,y:3)
+    }
+}
+
+
+/// A house is a big toy button, including its roof, door and caption.
+private struct VillageHousePressStyle:ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduced
+    func makeBody(configuration:Configuration)->some View {
+        configuration.label
+            .background {
+                Ellipse().fill(StorybookStyle.honey.opacity(configuration.isPressed ? 0.35 : 0))
+                    .blur(radius:12).padding(.horizontal,12)
+            }
+            .scaleEffect(configuration.isPressed && !reduced ? 0.93 : 1)
+            .rotationEffect(.degrees(configuration.isPressed && !reduced ? -2 : 0))
+            .brightness(configuration.isPressed ? 0.06 : 0)
+            .animation(reduced ? nil : .spring(response:0.28,dampingFraction:0.55),value:configuration.isPressed)
     }
 }
