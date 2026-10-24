@@ -5,6 +5,9 @@ struct FriendRoomView:View {
     @Environment(\.presentationMode) private var presentation
     let friendID:UUID
     @State private var layout=RoomLayout()
+    @StateObject private var pumpkins=PumpkinStore()
+    @State private var pizzaOpen=false
+    @State private var lanternOpen:PumpkinLantern?
     @State private var loaded=false
     @State private var selected:UUID?
     @State private var moving:RoomObject?
@@ -68,6 +71,14 @@ struct FriendRoomView:View {
                 do {try await Task.sleep(nanoseconds:220_000_000)} catch {return}
                 trayDragged=false
             }
+            .fullScreenCover(isPresented:$pizzaOpen) {
+                NavigationView {KitchenGameView(friend:friend ?? store.companion)}
+                    .navigationViewStyle(.stack).environmentObject(store)
+            }
+            .fullScreenCover(item:$lanternOpen) {lantern in
+                PumpkinWorkshopView(original:lantern,library:pumpkins,
+                    onGarden:{lanternOpen=nil},onClose:{lanternOpen=nil}).environmentObject(store)
+            }
             .sheet(isPresented:$styles) {
                 RoomDesignSheet(design:layout.design,onDesign:{value in
                     var next=layout;next.design=value;commit(next)
@@ -117,7 +128,8 @@ struct FriendRoomView:View {
                 friendPreview:friendPreview,action:action,signal:signal,activeID:activeID,pulse:pulse,pending:pending,
                 onSelect:{selected=$0},onTap:tap,onMove:move,onFriendMove:moveFriend,
                 onDropItem:{item,point in add(item,at:point)},toyPreview:toyPreview,
-                onSpawnToy:spawnToy,onMoveToy:moveToy,onUseToy:useToy,onCover:cover)
+                onSpawnToy:spawnToy,onMoveToy:moveToy,onUseToy:useToy,onCover:cover,pumpkins:pumpkins,
+                onPizza:{pizzaOpen=true},onLantern:{lanternOpen=$0})
             if full {
             Text(store.t(full ? "roomFull" : editing ? (draggingItem != nil ? "roomDropHere" : choice != nil && !trayOpen ? "roomSizeHint" : "roomSimpleHint") : "roomLivingHint"))
                 .font(.system(size:12,weight:.bold,design:.rounded)).multilineTextAlignment(.center)

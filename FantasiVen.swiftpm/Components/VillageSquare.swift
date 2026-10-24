@@ -66,10 +66,16 @@ struct VillageSquare: View {
     let active: Bool
     let visit: (VillagePlace) -> Void
     let chooseFriend: () -> Void
+    var destination:VillagePlace?
+    var onReach:()->Void = {}
+    @State private var approaching=false
     var body: some View {
         GeometryReader { proxy in
             let s=proxy.size
             let buildingWidth=min(wide ? 320 : 270,min(s.width*(wide ? 0.29 : 0.45),s.height*(wide ? 0.42 : 0.30)-(wide ? 0 : 30)))
+            let target=destination?.point(wide:wide)
+            let homePoint=CGPoint(x:s.width*(wide ? 0.50 : 0.75),y:s.height*(wide ? 0.66 : 0.81))
+            let walkingPoint=CGPoint(x:s.width*(target?.x ?? 0.5),y:s.height*(target?.y ?? 0.5)+buildingWidth*0.28)
             let friendWidth=min(wide ? 210 : 170,min(s.width*0.34,s.height*(wide ? 0.28 : 0.25)))
             ZStack {
                 VillageLandscape(wide:wide,dusk:dusk,active:active)
@@ -91,7 +97,7 @@ struct VillageSquare: View {
                 }
                 keepsakes(size:s,width:buildingWidth)
                 VStack(spacing:0) {
-                    LivingFriend(friend:friend,audible:true,active:active)
+                    LivingFriend(friend:friend,audible:true,locomotion:destination == nil ? 0 : 0.8,active:active,greetOnArrival:true)
                         .frame(width:friendWidth,height:friendWidth*CGFloat(320)/CGFloat(300))
                     Button(action:chooseFriend) {
                         HStack(spacing:6) {
@@ -101,10 +107,20 @@ struct VillageSquare: View {
                                 .shadow(color:GameStyle.purple,radius:0,y:2)
                         }.padding(.horizontal,10).frame(minHeight:44).contentShape(Rectangle())
                     }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("chooseFriend"))
-                }.position(x:s.width*(wide ? 0.50 : 0.75),y:s.height*(wide ? 0.66 : 0.81))
+                        .opacity(destination == nil ? 1 : 0).disabled(destination != nil)
+                }.scaleEffect(approaching ? 0.70 : 1,anchor:.bottom)
+                    .position(approaching ? walkingPoint : homePoint)
+                    .allowsHitTesting(destination == nil)
 
             }
         }.foregroundColor(GameStyle.ink)
+            .task(id:destination) {
+                guard destination != nil else {approaching=false;return}
+                if reduced {onReach();return}
+                withAnimation(.easeInOut(duration:0.72)) {approaching=true}
+                do {try await Task.sleep(nanoseconds:740_000_000);try Task.checkCancellation()} catch {return}
+                onReach()
+            }
     }
 
     @ViewBuilder private func keepsakes(size s:CGSize,width:CGFloat) -> some View {

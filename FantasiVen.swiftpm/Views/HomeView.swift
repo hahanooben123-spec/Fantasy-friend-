@@ -11,6 +11,7 @@ struct HomeView:View {
     @State private var editor:EditorRequest?
     @State private var resumeNavigation=false
     @StateObject private var pumpkins=PumpkinStore()
+    @State private var departure:VillagePlace?
     @State private var journey:VillagePlace?
     @State private var destination=VillagePlace.games
     @State private var visitNavigation=false
@@ -33,12 +34,12 @@ struct HomeView:View {
                         header(tablet:tablet).padding(.horizontal,tablet ? 28 : 16).padding(.vertical,4)
                         VillageSquare(friend:mascot,lanterns:pumpkins.lanterns,pizza:store.sessions.pizza,
                             wide:wide,dusk:dusk,active:homeVisible && journey == nil && phase == .active,
-                            visit:beginVisit,chooseFriend:{choosingFriend=true})
+                            visit:beginVisit,chooseFriend:{choosingFriend=true},destination:departure,onReach:reachHouse)
                             .frame(maxWidth:1400,maxHeight:.infinity).frame(maxWidth:.infinity)
                         if recent != nil {
                             resumeCard.padding(.horizontal,tablet ? 28 : 16).padding(.vertical,8).frame(maxWidth:850)
                         }
-                    }.disabled(journey != nil).accessibilityHidden(journey != nil)
+                    }.disabled(journey != nil || departure != nil).accessibilityHidden(journey != nil)
                     NavigationLink(destination:visitDestination,isActive:$visitNavigation) {EmptyView()}.hidden()
                     NavigationLink(destination:resumeDestination,isActive:$resumeNavigation) {EmptyView()}.hidden()
                     if let place=journey {
@@ -48,7 +49,7 @@ struct HomeView:View {
                 }
             }.navigationBarHidden(true)
                 .onAppear {homeVisible=true;pumpkins.reload();SoundService.shared.setWorld(.meadow)}
-                .onDisappear {homeVisible=false;journey=nil}
+                .onDisappear {homeVisible=false;journey=nil;departure=nil}
         }.navigationViewStyle(.stack).accentColor(GameStyle.purple).foregroundColor(GameStyle.ink)
             .sheet(isPresented:$choosingFriend,onDismiss:{
                 if createAfterChoosing {createAfterChoosing=false;create()}
@@ -89,9 +90,13 @@ struct HomeView:View {
         }.padding(.horizontal,4).padding(.vertical,7)
     }
     private func beginVisit(_ place:VillagePlace) {
-        guard journey == nil,!visitNavigation else {return}
+        guard journey == nil,departure == nil,!visitNavigation else {return}
         travelFriend=mascot
-        journey=place
+        if reduced {journey=place} else {departure=place}
+    }
+    private func reachHouse() {
+        guard let place=departure,homeVisible else {return}
+        departure=nil;journey=place
     }
     private func finishVisit(_ place:VillagePlace) {
         journey=nil

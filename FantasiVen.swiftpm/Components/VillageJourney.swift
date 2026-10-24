@@ -23,7 +23,7 @@ struct VillageJourney: View {
                             .scaleEffect(closeUp && !reduced ? 1.25 : 1,anchor:.bottom)
                         LivingFriend(friend:friend,audible:false,locomotion:open ? 0.8 : 0,active:phase == .active)
                             .frame(width:110,height:118)
-                            .offset(x:open ? 0 : -65,y:open ? -5 : 15)
+                            .offset(x:0,y:open ? -5 : 5)
                             .scaleEffect(open && !reduced ? 0.70 : 1,anchor:.bottom)
                             .opacity(closeUp && !reduced ? 0 : 1)
                     }.frame(width:min(440,proxy.size.width*0.88))

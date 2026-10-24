@@ -2,6 +2,12 @@ import SwiftUI
 
 enum PlayAction: String, CaseIterable { case tickle, feed, jump, dance, sleep, hug }
 
+enum CompanionMoment {case curious,proud,welcome
+    var motion:CreatureMotion {
+        switch self {case .curious:return .curious;case .proud:return .proud;case .welcome:return .wave}
+    }
+}
+
 struct LivingFriend: View {
     let friend: FantasyFriend
     var action: PlayAction = .jump
@@ -11,6 +17,10 @@ struct LivingFriend: View {
     var onTouch: (() -> Void)?
     var locomotion = 0.0
     var active = true
+    var greetOnArrival=false
+    var focus:CGPoint?
+    var moment=CompanionMoment.curious
+    var momentSignal=0
     @Environment(\.accessibilityReduceMotion) private var reduced
     @Environment(\.scenePhase) private var phase
     @Environment(\.locale) private var locale
@@ -19,7 +29,7 @@ struct LivingFriend: View {
     @State private var pausedAt: Date?
     @State private var motion = CreatureMotion.idle
     @State private var localSignal = 0
-    @State private var touchedAction = PlayAction.jump
+    @State private var touchMotion = CreatureMotion.jump
     @State private var lastRequest = ""
     @State private var finger: CGPoint?
 
@@ -63,8 +73,9 @@ struct LivingFriend: View {
                     finger=nil
                     if let onTouch=onTouch {onTouch()}
                     else {
-                        touchedAction=hypot(value.translation.width,value.translation.height)>12 ? .tickle :
-                            [PlayAction.tickle,.jump,.hug,.dance].filter {$0 != touchedAction}.randomElement() ?? .jump
+                        if hypot(value.translation.width,value.translation.height)>12 {touchMotion = .laugh}
+                        else if value.location.y<proxy.size.height*0.48 {touchMotion = .boop}
+                        else {touchMotion = [CreatureMotion.wave,.proud,.hug,.jump,.curious].filter {$0 != touchMotion}.randomElement() ?? .hug}
                         localSignal += 1
                     }
                 })
@@ -73,7 +84,19 @@ struct LivingFriend: View {
             .accessibilityLabel(friend.name.isEmpty ? "FantasiVen" : friend.name)
             .accessibilityHint(Words.text("tap",locale.identifier.hasPrefix("en") ? .en : .da))
             .accessibilityAddTraits(.isButton)
-            .accessibilityAction {if let onTouch=onTouch {onTouch()} else {touchedAction = .hug;localSignal += 1}}
+            .accessibilityAction {if let onTouch=onTouch {onTouch()} else {touchMotion = .hug;localSignal += 1}}
+            .onAppear {
+                if signal == 0 && running && abs(locomotion)<0.02 {
+                    if momentSignal>0 {started=Date();motion=moment.motion}
+                    else if greetOnArrival {started=Date();motion = .wave}
+                }
+            }
+            .onChange(of:momentSignal) {_ in
+                guard running else {return}
+                // Finishing a bite takes priority over a decorative reaction.
+                guard motion != .eat || Date().timeIntervalSince(started)>=2.0 else {return}
+                started=Date();motion=moment.motion
+            }
             .onChange(of:signal) {value in localSignal=0;if value == 0 {motion = .idle;lastRequest=""}}
             .onChange(of:running) { playing in
                 if !playing {pausedAt=Date();finger=nil}
@@ -88,10 +111,10 @@ struct LivingFriend: View {
                 let key="\(signal)-\(localSignal)"
                 guard key != lastRequest else {return}
                 lastRequest=key
-                let chosen=localSignal>0 ? touchedAction : action
+                let chosen=localSignal>0 ? touchMotion : CreatureMotion(action)
                 // Continuous finger-eating must let the reach/bite/chew sequence finish.
-                if chosen == .feed,motion == .eat,Date().timeIntervalSince(started)<2.0 {return}
-                started=Date();motion=CreatureMotion(chosen)
+                if chosen == .eat,motion == .eat,Date().timeIntervalSince(started)<2.0 {return}
+                started=Date();motion=chosen
                 if audible {
                     if chosen == .sleep {SoundService.shared.play(.click)}
                     else {SoundService.shared.react(voice:friend.voice?.rawValue ?? 0)}
@@ -111,6 +134,7 @@ struct LivingFriend: View {
 
     private func gaze(at clock:Double) -> CGPoint {
         if let finger=finger {return finger}
+        if let focus=focus {return CGPoint(x:min(1,max(-1,focus.x)),y:min(1,max(-1,focus.y)))}
         if reduced {return .zero}
         return CGPoint(x:sin(clock*0.65)*0.32,y:sin(clock*0.37)*0.14)
     }

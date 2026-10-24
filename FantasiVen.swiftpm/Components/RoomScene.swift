@@ -23,7 +23,9 @@ struct RoomScene:View {
     let onMoveToy:(RoomPlaything,Bool)->Void
     let onUseToy:(RoomPlaything)->Void
     let onCover:(Double)->Void
-    @StateObject private var pumpkins=PumpkinStore()
+    @ObservedObject var pumpkins:PumpkinStore
+    var onPizza:()->Void = {}
+    var onLantern:(PumpkinLantern)->Void = {_ in}
     @EnvironmentObject private var store:FriendStore
     @Environment(\.accessibilityReduceMotion) private var reduced
     @State private var blanketPreview:Double?
@@ -60,9 +62,23 @@ struct RoomScene:View {
                     }
                 }
                 ForEach(Array(pumpkins.lanterns.prefix(2).enumerated()),id:\.element.id) {i,lantern in
-                    PumpkinIllustration(lantern:lantern,animated:false).frame(width:48,height:52)
-                        .position(x:size.width*(0.90-Double(i)*0.075),y:size.height*0.62)
-                        .allowsHitTesting(false).zIndex(100)
+                    Button {onLantern(lantern)} label: {
+                        PumpkinIllustration(lantern:lantern,animated:false)
+                            .frame(width:64,height:70).contentShape(Rectangle())
+                    }.buttonStyle(SquishStyle()).disabled(editing)
+                        .accessibilityLabel(store.t("roomOpenLantern"))
+                        .position(x:size.width*(0.90-Double(i)*0.11),y:size.height*0.62)
+                        .zIndex(2200)
+                }
+                if let draft=store.sessions.pizza,draft.companion.id == friend.id,draft.served,draft.recipe.hasFood {
+                    let table=layout.objects.first {$0.kind == RoomItem.table.rawValue}
+                    Button(action:onPizza) {
+                        PizzaIllustration(recipe:draft.recipe,baked:1,board:false,serving:true)
+                            .frame(width:90,height:96).contentShape(Rectangle())
+                    }.buttonStyle(SquishStyle()).disabled(editing)
+                        .accessibilityLabel(store.t("roomTastePizza"))
+                        .position(x:size.width*(table?.x ?? 0.76),y:size.height*(table.map {$0.y-0.055} ?? 0.82))
+                        .zIndex(2250)
                 }
                 GestureLesson(activity:pulse+(selected == nil ? 0 : 1),from:UnitPoint(x:0.25,y:0.65),to:UnitPoint(x:0.4,y:0.6)).zIndex(4500)
                 if editing || layout.design.sleepingBed == nil ||
@@ -163,7 +179,7 @@ struct RoomScene:View {
     private func companion(_ size:CGSize)->some View {
         let point=friendPreview ?? CGPoint(x:layout.design.friendX,y:layout.design.friendY)
         let width=min(205,max(100,size.width*0.27))
-        return LivingFriend(friend:friend,action:action,signal:signal,locomotion:friendPreview == nil ? 0 : 0.65)
+        return LivingFriend(friend:friend,action:action,signal:signal,locomotion:friendPreview == nil ? 0 : 0.65,greetOnArrival:true)
             .frame(width:width,height:width*320/300)
             .position(x:point.x*size.width,y:point.y*size.height)
             .simultaneousGesture(DragGesture(minimumDistance:5,coordinateSpace:.named("friendRoomScene")).onChanged {value in

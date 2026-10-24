@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum CreatureMotion: Equatable {
-    case idle, walk, wave, jump, laugh, eat, dance, hug, sleep
+    case idle, walk, wave, curious, proud, boop, jump, laugh, eat, dance, hug, sleep
     init(_ action: PlayAction) {
         switch action {
         case .tickle: self = .laugh
@@ -20,6 +20,9 @@ enum CreatureMotion: Equatable {
         case .dance: return 3.2
         case .hug: return 2.4
         case .wave:return 1.15
+        case .curious:return 1.6
+        case .proud:return 1.8
+        case .boop:return 1.0
         case .sleep, .idle, .walk: return .infinity
         }
     }
@@ -87,8 +90,8 @@ enum CreatureRig {
         var p=CreaturePose()
         guard !reduced else {
             p.asleep=motion == .sleep
-            p.happy=motion == .hug || motion == .laugh || motion == .wave
-            p.expression=motion == .eat ? .chew : motion == .jump ? .wonder : .normal
+            p.happy=motion == .hug || motion == .laugh || motion == .wave || motion == .proud || motion == .boop
+            p.expression=motion == .eat ? .chew : motion == .jump || motion == .curious ? .wonder : .normal
             return p
         }
         let t=max(0,time), e=min(1,max(-1,energy))
@@ -166,6 +169,24 @@ enum CreatureRig {
             armR=(-105+sin(t*19)*19)*lift
             armL=8*lift;p.headTilt = -5*lift;p.happy=true
             secondary=sin(t*9)*4*lift
+        case .curious:
+            let lean=key(t,[(0,0),(0.35,1),(1.1,1),(1.6,0)])
+            p.headTilt = -10*lean;p.headY = -2*lean;p.brow=5*lean
+            p.roll = -3*lean;p.expression = .wonder
+            armL = -12*lean;armR=18*lean;secondary=sin(t*6)*6*lean
+        case .proud:
+            let delight=key(t,[(0,0),(0.25,1),(1.25,1),(1.8,0)])
+            let clap=sin(t*16)*delight
+            armL = -(62+clap*16)*delight;armR=(62+clap*16)*delight
+            p.y = -abs(sin(t*9))*5*delight
+            p.scaleY=1+0.025*delight;p.headTilt=sin(t*5)*4*delight
+            p.happy=true;p.particle=delight*0.65;secondary=clap*7
+        case .boop:
+            let squash=key(t,[(0,0),(0.12,1),(0.32,-0.35),(0.58,0.12),(1,0)])
+            p.scaleX=1+squash*0.07;p.scaleY=1-squash*0.09
+            p.headY=squash*4;p.headTilt=key(t,[(0,0),(0.2,8),(0.65,-3),(1,0)])
+            p.expression = .wink;p.happy=true
+            armL = -squash*18;armR=squash*18;secondary=squash*14
         case .hug:
             let embrace=key(t,[(0,0),(0.35,1),(1.5,1),(2.4,0)])
             armL = -embrace*72; armR=embrace*72

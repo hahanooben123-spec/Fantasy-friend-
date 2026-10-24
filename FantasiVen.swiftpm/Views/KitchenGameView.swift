@@ -24,6 +24,9 @@ struct KitchenGameView:View {
     @State private var adjustingToppings=false
     @State private var served=false
     @State private var signal=0
+    @State private var companionMoment=CompanionMoment.curious
+    @State private var companionSignal=0
+    @State private var companionFocus=CGPoint(x:0.85,y:-0.4)
     @State private var pouringIngredient:Int?
     @State private var pourRevision=0
     @State private var dragItem:PizzaDragItem?
@@ -79,7 +82,7 @@ struct KitchenGameView:View {
                         pouringIngredient=nil
                         landingPoint=CGPoint(x:surfaceFrame.midX,y:surfaceFrame.minY+surfaceFrame.height*0.47)
                         landingRevision+=1
-                        SoundService.shared.play(.reaction)
+                        notice(.proud);SoundService.shared.play(.reaction)
                     }
                     .task(id:landingID) {
                         guard landingID != nil else {return}
@@ -94,7 +97,7 @@ struct KitchenGameView:View {
                     try await Task.sleep(nanoseconds:450_000_000)
                     try Task.checkCancellation()
                     withAnimation(.spring(response:0.65,dampingFraction:0.8)) {revealPhase=2}
-                    SoundService.shared.pizzaReveal()
+                    notice(.proud);SoundService.shared.pizzaReveal()
                     try await Task.sleep(nanoseconds:850_000_000)
                     try Task.checkCancellation()
                     withAnimation(.easeInOut(duration:0.25)) {served=true;servingReveal=false}
@@ -252,15 +255,18 @@ struct KitchenGameView:View {
     }
     @ViewBuilder private var stage:some View {
         if step<3 {
+            ZStack(alignment:.bottomLeading) {
             PizzaWorkSurface(recipe:$recipe,mixing:step == 0,tool:tool,spice:spice,topping:topping,
-                landingID:landingID,targeted:validDropHover,adjusting:adjustingToppings,onBegin:begin,onEnd:surfaceEnded)
+                landingID:landingID,targeted:validDropHover,adjusting:adjustingToppings,onBegin:begin,onEnd:surfaceEnded,
+                onAttention:watchWork)
                 .accessibilityElement(children:.ignore).accessibilityLabel(store.t(instruction))
                 .accessibilityAction {assist()}
+                kitchenCompanion.frame(width:110,height:118).allowsHitTesting(false)
+            }
         } else if served {
             ZStack(alignment:.bottomLeading) {
                 PizzaEatingSurface(recipe:recipe,active:animationActive,onBite:bite)
-                LivingFriend(friend:friend,action:.feed,signal:signal,feedingFood:nil,active:animationActive)
-                    .frame(width:135,height:145).allowsHitTesting(false)
+                kitchenCompanion.frame(width:135,height:145).allowsHitTesting(false)
                 if let fragment=mouthful {
                     PizzaMouthfulFlight(active:animationActive,recipe:recipe,bite:fragment,revision:biteRevision,reduced:reduced)
                         .allowsHitTesting(false)
@@ -287,9 +293,21 @@ struct KitchenGameView:View {
                         PlayCelebration(revision:revealPhase>=2 ? 1 : 0)
                     }
                 }.frame(maxWidth:.infinity,maxHeight:.infinity)
+                    .overlay(alignment:.bottomLeading) {
+                        kitchenCompanion.frame(width:110,height:118).allowsHitTesting(false)
+                    }
             }
         }
     }
+    private var kitchenCompanion:some View {
+        LivingFriend(friend:friend,action:served ? .feed : .jump,signal:served ? signal : 0,
+            feedingFood:nil,active:animationActive,greetOnArrival:true,
+            focus:companionFocus,moment:companionMoment,momentSignal:companionSignal)
+    }
+    private func watchWork(_ point:PizzaPoint) {
+        companionFocus=CGPoint(x:min(1,max(-1,(point.x-0.15)*2)),y:min(1,max(-1,(point.y-0.8)*2)))
+    }
+    private func notice(_ moment:CompanionMoment) {companionMoment=moment;companionSignal+=1}
     private var controls:some View {
         VStack(spacing:9) {
             Text(store.t(instruction)).font(.system(size:14,weight:.bold,design:.rounded))
@@ -437,6 +455,7 @@ struct KitchenGameView:View {
                 finish();SoundService.shared.play(.click)
             }
             dragItem=item;dragPoint=value.location
+            if surfaceFrame.width>0 && surfaceFrame.height>0 {watchWork(surfacePoint(value.location))}
         }.onEnded {value in drop(item,at:value.location);dragItem=nil}
     }
     private func drop(_ item:PizzaDragItem,at location:CGPoint) {
@@ -473,17 +492,17 @@ struct KitchenGameView:View {
     }
     private func startPour(_ index:Int) {
         guard step == 0,pouringIngredient == nil,!recipe.ingredients.contains(index) else {return}
-        finish();pouringIngredient=index;pourRevision+=1
+        finish();pouringIngredient=index;pourRevision+=1;notice(.curious)
         SoundService.shared.play(index == 0 ? .pourFlour : index == 1 ? .pourWater : .pourOil)
     }
-    private func begin() {touching=true;if before == nil {before=recipe}}
+    private func begin() {touching=true;if before == nil {before=recipe};notice(.curious)}
     private func finish() {
         if let old=before,old != recipe {remember(old);SoundService.shared.play(.click)}
         before=nil;touching=false
     }
     private func surfaceEnded() {
         finish();interaction+=1
-        if step == 1 && tool == .shape {shaped=true}
+        if step == 1 && tool == .shape {if !shaped {notice(.proud)};shaped=true}
     }
     private func remember(_ old:PizzaRecipe) {history.append(old);if history.count>30 {history.removeFirst()}}
     private func change(_ update:(inout PizzaRecipe)->Void) {
@@ -515,9 +534,10 @@ struct KitchenGameView:View {
     private func bite(_ point:PizzaPoint) {
         let now=ProcessInfo.processInfo.systemUptime
         guard now-lastBiteTime>0.075,let piece=recipe.takeBite(at:point) else {return}
+        watchWork(point)
         lastBiteTime=now;mouthful=piece;biteRevision+=1;signal+=1
         SoundService.shared.play(.munch)
-        if !finishedEating && !recipe.hasFood {finishedEating=true;SoundService.shared.play(.complete)}
+        if !finishedEating && !recipe.hasFood {finishedEating=true;notice(.proud);SoundService.shared.play(.complete)}
     }
     private func reset() {
         pouringIngredient=nil;dragItem=nil;mouthful=nil;recipe=PizzaRecipe();step=0;tool = .shape
@@ -540,6 +560,7 @@ private struct PizzaWorkSurface:View {
     let adjusting:Bool
     let onBegin:()->Void
     let onEnd:()->Void
+    var onAttention:(PizzaPoint)->Void = {_ in}
     @State private var released=Date.distantPast
     @State private var settling=false
     @State private var last:CGPoint?
@@ -649,6 +670,7 @@ private struct PizzaWorkSurface:View {
         let first=last == nil
         if first {onBegin()}
         let p=PizzaPoint(x:Double(value.location.x/size.width),y:Double(value.location.y/size.height))
+        onAttention(p)
         let distance=last.map {hypot(value.location.x-$0.x,value.location.y-$0.y)/size.width} ?? 0
         defer {last=value.location}
         if mixing {
