@@ -15,7 +15,7 @@ struct PizzaIllustration:View {
     var elastic=0.0
     var body:some View {
         Canvas(rendersAsynchronously:true) {c,size in
-            c.scaleBy(x:size.width/300,y:size.height/320)
+            c.scaleBy(x:size.width/CGFloat(300),y:size.height/CGFloat(320))
             if serving {
                 c.draw(VillageArtwork.image("PizzaPlatePainted"),in:CGRect(x:0,y:10,width:300,height:300))
             } else if board {
@@ -88,7 +88,7 @@ struct PizzaIllustration:View {
             GeometryReader {frame in
                 if let id=landingID,let item=recipe.toppings.first(where:{$0.id == id}) {
                     PizzaLandingSprite(kind:item.kind)
-                        .frame(width:frame.size.width*29/300,height:frame.size.height*29/320)
+                        .frame(width:frame.size.width*29/CGFloat(300),height:frame.size.height*29/CGFloat(320))
                         .rotationEffect(.degrees(item.angle))
                         .position(x:item.point.x*frame.size.width,y:item.point.y*frame.size.height)
                 }
@@ -118,7 +118,7 @@ struct PizzaIllustration:View {
             let color=Color(red:1,green:0.88,blue:0.43).opacity(baked*0.9)
             for item in recipe.toppings where item.kind == .cheese {
                 let point=CGPoint(x:item.point.x*300,y:item.point.y*320)
-                let gx=Int(point.x/36),gy=Int(point.y/36)
+                let gx=Int(point.x/CGFloat(36)),gy=Int(point.y/CGFloat(36))
                 for dx in -1...1 {
                     for dy in -1...1 {
                         for other in cells[(gx+dx)*1000+gy+dy] ?? [] {
@@ -177,7 +177,7 @@ struct PizzaMixingBowl:View {
     var turn=0.0
     var body:some View {
         Canvas {c,s in
-            c.scaleBy(x:s.width/300,y:s.height/320)
+            c.scaleBy(x:s.width/CGFloat(300),y:s.height/CGFloat(320))
             let bowlRect=CGRect(x:0,y:10,width:300,height:300)
             c.draw(VillageArtwork.image("PizzaBowlPainted"),in:bowlRect)
             let opening=Path(ellipseIn:CGRect(x:27,y:89,width:246,height:85))
@@ -243,7 +243,7 @@ struct PizzaIngredientArt:View {
     var fillLevel=1.0
     var body:some View {
         Canvas {c,s in
-            c.scaleBy(x:s.width/60,y:s.height/70)
+            c.scaleBy(x:s.width/CGFloat(60),y:s.height/CGFloat(70))
             if spice {
                 let colors:[Color]=[Color(red:0.24,green:0.42,blue:0.15),.green,.white,.yellow]
                 let jar=Path(roundedRect:CGRect(x:12,y:17,width:36,height:44),cornerRadius:9)
@@ -280,8 +280,8 @@ struct PizzaToppingArt:View {
     let kind:PizzaToppingKind
     var body:some View {
         Canvas {c,s in
-            c.translateBy(x:s.width/2,y:s.height/2)
-            let scale=min(s.width,s.height)/29
+            c.translateBy(x:s.width/CGFloat(2),y:s.height/CGFloat(2))
+            let scale=min(s.width,s.height)/CGFloat(29)
             c.scaleBy(x:scale,y:scale)
             PizzaToppingPainter.paint(c,kind:kind,baked:0)
         }.accessibilityHidden(true)
@@ -324,7 +324,7 @@ enum PizzaToppingPainter {
         case .pepperoni:
             var shape=Path()
             for i in 0..<16 {
-                let a=Double(i)*Double.pi/8,r:CGFloat=i%2 == 0 ? 10 : 9.3
+                let a=Double(i)*Double.pi/Double(8),r:CGFloat=i%2 == 0 ? 10 : 9.3
                 let point=CGPoint(x:CGFloat(cos(a))*r,y:CGFloat(sin(a))*r)
                 if i == 0 {shape.move(to:point)} else {shape.addLine(to:point)}
             }
@@ -436,9 +436,9 @@ struct PizzaLandingSpark:View {
     var body:some View {
         Canvas {c,s in
             for i in 0..<6 {
-                let angle=Double(i)*Double.pi/3
-                let center=CGPoint(x:s.width/2+CGFloat(cos(angle))*s.width*0.27,
-                    y:s.height/2+CGFloat(sin(angle))*s.height*0.27)
+                let angle=Double(i)*Double.pi/Double(3)
+                let center=CGPoint(x:s.width/CGFloat(2)+CGFloat(cos(angle))*s.width*0.27,
+                    y:s.height/CGFloat(2)+CGFloat(sin(angle))*s.height*0.27)
                 var ray=Path();ray.move(to:center)
                 ray.addLine(to:CGPoint(x:center.x+CGFloat(cos(angle))*6,y:center.y+CGFloat(sin(angle))*6))
                 c.stroke(ray,with:.color(i%2 == 0 ? .white : Color(red:1,green:0.83,blue:0.25)),
@@ -461,7 +461,7 @@ struct PizzaPourEffect:View {
     let reduced:Bool
     @State private var started=Date()
     var body:some View {
-        TimelineView(.animation(minimumInterval:1.0/30,paused:reduced)) {timeline in
+        TimelineView(.animation(minimumInterval:Double(1)/Double(30),paused:reduced)) {timeline in
             let time=reduced ? 0.45 : min(1,timeline.date.timeIntervalSince(started))
             GeometryReader {proxy in
                 let size=proxy.size
@@ -492,15 +492,15 @@ struct PizzaPourEffect:View {
                         }
                         if kind != 0 && time>0.2 {
                             for i in 0..<3 {
-                                let ripple=(time*3+Double(i)/3).truncatingRemainder(dividingBy:1)
-                                let radius=12+ripple*36
+                                let ripple=(time*3+Double(i)/Double(3)).truncatingRemainder(dividingBy:1)
+                                let radius:CGFloat=CGFloat(12+ripple*36)
                                 c.stroke(Path(ellipseIn:CGRect(x:s.width*0.51-radius,y:bottom-radius*0.22,
                                     width:radius*2,height:radius*0.44)),
                                     with:.color(color.opacity((1-ripple)*max(0,1-time)*0.75)),lineWidth:1.5)
                             }
                         }
                         for i in 0..<12 {
-                            let a=Double(i)*Double.pi/6
+                            let a=Double(i)*Double.pi/Double(6)
                             let radius=CGFloat(12+time*35)
                             let x=s.width*0.51+CGFloat(cos(a))*radius
                             let y=bottom+CGFloat(sin(a))*radius*0.28
@@ -508,7 +508,7 @@ struct PizzaPourEffect:View {
                                 with:.color(color.opacity((1-time)*0.65)))
                         }
                     }
-                    PizzaIngredientArt(kind:kind,fillLevel:reduced ? 0.5 : max(0,1-(time-0.18)/0.62))
+                    PizzaIngredientArt(kind:kind,fillLevel:reduced ? 0.5 : max(0,1-(time-0.18)/Double(0.62)))
                         .frame(width:min(90,size.width*0.34),height:min(100,size.height*0.52))
                         .rotationEffect(
                             .degrees(pourAngle(at:time)),
@@ -538,7 +538,7 @@ struct PizzaHeatEffects:View {
     let progress:Double
     let reduced:Bool
     var body:some View {
-        TimelineView(.animation(minimumInterval:1.0/24,paused:reduced || progress>=1)) {timeline in
+        TimelineView(.animation(minimumInterval:Double(1)/Double(24),paused:reduced || progress>=1)) {timeline in
             let time=reduced ? 0 : timeline.date.timeIntervalSinceReferenceDate
             Canvas {c,s in
                 let center=CGPoint(x:s.width*0.5,y:s.height*0.60)
@@ -556,7 +556,7 @@ struct PizzaHeatEffects:View {
                 }
                 if ready {
                     for i in 0..<12 {
-                        let a=Double(i)*Double.pi/6
+                        let a=Double(i)*Double.pi/Double(6)
                         let from=CGPoint(x:center.x+CGFloat(cos(a))*s.width*0.36,y:center.y+CGFloat(sin(a))*s.height*0.34)
                         let to=CGPoint(x:center.x+CGFloat(cos(a))*s.width*0.44,y:center.y+CGFloat(sin(a))*s.height*0.42)
                         var ray=Path();ray.move(to:from);ray.addLine(to:to)
@@ -600,17 +600,17 @@ enum PizzaGeometry {
         let points=recipe.outline(inset:inset).map {CGPoint(x:$0.x*300,y:$0.y*320)}
         guard let first=points.first,let last=points.last else {return Path()}
         var path=Path()
-        path.move(to:CGPoint(x:(first.x+last.x)/2,y:(first.y+last.y)/2))
+        path.move(to:CGPoint(x:(first.x+last.x)/CGFloat(2),y:(first.y+last.y)/CGFloat(2)))
         for i in points.indices {
             let current=points[i],next=points[(i+1)%points.count]
-            path.addQuadCurve(to:CGPoint(x:(current.x+next.x)/2,y:(current.y+next.y)/2),control:current)
+            path.addQuadCurve(to:CGPoint(x:(current.x+next.x)/CGFloat(2),y:(current.y+next.y)/CGFloat(2)),control:current)
         }
         path.closeSubpath();return path
     }
     static func bite(_ bite:PizzaBite)->Path {
         var path=Path()
         for i in 0..<72 {
-            let a=Double(i)*Double.pi/36
+            let a=Double(i)*Double.pi/Double(3)6
             let radius=bite.radius*300*(1+0.065*cos(a*9))
             let point=CGPoint(x:bite.point.x*300+cos(a)*radius,y:bite.point.y*320+sin(a)*radius)
             if i == 0 {path.move(to:point)} else {path.addLine(to:point)}
@@ -623,7 +623,7 @@ struct PizzaDoughSwatch:View {
     var body:some View {
         Canvas {c,s in
             var recipe=PizzaRecipe();recipe.formed=1;recipe.doughForm=form
-            c.scaleBy(x:s.width/300,y:s.height/320)
+            c.scaleBy(x:s.width/CGFloat(300),y:s.height/CGFloat(320))
             ToyFinish.paint(c,path:PizzaGeometry.outline(recipe),color:Color(red:1,green:0.85,blue:0.48),edge:3)
         }.accessibilityHidden(true)
     }
@@ -642,16 +642,17 @@ struct PizzaMouthfulFlight:View {
     }
     var body:some View {
         GeometryReader {proxy in
-            let width=min(proxy.size.width,proxy.size.height*300/320)
-            let height=width*320/300
-            let x=(proxy.size.width-width)/2+bite.point.x*width
-            let y=(proxy.size.height-height)/2+bite.point.y*height
+            let ratio:CGFloat=CGFloat(300)/CGFloat(320)
+            let width:CGFloat=min(proxy.size.width,proxy.size.height*ratio)
+            let height:CGFloat=width/ratio
+            let x:CGFloat=(proxy.size.width-width)/CGFloat(2)+CGFloat(bite.point.x)*width
+            let y:CGFloat=(proxy.size.height-height)/CGFloat(2)+CGFloat(bite.point.y)*height
             ZStack {
                 Canvas {c,s in
                     for i in 0..<9 {
-                        let a=Double(i)*Double.pi*2/9
+                        let a=Double(i)*Double.pi*2/Double(9)
                         let distance:CGFloat=arrived ? 32 : 7
-                        let point=CGPoint(x:s.width/2+CGFloat(cos(a))*distance,y:s.height/2+CGFloat(sin(a))*distance)
+                        let point=CGPoint(x:s.width/CGFloat(2)+CGFloat(cos(a))*distance,y:s.height/CGFloat(2)+CGFloat(sin(a))*distance)
                         c.fill(Path(ellipseIn:CGRect(x:point.x,y:point.y,width:4,height:3)),
                             with:.color(i%3 == 0 ? .white : Color(red:0.94,green:0.64,blue:0.23)))
                     }
