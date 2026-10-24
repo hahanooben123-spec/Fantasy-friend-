@@ -26,8 +26,8 @@ struct MiniGamesView:View {
                                     .font(.system(size:22,weight:.bold)).frame(width:52,height:52)
                                     .background(CandySurface(color:WorkshopLook.yellow,cornerRadius:19))
                             }.buttonStyle(SquishStyle()).accessibilityLabel(store.t(store.friends.isEmpty ? "create" : "chooseFriend"))
-                        }.padding(.horizontal,13).padding(.vertical,5).background(StorybookPanel(cornerRadius:26))
-                        LazyVGrid(columns:[GridItem(.flexible(),spacing:14),GridItem(.flexible(),spacing:14)],spacing:15) {
+                        }.padding(.horizontal,13).padding(.vertical,5)
+                        LazyVGrid(columns:[GridItem(.adaptive(minimum:160,maximum:260),spacing:16)],spacing:18) {
                             ForEach(MiniGameKind.menuGames) {kind in
                                 NavigationLink(destination:GameDestinationView(kind:kind,friend:friend).id(friend.id)) {
                                     GameInvitationCard(kind:kind,friend:friend)
@@ -91,11 +91,12 @@ private struct GameInvitationCard:View {
             HStack {
                 Text(store.t(kind.titleKey)).font(.system(size:20,weight:.heavy,design:.rounded)).lineLimit(2)
                 Spacer(minLength:0)
-                Image(systemName:"play.fill").font(.system(size:14,weight:.heavy))
+                Image(systemName:"play.fill").font(.system(size:15,weight:.heavy))
+                    .frame(width:36,height:36)
+                    .background(Circle().fill(kind.tint))
             }.padding(.horizontal,13).padding(.bottom,13)
         }.frame(maxWidth:.infinity,minHeight:172)
-            .background(CandySurface(color:kind.tint,cornerRadius:29))
-            .overlay(RoundedRectangle(cornerRadius:29).stroke(.white.opacity(0.65),lineWidth:2))
+            .background(GameChoiceSurface(selected:false,tint:kind.tint))
             .contentShape(RoundedRectangle(cornerRadius:29))
     }
 }

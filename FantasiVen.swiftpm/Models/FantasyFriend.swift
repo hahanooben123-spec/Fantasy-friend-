@@ -14,6 +14,8 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
     var mouth = 0
     var arms = 0
     var legs = 0
+    var armSize:Double?
+    var legSize:Double?
     var accessories: Set<Int> = [1]
     var world: World = .forest
     // Optional so friends saved before free placement still decode unchanged.
@@ -47,11 +49,55 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
 
     func placement(for attachment: Attachment) -> PartPlacement {
         if let explicit=placements?[attachment.rawValue] {return explicit}
+        var pose=PartPlacement()
         if let sculpt=bodySculpt {
             let shift=sculpt.limbShift(attachment,friend:self)
-            return PartPlacement(x:shift.x/300,y:shift.y/320)
+            pose.x=shift.x/300;pose.y=shift.y/320
         }
-        return PartPlacement()
+        if attachment.category == .arms {pose.scale=armSize ?? 1}
+        if attachment.category == .legs {pose.scale=legSize ?? 1}
+        if (attachment.category == .arms || attachment.category == .legs) && pose.scale != 1 {
+            let rect=AttachmentLayout.bounds(for:attachment,friend:self)
+            let anchor:CGPoint
+            switch attachment {
+            case .leftArm:anchor=CGPoint(x:rect.maxX-15,y:179)
+            case .rightArm:anchor=CGPoint(x:rect.minX+15,y:179)
+            case .leftLeg:anchor=CGPoint(x:110,y:237)
+            case .rightLeg:anchor=CGPoint(x:180,y:237)
+            default:anchor=CGPoint(x:rect.midX,y:rect.midY)
+            }
+            let factor=CGFloat(1)-CGFloat(pose.scale)
+            pose.x+=Double((anchor.x-rect.midX)*factor/CGFloat(300))
+            pose.y+=Double((anchor.y-rect.midY)*factor/CGFloat(320))
+        }
+        return pose
+    }
+
+    func simplifiedForCreator()->FantasyFriend {
+        var copy=self
+        if let arm=pieces?.last(where:{$0.kind == .arm}) {copy.arms=arm.variant;copy.armSize=arm.scale}
+        if let leg=pieces?.last(where:{$0.kind == .leg}) {copy.legs=leg.variant;copy.legSize=leg.scale}
+        copy.armSize=min(1.3,max(0.7,copy.armSize ?? placement(for:.leftArm).scale))
+        copy.legSize=min(1.3,max(0.7,copy.legSize ?? placement(for:.leftLeg).scale))
+        for limb in [Attachment.leftArm,.rightArm,.leftLeg,.rightLeg] {
+            copy.placements?.removeValue(forKey:limb.rawValue)
+            copy.mirroredParts?.remove(limb.rawValue)
+            copy.show(limb.rawValue)
+        }
+        copy.pieces?.removeAll {$0.kind == .arm || $0.kind == .leg}
+        if copy.pieces?.isEmpty == true {copy.pieces=nil}
+        return copy
+    }
+    mutating func chooseLimb(_ part:Part,index:Int) {
+        if part == .arms {arms=index} else if part == .legs {legs=index} else {return}
+        self=simplifiedForCreator()
+    }
+    mutating func resizeLimbs(_ part:Part,size:Double) {
+        guard size.isFinite else {return}
+        if part == .arms {armSize=min(1.3,max(0.7,size))}
+        else if part == .legs {legSize=min(1.3,max(0.7,size))}
+        else {return}
+        self=simplifiedForCreator()
     }
 
     mutating func setPlacement(_ placement: PartPlacement, for attachment: Attachment) {
@@ -80,6 +126,8 @@ struct FantasyFriend: Identifiable, Codable, Equatable {
         (0..<16).contains(color) && (0..<16).contains(accent) &&
         (0..<12).contains(eyes) && (0..<10).contains(mouth) &&
         (0..<8).contains(arms) && (0..<8).contains(legs) &&
+        (armSize.map {$0.isFinite && (0.7...1.3).contains($0)} ?? true) &&
+        (legSize.map {$0.isFinite && (0.7...1.3).contains($0)} ?? true) &&
         accessories.allSatisfy { (0..<15).contains($0) } && name.count <= 30 &&
         (placements ?? [:]).allSatisfy { Attachment(rawValue: $0.key) != nil && $0.value.isValid } &&
         (doodles ?? []).allSatisfy(\.isValid) &&

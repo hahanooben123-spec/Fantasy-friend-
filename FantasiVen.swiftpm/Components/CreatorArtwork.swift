@@ -71,10 +71,9 @@ struct CreatorToolButton: View {
     var action: () -> Void
     var body: some View {
         Button(action: action) {
-            CreatorLineIcon(mark: mark).frame(width: 32, height: 32).frame(width: 48, height: 48)
-                .background(CandySurface(color:tint,cornerRadius:17))
-                .overlay(RoundedRectangle(cornerRadius: 17).stroke(WorkshopLook.sea.opacity(0.2), lineWidth: 1.5))
-                .shadow(color: WorkshopLook.sea.opacity(0.25), radius: 0, y: 3).contentShape(Rectangle())
+            CreatorLineIcon(mark: mark).frame(width: 32, height: 32).frame(width: 52, height: 52)
+                .background(CandySurface(color:tint,cornerRadius:26))
+                .contentShape(Circle())
         }.buttonStyle(SquishStyle()).accessibilityLabel(label)
     }
 }

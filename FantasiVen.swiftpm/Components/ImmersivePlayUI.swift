@@ -11,8 +11,7 @@ struct PlayHUD: View {
     var body:some View {
         HStack(spacing:8) {
             RoundButton(icon:"chevron.left",label:store.t("close")) {presentation.wrappedValue.dismiss()}
-            Text(title).font(.system(size:18,weight:.heavy,design:.rounded)).lineLimit(1).minimumScaleFactor(0.7)
-                .padding(.horizontal,12).padding(.vertical,10).background(StorybookPanel(cornerRadius:24))
+            VillageCaption(title:title,size:20)
             Spacer(minLength:0)
             RoundButton(icon:"slider.horizontal.3",label:store.t("settings")) {wasPaused=paused;paused=true;settings=true}
             RoundButton(icon:paused ? "play.fill" : "pause.fill",label:store.t(paused ? "resumeGame" : "pauseGame")) {paused.toggle()}
@@ -63,8 +62,8 @@ struct PlayToken:View {
             VStack(spacing:2) {
                 PlayControlArtwork(symbol:symbol).frame(width:38,height:38)
                 Text(label).font(.system(size:12,weight:.heavy,design:.rounded)).lineLimit(2).multilineTextAlignment(.center)
-            }.frame(minWidth:52,minHeight:66)
-                .background { if selected {CandySurface(color:StorybookStyle.honey,cornerRadius:18)} }
+            }.frame(minWidth:60,minHeight:70)
+                .background { if selected {GameChoiceSurface(selected:true)} }
         }.buttonStyle(SquishStyle()).accessibilityLabel(label)
     }
 }

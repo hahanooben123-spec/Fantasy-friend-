@@ -2,6 +2,16 @@
 
 Et originalt, lokalt iPhone-spil til børn på 3–8 år. Swift 6, SwiftUI og iOS 15+. Ingen tredjepartspakker, login, netværkskald eller køb.
 
+## Enkel skaber og fælles børnevenligt UI
+
+Arme og ben vælges som ét par af hver: tryk på en type for at udskifte parret, og vælg Små, Mellem eller Store. Fæstet ved skuldre og hofter følger størrelsen automatisk. Løse ekstra arme/ben og fri flytning/rotation er fjernet fra den primære skaber. Tilbehør slås til/fra som standarddele. Kroppens formning og tegning er bevaret.
+
+Ved redigering af en gammel figur samles løse arme/ben i redigeringskopien. Samlingen ændres først ved gemning. De valgfrie armSize/legSize-felter er kompatible med ældre arkiver. Tegninger og andet tilbehør bevares.
+
+UI'et har fælles store billedvalg med tydelig valgt-markering, runde kontroller, lettere paneler og mere rolige værktøjsbakker. Overskrifter i galleri og minispil står direkte i scenen. Skaberens telefonheader har Tilbage, Fortryd, Mere og Færdig; Prøv står ved figuren. Minispil bruger adaptive billedkort, og lege-værelset skjuler redigeringsvejledningen.
+
+Referencer og konkrete designvalg: [Documentation/Child-Friendly-UI.md](Documentation/Child-Friendly-UI.md). Ingen build, tests eller UI-kontrol kørt efter brugerens ønske.
+
 ## Tryk direkte på husene og leg uden robotoplæsning
 
 Hvert hus på forsiden har ét samlet rektangulært trykområde omkring illustration og navn. Tegningerne er fortsat dekorative under dette trykområde. Fem korte navne står direkte i scenen med afrundet cartoon-skrift og hvid kontur. Store tekstpaneler, invitationsteksten og den ekstra maskotboks er fjernet fra forsiden. Landsbyen tilpasser huse og ven til den tilgængelige højde uden en intern rulleliste, også på liggende telefon. Dørovergangen bruger samme korte skrift.

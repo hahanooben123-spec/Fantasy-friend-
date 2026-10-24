@@ -32,24 +32,35 @@ struct CandySurface: View {
     var color: Color
     var cornerRadius: CGFloat = 27
     var body: some View {
-        RoundedRectangle(cornerRadius:cornerRadius)
-            .fill(LinearGradient(stops:[
-                .init(color:GameStyle.mixed(color,with:StorybookStyle.cream,amount:0.34),location:0),
-                .init(color:GameStyle.mixed(color,with:.white,amount:0.1),location:0.28),
-                .init(color:color,location:0.62),
-                .init(color:GameStyle.mixed(color,with:GameStyle.ink,amount:0.17),location:1)],
-                startPoint:.topLeading,endPoint:.bottomTrailing))
-            .overlay(RoundedRectangle(cornerRadius:cornerRadius).strokeBorder(
-                GameStyle.mixed(color,with:GameStyle.ink,amount:0.6),lineWidth:1.5))
-            .overlay(RoundedRectangle(cornerRadius:max(4,cornerRadius-3)).strokeBorder(
-                LinearGradient(colors:[.white.opacity(0.72),.white.opacity(0.04)],startPoint:.top,endPoint:.bottom),
-                lineWidth:1.5).padding(3))
-            .overlay(alignment:.top) {
-                Capsule().fill(LinearGradient(colors:[.white.opacity(0.35),.clear],startPoint:.top,endPoint:.bottom))
-                    .frame(height:14).padding(.horizontal,cornerRadius*0.65).padding(.top,6)
+        RoundedRectangle(cornerRadius:cornerRadius,style:.continuous)
+            .fill(LinearGradient(colors:[GameStyle.mixed(color,with:.white,amount:0.20),
+                color,GameStyle.mixed(color,with:GameStyle.ink,amount:0.10)],
+                startPoint:.top,endPoint:.bottom))
+            .overlay(RoundedRectangle(cornerRadius:cornerRadius,style:.continuous)
+                .strokeBorder(.white.opacity(0.82),lineWidth:2))
+            .shadow(color:GameStyle.mixed(color,with:GameStyle.ink,amount:0.3).opacity(0.5),radius:0,y:3)
+            .shadow(color:GameStyle.ink.opacity(0.10),radius:4,y:5)
+            .allowsHitTesting(false)
+    }
+}
+
+/// Picture choices share a clear selected state across the creator and games.
+struct GameChoiceSurface:View {
+    var selected:Bool
+    var tint=StorybookStyle.honey
+    var body:some View {
+        RoundedRectangle(cornerRadius:24,style:.continuous)
+            .fill(selected ? GameStyle.mixed(tint,with:.white,amount:0.24) : .white.opacity(0.94))
+            .overlay(RoundedRectangle(cornerRadius:24,style:.continuous)
+                .strokeBorder(selected ? GameStyle.purple : tint.opacity(0.28),lineWidth:selected ? 3.5 : 1.5))
+            .overlay(alignment:.topTrailing) {
+                if selected {
+                    Image(systemName:"checkmark").font(.system(size:11,weight:.heavy))
+                        .foregroundColor(.white).frame(width:22,height:22)
+                        .background(Circle().fill(GameStyle.purple)).padding(5)
+                }
             }
-            .shadow(color:GameStyle.mixed(color,with:GameStyle.ink,amount:0.30),radius:0,y:4)
-            .shadow(color:GameStyle.ink.opacity(0.2),radius:6,x:0,y:7)
+            .shadow(color:GameStyle.ink.opacity(0.10),radius:3,y:3)
             .allowsHitTesting(false)
     }
 }
@@ -62,10 +73,10 @@ struct CandyButton: View {
     var body: some View {
         Button(action: { SoundService.shared.play(.click); action() }) {
             HStack(spacing: 12) {
-                Image(systemName: icon).font(.system(size: 23, weight: .bold)).frame(width: 30)
-                Text(title).font(.system(.headline, design: .rounded)).minimumScaleFactor(0.8)
+                Image(systemName: icon).font(.system(size: 24, weight: .heavy)).frame(width:44,height:44)
+                .background(Circle().fill(.white.opacity(0.18)))
+                Text(title).font(.system(size:18,weight:.heavy,design:.rounded)).lineLimit(2).minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
-                Image(systemName: "chevron.right").font(.system(size: 14, weight: .heavy))
             }
             .foregroundColor(.white).shadow(color: GameStyle.ink.opacity(0.35), radius: 0, y: 1)
             .padding(.horizontal, 21).frame(minHeight: 64)
@@ -91,8 +102,8 @@ struct RoundButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon).font(.system(size: 21, weight: .bold))
-                .foregroundColor(GameStyle.ink).frame(width: 50, height: 50)
-                .background(CandySurface(color: Color(red: 1, green: 0.91, blue: 0.48), cornerRadius: 25))
+                .foregroundColor(GameStyle.ink).frame(width: 54, height: 54)
+                .background(CandySurface(color: Color(red: 1, green: 0.91, blue: 0.48), cornerRadius: 27))
                 .contentShape(Circle())
         }.buttonStyle(SquishStyle()).accessibilityLabel(label)
     }

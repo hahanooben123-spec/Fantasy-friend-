@@ -124,10 +124,10 @@ private struct CreaturePainter {
             if let index = attachment.extraIndex, friend.accessories.contains(index), friend.placement(for: attachment) == PartPlacement() { placed(for: attachment).drawPiece(attachment) }
         }
         let limbs: [Attachment] = [.leftArm, .rightArm, .leftLeg, .rightLeg]
-        for attachment in limbs where friend.placement(for: attachment) == PartPlacement() { placed(for: attachment).drawPiece(attachment) }
+        for attachment in limbs where friend.placements?[attachment.rawValue] == nil { placed(for: attachment).drawPiece(attachment) }
         drawBody(blink: blink, happy: happy, asleep: asleep)
         // Moved limbs remain visible even when children place them on the tummy.
-        for attachment in limbs where friend.placement(for: attachment) != PartPlacement() { placed(for: attachment).drawPiece(attachment) }
+        for attachment in limbs where friend.placements?[attachment.rawValue] != nil { placed(for: attachment).drawPiece(attachment) }
         for attachment in [Attachment.tail, .wings, .spikes] {
             if let index = attachment.extraIndex, friend.accessories.contains(index), friend.placement(for: attachment) != PartPlacement() {
                 placed(for: attachment).drawPiece(attachment)

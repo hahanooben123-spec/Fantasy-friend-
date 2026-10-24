@@ -56,7 +56,7 @@ struct CreatorStage: View {
                     .rotationEffect(.degrees(reduced ? 0 : lean),anchor:.bottom)
                     .animation(reduced ? nil : .spring(response:0.32,dampingFraction:0.65),value:lean)
                     .allowsHitTesting(false)
-                if brush == nil && !reactingParts, let selected = selection {
+                if brush == nil && part == .body && !reactingParts, let selected = selection, selected == .body {
                     selectionFrame(selected,size:size)
                 }
                 StudioBurst(revision:revision).allowsHitTesting(false)
@@ -71,7 +71,7 @@ struct CreatorStage: View {
                 }).coordinateSpace(name:"creatorStage").contentShape(Rectangle())
                 .gesture(DragGesture(minimumDistance:0,coordinateSpace:.named("creatorStage"))
                     .onChanged { value in
-                        guard pinchOrigin == nil else {return}
+                        guard pinchOrigin == nil,brush != nil || part == .body else {return}
                         reactingParts=false
                         let point = canonical(value.location,size:size)
                         gaze = CGPoint(x:min(1,max(-1,(point.x-150)/80)),y:min(1,max(-1,(point.y-157)/80)))
@@ -92,8 +92,6 @@ struct CreatorStage: View {
                             if part == .body {
                                 friend=CreatorClay.pull(source,from:canonical(value.startLocation,size:size),to:point)
                             } else {lean=min(5,max(-5,Double(value.translation.width/35)))}
-                        } else {
-                            friend=CreatorGeometry.moved(selected,original:source,delta:CGSize(width:value.translation.width/width*300/zoom,height:value.translation.height/height*320/zoom))
                         }
                     }
                     .onEnded { _ in
@@ -115,10 +113,6 @@ struct CreatorStage: View {
                 })
                 .accessibilityAction(named:Text(store.t("creatorMakeBigger"))) {
                     onBegin();friend=CreatorClay.pinch(friend,scale:1.08);onEnd()
-                }
-                .onDrop(of:[UTType.text.identifier],isTargeted:nil) { _,point in
-                    guard let choice=incoming else { return false }
-                    onDrop(choice,canonical(point,size:size));incoming=nil;return true
                 }
                 .position(x:geometry.size.width/2,y:geometry.size.height/2)
         }
@@ -167,14 +161,6 @@ struct CreatorStage: View {
         if selected == .body {
             bodyHandle(horizontal:true,size:size).position(screen(CGPoint(x:rect.maxX+14,y:rect.midY),size:size))
             bodyHandle(horizontal:false,size:size).position(screen(CGPoint(x:rect.midX,y:rect.maxY+12),size:size))
-        } else {
-            RoundedRectangle(cornerRadius:14)
-                .stroke(.white,style:StrokeStyle(lineWidth:3,dash:[6,5]))
-                .shadow(color:WorkshopLook.blue,radius:1)
-                .frame(width:rect.width/300*size.width*zoom+12,height:rect.height/320*size.height*zoom+12)
-                .position(center).allowsHitTesting(false)
-            transformHandle(selected,rotating:true,size:size).position(screen(CGPoint(x:min(275,rect.maxX+5),y:max(24,rect.minY-10)),size:size))
-            transformHandle(selected,rotating:false,size:size).position(screen(CGPoint(x:min(275,rect.maxX+6),y:min(294,rect.maxY+6)),size:size))
         }
     }
     private func bodyHandle(horizontal:Bool,size:CGSize)->some View {
@@ -185,20 +171,6 @@ struct CreatorStage: View {
                 guard let source=handleOrigin else { return }
                 if horizontal { friend.bodyWidth=min(1.2,max(0.75,source.widthFactor+value.translation.width/size.width*1.2)) }
                 else { friend.bodyHeight=min(1.2,max(0.75,source.heightFactor+value.translation.height/size.height*1.2)) }
-            }.onEnded { _ in handleOrigin=nil;onEnd() })
-    }
-    private func transformHandle(_ selected:CreatorSelection,rotating:Bool,size:CGSize)->some View {
-        CreatorLineIcon(mark:rotating ? .rotate : .resize,color:.white).frame(width:27,height:27)
-            .frame(width:56,height:56).background(Circle().fill(WorkshopLook.blue)).overlay(Circle().stroke(.white,lineWidth:3))
-            .highPriorityGesture(DragGesture(coordinateSpace:.named("creatorStage")).onChanged { value in
-                if handleOrigin == nil { handleOrigin=friend;onBegin() }
-                guard let source=handleOrigin else { return }
-                let rect=CreatorGeometry.bounds(selected,friend:source)
-                let start=canonical(value.startLocation,size:size),point=canonical(value.location,size:size)
-                let pose=CreatorGeometry.pose(selected,friend:source)
-                let angle=(atan2(point.y-rect.midY,point.x-rect.midX)-atan2(start.y-rect.midY,start.x-rect.midX))*180 / .pi
-                let distance=hypot(point.x-rect.midX,point.y-rect.midY)/max(12,hypot(start.x-rect.midX,start.y-rect.midY))
-                friend=CreatorGeometry.transformed(selected,original:source,rotation:pose.rotation+(rotating ? angle : 0),scale:pose.scale*(rotating ? 1 : distance))
             }.onEnded { _ in handleOrigin=nil;onEnd() })
     }
     private func appendPaint(_ point:CGPoint,brush:PaintTool) {

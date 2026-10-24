@@ -34,7 +34,7 @@ struct BuilderView: View {
 
     init(original: FantasyFriend, existing: Bool, resuming:Bool=false) {
         self.original=original;self.existing=existing;self.resuming=resuming
-        _friend=State(initialValue:original)
+        _friend=State(initialValue:original.simplifiedForCreator())
     }
     var body: some View {
         GeometryReader { geometry in
@@ -52,7 +52,7 @@ struct BuilderView: View {
                     } else {
                         scene.frame(maxWidth:.infinity,maxHeight:.infinity)
                         categoryRail(vertical:false).frame(height:68)
-                        drawer(wide:false).frame(height:160)
+                        drawer(wide:false).frame(height:168)
                     }
                 }
                 if let pick=dragPick {
@@ -108,31 +108,22 @@ struct BuilderView: View {
             } message: { Text(store.t("discardHint")) }
     }
     private func header(wide:Bool)->some View {
-        HStack(spacing:10) {
-            CreatorToolButton(mark:.close,label:store.t("close")) {
+        HStack(spacing:8) {
+            RoundButton(icon:"chevron.left",label:store.t("back")) {
                 finishGesture()
                 if store.saveEditorDraft(friend,existing:existing) {presentation.wrappedValue.dismiss()}
             }
-            if wide {
-                VStack(alignment:.leading,spacing:2) {
-                    Text(store.t("creatorTitle")).font(.system(size:22,weight:.heavy,design:.rounded))
-                    Text(store.t("creatorTagline")).font(.system(size:12,weight:.medium,design:.rounded))
-                }.foregroundColor(.white)
-            }
+            if wide {VillageCaption(title:store.t("creatorTitle"),size:23)}
             Spacer(minLength:2)
             CreatorToolButton(mark:.undo,label:store.t("undo"),action:undo).disabled(history.isEmpty).opacity(history.isEmpty ? 0.35 : 1)
-            if wide {
-                CreatorToolButton(mark:.redo,label:store.t("redo"),action:redo).disabled(future.isEmpty).opacity(future.isEmpty ? 0.35 : 1)
-            }
             RoundButton(icon:"ellipsis",label:store.t("roomMore")) {finishGesture();moreTools=true}
-            Button {finishGesture();selection=nil;trying=true} label:{
-                HStack(spacing:5) {
-                    Image(systemName:"play.fill").font(.system(size:16,weight:.heavy))
-                    if wide {Text(store.t("creatorTry")).font(.system(size:13,weight:.heavy,design:.rounded))}
-                }.padding(.horizontal,12).frame(minWidth:48,minHeight:48)
-                    .background(CandySurface(color:StudioStyle.colors[2],cornerRadius:18))
-            }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("creatorTryTitle"))
-            CreatorToolButton(mark:.done,label:store.t("save"),tint:WorkshopLook.yellow) { finishGesture();naming=true }
+            Button {finishGesture();naming=true} label:{
+                HStack(spacing:6) {
+                    Image(systemName:"checkmark").font(.system(size:21,weight:.heavy))
+                    Text(store.t("done")).font(.system(size:15,weight:.heavy,design:.rounded))
+                }.padding(.horizontal,16).frame(minHeight:52)
+                    .background(CandySurface(color:StorybookStyle.honey,cornerRadius:25))
+            }.buttonStyle(SquishStyle())
         }.padding(.horizontal,14).padding(.vertical,10)
     }
     private var scene: some View {
@@ -147,6 +138,9 @@ struct BuilderView: View {
                             .background(CandySurface(color:WorkshopLook.cream,cornerRadius:22))
                     }.buttonStyle(SquishStyle())
                     Spacer()
+                    RoundButton(icon:"play.fill",label:store.t("creatorTryTitle")) {
+                        finishGesture();selection=nil;trying=true
+                    }
                     CreatorToolButton(mark:.shuffle,label:store.t("surprise"),tint:WorkshopLook.yellow) { surprise() }
                 }.padding(.horizontal,18).padding(.top,12)
                 CreatorStage(friend:$friend,selection:$selection,incoming:$incoming,part:part,
@@ -175,7 +169,7 @@ struct BuilderView: View {
                 if item == .body { selection = .body }
                 if item == .eyes { selection = .eyes }
                 if item == .mouth { selection = .mouth }
-                if item == .paint { selection=nil }
+                if item == .paint || item == .arms || item == .legs || item == .extras || item == .color {selection=nil}
                 SoundService.shared.play(.click)
             } label: {
                 VStack(spacing:1) {
@@ -183,9 +177,7 @@ struct BuilderView: View {
                     Text(store.t(Words.partKeys[item.rawValue])).font(.system(size:10,weight:.heavy,design:.rounded)).lineLimit(1)
                 }.foregroundColor(WorkshopLook.sea)
                     .frame(width:67,height:59)
-                    .background(CandySurface(color:part == item ? StudioStyle.color(item) :
-                        GameStyle.mixed(StudioStyle.color(item),with:StorybookStyle.cream,amount:0.60),cornerRadius:18))
-                    .overlay(RoundedRectangle(cornerRadius:18).stroke(part == item ? .white : .clear,lineWidth:2))
+                    .background(GameChoiceSurface(selected:part == item,tint:StudioStyle.color(item)))
                     .contentShape(Rectangle())
             }.buttonStyle(SquishStyle()).accessibilityLabel(store.t(Words.partKeys[item.rawValue]))
                 .accessibilityAddTraits(part == item ? .isSelected : [])
@@ -196,11 +188,7 @@ struct BuilderView: View {
             HStack {
                 Text(store.t(Words.partKeys[part.rawValue])).font(.system(size:20,weight:.heavy,design:.rounded))
                 Spacer()
-                if part == .eyes {
-                    CreatorToolButton(mark:.add,label:store.t("creatorExtraEye"),tint:WorkshopLook.yellow) {
-                        addPiece(.eye,index:friend.eyes,at:CGPoint(x:150,y:105))
-                    }.scaleEffect(0.85).frame(width:42,height:42)
-                } else if part == .color {
+                if part == .color {
                     Button { secondary.toggle() } label: {
                         Text(store.t(secondary ? "accent" : "color")).font(.system(size:12,weight:.bold,design:.rounded))
                             .padding(10).background(Capsule().fill(WorkshopLook.yellow))
@@ -210,10 +198,8 @@ struct BuilderView: View {
                         Image(systemName:"arrow.counterclockwise").font(.system(size:18,weight:.bold))
                             .frame(width:44,height:44).background(StorybookPanel(cornerRadius:16))
                     }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("creatorResetClay"))
-                } else {
-                    Text(store.t("creatorTrayHint")).font(.system(size:11,weight:.semibold,design:.rounded)).opacity(0.6)
                 }
-            }.frame(height:36).padding(.horizontal,16)
+            }.frame(height:48).padding(.horizontal,16)
             if part == .color || part == .paint {
                 colors(wide:wide)
                 if part == .paint { brushTools }
@@ -240,17 +226,22 @@ struct BuilderView: View {
                         Text(store.t(Words.bodyKeys[index])).font(.system(size:11,weight:.bold,design:.rounded))
                     }
                 }.foregroundColor(WorkshopLook.sea).padding(7)
-                    .background(CandySurface(color:chosen(index) ? WorkshopLook.yellow : StorybookStyle.cream,cornerRadius:23))
-                    .overlay(RoundedRectangle(cornerRadius:23).stroke(chosen(index) ? WorkshopLook.blue : WorkshopLook.sea.opacity(0.12),lineWidth:chosen(index) ? 3 : 1))
+                    .background(GameChoiceSurface(selected:chosen(index)))
                     .contentShape(Rectangle())
             }.buttonStyle(SquishStyle())
                 .accessibilityLabel(store.t(Words.partKeys[part.rawValue])+" \(index+1)")
-                .simultaneousGesture(pickGesture(CreatorPick(part:part,index:index),wide:wide))
+                .accessibilityAddTraits(chosen(index) ? .isSelected : [])
         }
     }
     @ViewBuilder private func choiceArt(_ index:Int)->some View {
-        if part == .arms || part == .legs || part == .extras {
-            CreativePieceView(piece:CreativePiece(kind:part == .arms ? .arm : part == .legs ? .leg : .extra,variant:index,color:friend.color,accent:friend.accent))
+        if part == .arms || part == .legs {
+            HStack(spacing:0) {
+                CreativePieceView(piece:CreativePiece(kind:part == .arms ? .arm : .leg,variant:index,color:friend.color,accent:friend.accent))
+                    .scaleEffect(x:-1,y:1)
+                CreativePieceView(piece:CreativePiece(kind:part == .arms ? .arm : .leg,variant:index,color:friend.color,accent:friend.accent))
+            }
+        } else if part == .extras {
+            CreativePieceView(piece:CreativePiece(kind:.extra,variant:index,color:friend.color,accent:friend.accent))
         } else {
             CharacterView(friend:sample(index),detail:part == .eyes || part == .mouth ? part : nil)
         }
@@ -270,6 +261,9 @@ struct BuilderView: View {
         case .body:return friend.body.rawValue==index
         case .eyes:return friend.eyes==index && !friend.isHidden("eyes")
         case .mouth:return friend.mouth==index && !friend.isHidden("mouth")
+        case .arms:return friend.arms==index
+        case .legs:return friend.legs==index
+        case .extras:return friend.accessories.contains(index)
         default:return false
         }
     }
@@ -308,51 +302,28 @@ struct BuilderView: View {
             CreatorToolButton(mark:.trash,label:store.t("clearPaint")) { change { $0.doodles=nil } }.disabled(friend.doodles?.isEmpty ?? true)
         }.padding(.horizontal,16)
     }
+    private var activeLimbSize:Double {part == .arms ? (friend.armSize ?? 1) : (friend.legSize ?? 1)}
     private var selectionTools: some View {
-        HStack(spacing:12) {
-            if selection != nil && selection != .body && part != .paint {
-                Button {moreTools=true} label:{
-                    Label(store.t("roomMore"),systemImage:"ellipsis")
-                        .font(.system(size:14,weight:.heavy,design:.rounded))
-                        .frame(width:88,height:52).background(CandySurface(color:.white,cornerRadius:18))
-                }.buttonStyle(SquishStyle())
-                CreatorToolButton(mark:.trash,label:store.t("removePart"),action:removeSelection)
-                Button { part = .color } label: {
-                    ZStack { Circle().fill(GameStyle.palette[friend.color]).frame(width:26,height:26).offset(x:-6);Circle().fill(GameStyle.palette[friend.accent]).frame(width:23,height:23).offset(x:8,y:7) }
-                        .frame(width:48,height:48).background(RoundedRectangle(cornerRadius:17).fill(.white))
-                }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("color"))
+        HStack(spacing:10) {
+            if part == .arms || part == .legs {
+                ForEach(Array([0.75,1.0,1.25].enumerated()),id:\.offset) {index,size in
+                    Button {change {$0.resizeLimbs(part,size:size)}} label:{
+                        VStack(spacing:3) {
+                            CreatorCategoryIcon(part:part).frame(width:CGFloat(31)*CGFloat(size),height:CGFloat(31)*CGFloat(size))
+                                .frame(height:38)
+                            Text(store.t("creatorSize\(index)")).font(.system(size:11,weight:.heavy,design:.rounded))
+                        }.frame(width:78,height:64)
+                            .background(GameChoiceSurface(selected:abs(activeLimbSize-size)<0.02))
+                            .contentShape(Rectangle())
+                    }.buttonStyle(SquishStyle()).accessibilityLabel(store.t("creatorLimbSize")+" "+store.t("creatorSize\(index)"))
+                }
             } else {
-                Text(store.t(part == .body ? "creatorClayHint" : part == .paint ? "paintHint" : "creatorTouchHint"))
+                Text(store.t(part == .body ? "creatorClayHint" : part == .paint ? "paintHint" : "creatorChooseHint"))
                     .font(.system(size:12,weight:.bold,design:.rounded))
-                    .padding(.horizontal,15).padding(.vertical,9).background(Capsule().fill(.white.opacity(0.9)))
+                    .multilineTextAlignment(.center).foregroundColor(GameStyle.ink)
+                    .padding(.horizontal,15).padding(.vertical,8)
             }
-        }.frame(height:48).frame(maxWidth:.infinity)
-    }
-    private func pickGesture(_ pick:CreatorPick,wide:Bool)->some Gesture {
-        DragGesture(minimumDistance:12,coordinateSpace:.named("creatorWorkshop")).onChanged {value in
-            if dragPick == nil {
-                let across=abs(value.translation.width),up=abs(value.translation.height)
-                guard wide ? across>up*0.7 : up>across*0.7 else {return}
-                finishGesture();SoundService.shared.play(.click)
-            }
-            dragPick=pick;incoming=pick;dragPoint=value.location
-        }.onEnded {value in
-            defer {dragPick=nil;incoming=nil}
-            guard dragPick != nil,stageFrame.width>0,stageFrame.height>0,stageFrame.contains(value.location) else {return}
-            var point=CGPoint(x:((value.location.x-stageFrame.minX)/stageFrame.width-0.5)/1.1*300+150,
-                              y:((value.location.y-stageFrame.minY)/stageFrame.height-0.5)/1.1*320+160)
-            let anchors:[CGPoint]
-            switch pick.part {
-            case .eyes:anchors=[CGPoint(x:150,y:157)]
-            case .mouth:anchors=[CGPoint(x:151,y:207)]
-            case .arms:anchors=[CGPoint(x:74,y:181),CGPoint(x:226,y:181)]
-            case .legs:anchors=[CGPoint(x:117,y:265),CGPoint(x:183,y:265)]
-            default:anchors=[]
-            }
-            if let nearest=anchors.min(by:{hypot($0.x-point.x,$0.y-point.y)<hypot($1.x-point.x,$1.y-point.y)}),
-               hypot(nearest.x-point.x,nearest.y-point.y)<13 {point=nearest}
-            apply(pick,at:point)
-        }
+        }.frame(height:66).frame(maxWidth:.infinity)
     }
     private var advancedTools:some View {
         ScrollView {
@@ -360,16 +331,11 @@ struct BuilderView: View {
             HStack {Text(store.t("roomMore")).font(.title2.bold());Spacer()
                 RoundButton(icon:"xmark",label:store.t("close")) {moreTools=false}}
             CharacterView(friend:friend).frame(height:200)
-            CandyButton(title:store.t("personality"),icon:"speaker.wave.2.fill") {
+            CandyButton(title:store.t("personality"),icon:"music.note") {
                 personalityAfterMore=true;moreTools=false
             }
             CandyButton(title:store.t("redo"),icon:"arrow.uturn.forward") {redo();moreTools=false}
                 .disabled(future.isEmpty)
-            CandyButton(title:store.t("copyPiece"),icon:"square.on.square") {duplicate();moreTools=false}
-                .disabled(selection == nil || selection == .mouth || selection == .body)
-            CandyButton(title:store.t("mirror"),icon:"arrow.left.and.right") {mirror();moreTools=false}
-                .disabled(selection == nil || selection == .body)
-            Text(store.t("creatorHandleHint")).font(.system(.body,design:.rounded)).multilineTextAlignment(.center)
             Spacer(minLength:0)
         }.padding(26).frame(maxWidth:560).frame(maxWidth:.infinity)
         }.background(StorybookShelf()).foregroundColor(GameStyle.ink)
@@ -420,21 +386,19 @@ struct BuilderView: View {
                     var values=value.facePlacements ?? [:];values[key]=pose;value.facePlacements=values
                 }
             };selection = pick.part == .eyes ? .eyes : .mouth
-        case .arms: addPiece(.arm,index:pick.index,at:point ?? CGPoint(x:74,y:181))
-        case .legs: addPiece(.leg,index:pick.index,at:point ?? CGPoint(x:183,y:265))
+        case .arms: change {$0.chooseLimb(.arms,index:pick.index)};selection=nil
+        case .legs: change {$0.chooseLimb(.legs,index:pick.index)};selection=nil
         case .extras:
             let a=Attachment.extra(pick.index)
-            let rect=AttachmentLayout.bounds(for:a,friend:friend)
-            addPiece(.extra,index:pick.index,at:point ?? CGPoint(x:rect.midX,y:rect.midY))
+            change {value in
+                value.pieces?.removeAll {$0.kind == .extra && $0.variant == pick.index}
+                if value.accessories.contains(pick.index) {value.accessories.remove(pick.index)}
+                else {value.accessories.insert(pick.index);value.show(a.rawValue)}
+                value.setPlacement(PartPlacement(),for:a)
+            }
+            selection=friend.accessories.contains(pick.index) ? .attachment(a) : nil
         default:break
         }
-    }
-    private func addPiece(_ kind:PieceKind,index:Int,at point:CGPoint) {
-        guard (friend.pieces ?? []).count<64 else { return }
-        var piece=CreativePiece(kind:kind,variant:index,color:friend.color,accent:friend.accent)
-        piece.move(x:point.x/300,y:point.y/320,snap:false)
-        change { var parts=$0.pieces ?? [];parts.append(piece);$0.pieces=parts }
-        selection = .piece(piece.id)
     }
     private func tint(_ color:Int) {
         change { value in
@@ -452,45 +416,6 @@ struct BuilderView: View {
             }
         }
     }
-    private func duplicate() {
-        guard let selected=selection else { return }
-        switch selected {
-        case .piece(let id):
-            guard let source=friend.pieces?.first(where:{$0.id==id}),(friend.pieces ?? []).count<64 else { return }
-            var copy=source;copy.id=UUID();copy.move(x:copy.x+0.1,y:copy.y+0.04,snap:false)
-            change { var parts=$0.pieces ?? [];parts.append(copy);$0.pieces=parts };selection = .piece(copy.id)
-        case .attachment(let a):
-            let kind:PieceKind = a.category == .arms ? .arm : a.category == .legs ? .leg : .extra
-            let index=a.extraIndex ?? (kind == .arm ? friend.arms : friend.legs)
-            let center=AttachmentLayout.center(for:a,friend:friend)
-            addPiece(kind,index:index,at:CGPoint(x:center.x+24,y:center.y))
-        case .eyes:addPiece(.eye,index:friend.eyes,at:CGPoint(x:150,y:110))
-        default:break
-        }
-    }
-    private func mirror() {
-        guard let selected=selection else { return }
-        change { value in
-            if case .piece(let id)=selected,let i=value.pieces?.firstIndex(where:{$0.id==id}) { value.pieces?[i].mirrored.toggle() }
-            else {
-                let key:String
-                switch selected { case .attachment(let a):key=a.rawValue;case .eyes:key="eyes";case .mouth:key="mouth";default:return }
-                var set=value.mirroredParts ?? [];if set.contains(key) { set.remove(key) } else { set.insert(key) };value.mirroredParts=set
-            }
-        }
-    }
-    private func removeSelection() {
-        guard let selected=selection else { return }
-        change { value in
-            switch selected {
-            case .piece(let id):value.pieces?.removeAll {$0.id==id}
-            case .attachment(let a):value.hide(a.rawValue)
-            case .eyes:value.hide("eyes")
-            case .mouth:value.hide("mouth")
-            case .body:break
-            }
-        };selection=nil
-    }
     private func chooseStarter(_ seed:FriendSeed) {
         change {value in
             var replacement=seed.make()
@@ -499,7 +424,7 @@ struct BuilderView: View {
             replacement.name=value.name.isEmpty || (!existing && defaultName) ? seed.title : value.name
             replacement.world=value.world;replacement.room=value.room;replacement.roomDesign=value.roomDesign
             replacement.song=value.song;replacement.track=value.track
-            value=replacement
+            value=replacement.simplifiedForCreator()
         }
         selection = .body;incoming=nil;starters=false
         SoundService.shared.react(voice:friend.voice?.rawValue ?? 0)

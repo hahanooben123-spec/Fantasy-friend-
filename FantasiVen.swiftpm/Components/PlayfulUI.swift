@@ -129,33 +129,15 @@ struct AdventureHeading: View {
     @Environment(\.presentationMode) private var presentation
     let title: String
     let subtitle: String
-    @State private var leaving = false
-    var body: some View {
-        HStack(spacing: 12) {
-            RoundButton(icon: "chevron.left", label: store.t("back")) { leaving = true }.disabled(leaving)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title).font(.system(size: 27, weight: .heavy, design: .rounded)).lineLimit(2).minimumScaleFactor(0.75)
-                Text(subtitle).font(.system(.caption, design: .rounded)).lineLimit(2)
-            }
-            Spacer(minLength: 0)
-        }.foregroundColor(GameStyle.ink).padding(.horizontal, 12).padding(.vertical, 9)
-            .background(StorybookPanel(cornerRadius:28))
-            .padding(.horizontal, 12).padding(.top, 8)
-            .overlay(alignment: .trailing) {
-                if leaving {
-                    HStack(spacing: 2) {
-                        Text(store.t("bye")).font(.system(.caption, design: .rounded).weight(.bold))
-                        CharacterView(friend: store.friends.first ?? FantasyFriend(), happy: true).frame(width: 60, height: 65).rotationEffect(.degrees(-12))
-                    }.padding(8).background(Capsule().fill(.white)).padding(.trailing, 10).allowsHitTesting(false)
-                }
-            }
-            .task(id: leaving) {
-                guard leaving else { return }
-                do { try await Task.sleep(nanoseconds: 320_000_000) } catch { return }
-                presentation.wrappedValue.dismiss()
-            }
+    var body:some View {
+        HStack(spacing:12) {
+            RoundButton(icon:"chevron.left",label:store.t("back")) {presentation.wrappedValue.dismiss()}
+            VillageCaption(title:title,size:25).accessibilityHint(subtitle)
+            Spacer(minLength:0)
+        }.padding(.horizontal,14).padding(.vertical,9)
     }
 }
+
 
 struct FriendHomeCard: View {
     let friend: FantasyFriend

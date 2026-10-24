@@ -12,37 +12,25 @@ enum StorybookStyle {
 /// Cream enamel, an amber bevel and a warm contact shadow, like the pumpkin tools.
 struct StorybookPanel: View {
     var cornerRadius: CGFloat = 28
-    var body: some View {
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .fill(LinearGradient(stops: [
-                .init(color: Color(red: 1, green: 0.99, blue: 0.93), location: 0),
-                .init(color: StorybookStyle.cream, location: 0.65),
-                .init(color: Color(red: 0.88, green: 0.95, blue: 0.94), location: 1)
-            ], startPoint: .topLeading, endPoint: .bottomTrailing))
-            .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .strokeBorder(StorybookStyle.teal.opacity(0.40), lineWidth: 1.5))
-            .overlay(RoundedRectangle(cornerRadius: max(4, cornerRadius-3), style: .continuous)
-                .strokeBorder(LinearGradient(colors: [.white.opacity(0.95), .white.opacity(0.08)],
-                    startPoint: .top, endPoint: .bottom), lineWidth: 2).padding(3))
-            .shadow(color: StorybookStyle.teal.opacity(0.30), radius: 0, y: 3)
-            .shadow(color: StorybookStyle.plum.opacity(0.12), radius: 6, y: 5)
+    var body:some View {
+        RoundedRectangle(cornerRadius:cornerRadius,style:.continuous)
+            .fill(Color.white.opacity(0.94))
+            .overlay(RoundedRectangle(cornerRadius:cornerRadius,style:.continuous)
+                .strokeBorder(StorybookStyle.teal.opacity(0.16),lineWidth:1.5))
+            .shadow(color:StorybookStyle.plum.opacity(0.10),radius:6,y:4)
             .allowsHitTesting(false)
     }
 }
 
 /// Edge-to-edge tool shelf, with the same wood and inlay as the workshop.
 struct StorybookShelf: View {
-    var body: some View {
-        LinearGradient(colors: [StorybookStyle.cream, Color(red: 0.86, green: 0.96, blue: 0.96)],
-            startPoint: .topLeading, endPoint: .bottomTrailing)
-            .overlay(alignment: .top) {
-                Rectangle().fill(LinearGradient(colors: [Color.white, StorybookStyle.honey,
-                    StorybookStyle.teal.opacity(0.35)], startPoint: .top, endPoint: .bottom)).frame(height: 6)
+    var body:some View {
+        LinearGradient(colors:[.white,Color(red:0.89,green:0.97,blue:0.97)],
+            startPoint:.top,endPoint:.bottom)
+            .overlay(alignment:.top) {
+                Rectangle().fill(StorybookStyle.teal.opacity(0.16)).frame(height:2)
             }
-            .overlay(alignment: .bottom) {
-                Rectangle().fill(StorybookStyle.teal.opacity(0.14)).frame(height: 2)
-            }
-            .shadow(color: StorybookStyle.plum.opacity(0.18), radius: 8, y: -3)
+            .shadow(color:StorybookStyle.plum.opacity(0.08),radius:5,y:-3)
             .allowsHitTesting(false)
     }
 }

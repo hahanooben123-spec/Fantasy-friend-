@@ -122,10 +122,12 @@ struct FriendRoomView:View {
                 onSelect:{selected=$0},onTap:tap,onMove:move,onFriendMove:moveFriend,
                 onDropItem:{item,point in add(item,at:point)},toyPreview:toyPreview,
                 onSpawnToy:spawnToy,onMoveToy:moveToy,onUseToy:useToy,onCover:cover)
+            if editing || full {
             Text(store.t(full ? "roomFull" : editing ? (draggingItem != nil ? "roomDropHere" : choice != nil && !trayOpen ? "roomSelectedHint" : "roomSimpleHint") : "roomLivingHint"))
                 .font(.system(size:12,weight:.bold,design:.rounded)).multilineTextAlignment(.center)
                 .padding(.horizontal,14).padding(.vertical,9)
                 .background(StorybookPanel(cornerRadius:24)).padding(10).allowsHitTesting(false)
+            }
         }.background(GeometryReader {proxy in
             Color.clear.preference(key:RoomSurfaceFrameKey.self,value:proxy.frame(in:.named("roomWorkshop")))
         })
@@ -139,7 +141,7 @@ struct FriendRoomView:View {
                             RoomFurniture(kind:[6,1,13][index]).frame(width:36,height:36)
                             Text(store.t("roomCategory\(index)")).font(.system(size:11,weight:.heavy,design:.rounded)).lineLimit(1)
                         }.frame(maxWidth:.infinity,minHeight:59)
-                            .background(CandySurface(color:category == index ? WorkshopLook.yellow : StorybookStyle.cream,cornerRadius:17))
+                            .background(GameChoiceSurface(selected:category == index))
                     }.buttonStyle(SquishStyle()).accessibilityAddTraits(category == index ? .isSelected : [])
                 }
             }.padding(.horizontal,10)
